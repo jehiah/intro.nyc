@@ -1,8 +1,12 @@
 package main
 
 import (
+        "embed"
+        _ "embed"
         "flag"
         "fmt"
+        "io"
+        "io/fs"
         "log"
         "net/http"
         "net/url"
@@ -16,14 +20,70 @@ import (
         "github.com/julienschmidt/httprouter"
 )
 
+//go:embed templates/index.html
+var content embed.FS
+
 type App struct {
         legistar *legistar.Client
+        devMode  bool
 
         cachedRedirects map[string]string
 }
 
 func (a *App) Index(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-        http.Redirect(w, r, "https://legistar.council.nyc.gov/Legislation.aspx", 302)
+        var f fs.File
+        var err error
+        if a.devMode {
+                f, err = os.Open("templates/index.html")
+        } else {
+                f, err = content.Open("templates/index.html")
+        }
+
+        if err != nil {
+                log.Printf("%#v", err)
+                http.Error(w, "error", 500)
+                return
+        }
+        defer f.Close()
+        w.Header().Set("content-type", "text/html")
+        io.Copy(w, f)
+}
+
+func (a *App) IntroJSON(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+        file := ps.ByName("file")
+        if file != "data" {
+                log.Printf("file != data %q", file)
+                http.Error(w, "Not Found", 404)
+                return
+        }
+        path := ps.ByName("year")
+        if !strings.HasSuffix(path, ".json") {
+                log.Printf("year %q", path)
+                http.Error(w, "Not Found", 404)
+                return
+        }
+        year, err := strconv.Atoi(strings.TrimSuffix(path, ".json"))
+        if err != nil || year < 2014 || year > 2022 {
+                log.Printf("year %d not found", year)
+                http.Error(w, "Not Found", 404)
+                return
+        }
+        req, err := http.NewRequestWithContext(r.Context(), "GET", fmt.Sprintf("https://raw.githubusercontent.com/jehiah/nyc_legislation/master/introduction/%d/index.json", year), nil)
+        if err != nil {
+                log.Printf("err %#v", err)
+                http.Error(w, "error", 500)
+                return
+        }
+        resp, err := http.DefaultClient.Do(req)
+        if err != nil || resp.StatusCode != 200 {
+                http.Error(w, "error", 503)
+                return
+        }
+        defer resp.Body.Close()
+        w.Header().Add("content-type", "application/json")
+        w.Header().Add("Cache-Control", "public; max-age=300")
+        w.Header().Add("expires", resp.Header.Get("expires"))
+        io.Copy(w, resp.Body)
 }
 
 func (a *App) FileRedirect(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -83,13 +143,14 @@ func (a *App) FileRedirect(w http.ResponseWriter, r *http.Request, ps httprouter
 
 func main() {
         logRequests := flag.Bool("log-requests", false, "log requests")
+        devMode := flag.Bool("dev-mode", false, "development mode")
         flag.Parse()
 
         log.Print("starting server...")
 
         app := &App{
-                legistar: legistar.NewClient("nyc", os.Getenv("NYC_LEGISLATOR_TOKEN")),
-
+                legistar:        legistar.NewClient("nyc", os.Getenv("NYC_LEGISLATOR_TOKEN")),
+                devMode:         *devMode,
                 cachedRedirects: make(map[string]string),
         }
         var err error
@@ -100,6 +161,7 @@ func main() {
 
         router := httprouter.New()
         router.GET("/", app.Index)
+        router.GET("/:file/:year", app.IntroJSON)
         router.GET("/:file", app.FileRedirect)
 
         // Determine port for HTTP service.
