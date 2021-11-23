@@ -30,6 +30,7 @@ type App struct {
 	cachedRedirects map[string]string
 }
 
+// Index returns the root path of `/`
 func (a *App) Index(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var f fs.File
 	var err error
@@ -52,6 +53,9 @@ func (a *App) Index(w http.ResponseWriter, r *http.Request, ps httprouter.Params
 	io.Copy(w, f)
 }
 
+// IntroJSON proxies to /data/${year}.json to github:jehiah/nyc_legislation:introduction/$year/index.json
+//
+// Note: the router match pattern is `/:file/:year` so `:file` must be == "data"
 func (a *App) IntroJSON(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	file := ps.ByName("file")
 	if file != "data" {
@@ -89,6 +93,9 @@ func (a *App) IntroJSON(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 	io.Copy(w, resp.Body)
 }
 
+// FileRedirect redirects from /1234-2020 to the URL for File "Intro 1234-2020"
+//
+// Redirects are cached for the lifetime of the process but not persisted
 func (a *App) FileRedirect(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	file := ps.ByName("file")
 	if ok, _ := regexp.MatchString("^[0-9]{4}-20(14|15|16|17|18|19|20|21|22)$", file); !ok {
