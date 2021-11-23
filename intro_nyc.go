@@ -91,23 +91,17 @@ func (a *App) IntroJSON(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 
 func (a *App) FileRedirect(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	file := ps.ByName("file")
-	if ok, _ := regexp.MatchString("^[0-9]{4}-20(14|15|16|17|18|19|20|21|22)", file); !ok {
+	if ok, _ := regexp.MatchString("^[0-9]{4}-20(14|15|16|17|18|19|20|21|22)$", file); !ok {
 		http.Error(w, "Not Found", 404)
 		return
 	}
 
 	n := strings.Split(file, "-")
 	seq, _ := strconv.Atoi(n[0])
-	if seq > 3000 {
+	if seq > 3000 || seq < 1 {
 		http.Error(w, "Not Found", 404)
 		return
 	}
-	// year, err := strconv.Atoi(n[1])
-	// if err != nil {
-	//         log.Print(err)
-	//         http.Error(w, "INVALID REQUEST", 400)
-	//         return
-	// }
 	file = fmt.Sprintf("Int %s", file)
 
 	if redirect, ok := a.cachedRedirects[file]; ok {
