@@ -46,6 +46,9 @@ func (a *App) Index(w http.ResponseWriter, r *http.Request, ps httprouter.Params
 	}
 	defer f.Close()
 	w.Header().Set("content-type", "text/html")
+	if !a.devMode {
+		w.Header().Add("Cache-Control", "public; max-age=300")
+	}
 	io.Copy(w, f)
 }
 
@@ -108,6 +111,9 @@ func (a *App) FileRedirect(w http.ResponseWriter, r *http.Request, ps httprouter
 	file = fmt.Sprintf("Int %s", file)
 
 	if redirect, ok := a.cachedRedirects[file]; ok {
+		if !a.devMode {
+			w.Header().Add("Cache-Control", "public; max-age=300")
+		}
 		http.Redirect(w, r, redirect, 302)
 		return
 	}
@@ -137,7 +143,9 @@ func (a *App) FileRedirect(w http.ResponseWriter, r *http.Request, ps httprouter
 		return
 	}
 	a.cachedRedirects[file] = redirect
-
+	if !a.devMode {
+		w.Header().Set("Cache-Control", "max-age=3600")
+	}
 	http.Redirect(w, r, redirect, 302)
 }
 
