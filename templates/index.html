@@ -285,7 +285,7 @@ function renderRecent() {
   document.querySelector("#recent-legislation").innerHTML = '';
   // sort
   recentData.sort((a, b) => {return compareDates(b.lastEventDt, a.lastEventDt)})
-  recentData.splice(10)
+  recentData.splice(25)
   // recentData.forEach(dd => {
   //   console.log("recentData", dd);
   // })
