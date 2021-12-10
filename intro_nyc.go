@@ -23,11 +23,15 @@ import (
 //go:embed templates/index.html
 var content embed.FS
 
+//go:embed static/*
+var static embed.FS
+
 type App struct {
 	legistar *legistar.Client
 	devMode  bool
 
 	cachedRedirects map[string]string
+	staticHandler   http.Handler
 }
 
 // Index returns the root path of `/`
@@ -58,11 +62,17 @@ func (a *App) Index(w http.ResponseWriter, r *http.Request, ps httprouter.Params
 // Note: the router match pattern is `/:file/:year` so `:file` must be == "data"
 func (a *App) IntroJSON(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	file := ps.ByName("file")
-	if file != "data" {
+	switch file {
+	case "static":
+		a.staticHandler.ServeHTTP(w, r)
+		return
+	case "data":
+	default:
 		log.Printf("file != data %q", file)
 		http.Error(w, "Not Found", 404)
 		return
 	}
+
 	path := ps.ByName("year")
 	if !strings.HasSuffix(path, ".json") {
 		log.Printf("year %q", path)
@@ -161,6 +171,10 @@ func main() {
 		legistar:        legistar.NewClient("nyc", os.Getenv("NYC_LEGISLATOR_TOKEN")),
 		devMode:         *devMode,
 		cachedRedirects: make(map[string]string),
+		staticHandler:   http.StripPrefix("/static/", http.FileServer(http.FS(static))),
+	}
+	if *devMode {
+		app.staticHandler = http.StripPrefix("/static/", http.FileServer(http.Dir("static")))
 	}
 	var err error
 	app.legistar.LookupURL, err = url.Parse("https://legistar.council.nyc.gov/gateway.aspx?m=l&id=")
