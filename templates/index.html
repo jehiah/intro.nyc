@@ -6,14 +6,22 @@
     <title>NYC Council Legislation Search</title>
 
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css" integrity="sha512-GQGU0fMMi238uA+a/bdWJfpUGKUkBdgfFdgBm72SUQ6BeyWjoY/ton0tEjH+OSH9iP4Dfh+7HM0I9f5eR0L/4w==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <style>
+
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@200;400&display=swap');
+
+body {
+  font-family: 'Be Vietnam Pro', sans-serif;
+}
+
 .navbar {
   background: #2f56a6;
   color: #fff;
   padding-top: 1rem;
   padding-bottom: 1rem;
-  margin-bottom: 1rem;
+  margin-bottom: 3rem;
 }
 .navbar-brand {
   /*color: inherit;*/
@@ -24,16 +32,24 @@
 .h1 {
   font-size: 2rem;
 }
-
+h3 {
+  font-size: calc(1.3rem + .1vw);
+}
 
 .btn-primary {
   background: #2f56a6;
   border-color: #2f56a6;
 }
 #search {
-  margin: 2rem 0;
 }
-
+.action-date {
+  font-weight: 200;
+  font-size: .8rem;
+  margin: 0 .5em;
+}
+.action {
+  font-weight: 200;
+}
 
 
 .legislation {
@@ -43,22 +59,41 @@
   font-size: .8rem;
   color: #333;
   margin-left: 3rem;
-  display: block;
+  /*display: block;*/
+  display: none;
 }
 
-.file::before {
+
+.file {
+  line-height: 1rem;
+  font-size: .75rem;
+  padding: .25em 0.6em;
+  text-decoration: inherit;
+  /*font-weight: 200;*/
+}
+a.file-link:link {
+  text-decoration: none;
+}
+.file {
+  /*background-color: #d0d4dd;*/
+  background-color: #e4e6ef;
+  color: #2f56a6;
+}
+
+.file:hover{
+  color: #e4e6ef;
+  background-color: #2f56a6;
+  /*background-color: rgb(88, 97, 105) !important;*/
+}
+/*.file::before {
   content: url('data:image/svg+xml; utf8, <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-link"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>');
   display: inline-block;
   margin: 0px 2px 0 0px;
 }
-
-.file {
-  line-height: 1rem;
-  font-size: .85rem;
-  text-decoration: inherit;
+*/
+#q {
+  max-width: 100rem;
 }
-
-
 
 footer {
   text-align: center;
@@ -74,13 +109,12 @@ footer p {
 }
     </style>
 
-    <title>Intro.NYC</title>
   </head>
   <body>
 
 <nav class="navbar">
   <div class="container-fluid">
-    <a class="navbar-brand" href="https://intro.nyc/">Intro.NYC</a>
+    <a class="navbar-brand" href="https://intro.nyc/">Intro.nyc</a>
     <span class="h1">New York City Council Legislation</span>
     <a href="https://legistar.council.nyc.gov/Legislation.aspx"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-external-link"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg> legistar.council.nyc.gov</a> 
   </div>
@@ -90,6 +124,8 @@ footer p {
 
   <div class="row">
 
+
+<div class="col-sm-12 col-lg-6 col-md-9">
 <div id="search-loading">
 <div class="spinner-border text-primary" role="status" ></div>
 Search Loading...
@@ -107,19 +143,39 @@ Search Loading...
 
 </div>
 
-</div>
-<div class="row">
 
 <template id="legislation-template">
   <div class="legislation">
-    <a href="" class="file-link"><span class="badge bg-secondary file"></span></a> <span class="name"></span>
+    <a href="" class="file-link"><span class="badge file"></span></a> <span class="name"></span>
     <span class="badge bg-success status">Enacted</span>
     <br>
     <span class="title"></span>
   </div>
 </template>
 
-<div id="results"></div>
+<div id="search-results"></div>
+
+</div>
+
+<div class="col-md-3 col-lg-6 col-sm-12">
+<h3>Recent Legislation Changes</h3>
+
+<template id="recent-legislation-template">
+  <div class="legislation">
+    <a href="" class="file-link"><span class="badge file"></span></a>
+    <span class="action-date"></span>
+    <span class="action"></span>
+    <br>
+     <span class="name"></span>
+    <span class="badge bg-success status">Enacted</span>
+  </div>
+</template>
+
+<div id="recent-legislation">
+
+</div>
+
+</div>
 
 </div>
 
@@ -141,6 +197,14 @@ Search Loading...
 // is 'template' supported
 // if ('content' in document.createElement('template')) {
 
+
+function shortDate(d, opt) {
+  return d.toLocaleString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  })
+}
 
 // bootstrap search from URL
 const urlSearchParams = new URLSearchParams(window.location.search)
@@ -165,6 +229,20 @@ const index = new FlexSearch.Document({
 });
 
 var lookupData = {};
+var recentData = [];
+// isRecentDate checks if a date is in the last 30 days
+const today = (new Date()).valueOf()
+function isRecentDate(d) {
+  const start = today - (30*24*60*60*1000);
+  const ms = d.valueOf()
+  return start <= ms && ms <= today
+}
+function isDate(d) {
+  return d !== "0001-01-01T00:00:00Z"
+}
+function compareDates(a, b) {
+  return (a>b)-(a<b)
+}
 
 Promise.all([
   fetch('/data/2021.json'),
@@ -179,9 +257,15 @@ Promise.all([
 }).then(data => {
   // console.log("data", data)
   data.forEach(d => {    
-    // index.add(d)
     d.forEach(dd => {
       dd.IntroDt = new Date(dd.IntroDate)
+      dd.lastEvent = lastInterestingHistory(dd.History);
+      if ( dd.lastEvent != null ) {
+        dd.lastEventDt = new Date(dd.lastEvent.Date)
+        if (isRecentDate(dd.lastEventDt)) {
+          recentData.push(dd)
+        }
+      }
       index.add(dd)
       lookupData[dd.File] = dd
     })
@@ -193,16 +277,52 @@ Promise.all([
   document.getElementById('search').style.display = '';
   search(q.value)
   q.addEventListener("input", onsearchupdate);
+
+  renderRecent()
 })
+
+function renderRecent() {
+  document.querySelector("#recent-legislation").innerHTML = '';
+  // sort
+  recentData.sort((a, b) => {return compareDates(b.lastEventDt, a.lastEventDt)})
+  recentData.splice(10)
+  // recentData.forEach(dd => {
+  //   console.log("recentData", dd);
+  // })
+  recentData.forEach(d => addRecentResult(d))
+}
+
+function lastInterestingHistory(h)  {
+  if (typeof(h) == "undefined") {
+    return null
+  }
+  const interestingEvents = [
+    'Introduced by Council',
+    'Amended by Committee',
+    'Approved by Committee',
+    'Approved by Council',
+    'City Charter Rule Adopted',
+  ]
+  for (let i = h.length-1; i >= 0; i--) {
+    if (interestingEvents.indexOf(h[i].Action) != -1) {
+      return h[i];
+    }
+  }
+  return null
+}
 
 function onsearchupdate() {
   const q = document.getElementById("q");
-  history.pushState(null, document.title, "/?q=" + encodeURIComponent(q.value))
+  if (q.value.length > 0) {
+    history.pushState(null, document.title, "/?q=" + encodeURIComponent(q.value))
+  } else {
+    history.pushState(null, document.title, "/")
+  }
   search(q.value)
 }
 
 function search(q) {
-  document.querySelector("#results").innerHTML = '';
+  document.querySelector("#search-results").innerHTML = '';
   var results = index.search(q, 50)
   // console.log("results", results)
   var seen = {};
@@ -217,18 +337,20 @@ function search(q) {
     })
   })
   if (!hasResults) {
-    // add "no results"
-    p = document.createElement("p")
-    p.textContent = "No results"
-    document.querySelector("#results").appendChild(p)
+    if (q !== "") {
+      // add "no results"
+      p = document.createElement("p")
+      p.textContent = "No results"
+      document.querySelector("#search-results").appendChild(p)
+    }
   } else {
     resultArray.sort((a, b) => {return b.IntroDt - a.IntroDt})
-    resultArray.forEach(d => addResult(d))
+    resultArray.forEach(d => addSearchResult(d))
   }
 }
-function addResult(row) {
+function addSearchResult(row) {
     // console.log("addResult", row)
-    var target = document.querySelector("#results");
+    var target = document.querySelector("#search-results");
     var template = document.querySelector('#legislation-template');
     var clone = template.content.cloneNode(true);
     const file = row.File.replace("Int ", "")
@@ -242,7 +364,25 @@ function addResult(row) {
     }
     clone.querySelectorAll(".status")[0].style.display = enacted ? "" : "none";
     target.appendChild(clone);
-
+}
+function addRecentResult(row) {
+    // console.log("addResult", row)
+    var target = document.querySelector("#recent-legislation");
+    var template = document.querySelector('#recent-legislation-template');
+    var clone = template.content.cloneNode(true);
+    const file = row.File.replace("Int ", "")
+    clone.querySelectorAll(".file-link")[0].href="/" + file;
+    clone.querySelectorAll(".file")[0].textContent="intro.nyc/"+file;
+    clone.querySelectorAll(".name")[0].textContent=row.Name;
+    clone.querySelectorAll(".action")[0].textContent=row.lastEvent.Action;
+    clone.querySelectorAll(".action-date")[0].textContent=shortDate(row.lastEventDt);
+    var enacted = false;
+    if (row.StatusName == "Enacted (Mayor's Desk for Signature)" || row.StatusName == "Enacted") {
+      enacted = true;
+    }
+    // clone.querySelectorAll(".status")[0].style.display = enacted ? "" : "none";
+    clone.querySelectorAll(".status")[0].style.display = "none";
+    target.appendChild(clone);
 }
 
 </script>
