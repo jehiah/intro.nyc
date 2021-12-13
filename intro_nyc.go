@@ -171,7 +171,7 @@ func main() {
 		legistar:        legistar.NewClient("nyc", os.Getenv("NYC_LEGISLATOR_TOKEN")),
 		devMode:         *devMode,
 		cachedRedirects: make(map[string]string),
-		staticHandler:   http.StripPrefix("/static/", http.FileServer(http.FS(static))),
+		staticHandler:   http.FileServer(http.FS(static)),
 	}
 	if *devMode {
 		app.staticHandler = http.StripPrefix("/static/", http.FileServer(http.Dir("static")))
