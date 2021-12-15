@@ -49,10 +49,11 @@ h3 {
 .action-date {
   font-weight: 200;
   font-size: .8rem;
-  margin: 0 .5em;
+  margin: 0 .4em;
 }
 .action {
   font-weight: 200;
+  font-size: .9em;
 }
 
 
@@ -380,6 +381,9 @@ function addRecentResult(row) {
     clone.querySelectorAll(".file")[0].textContent="intro.nyc/"+file;
     clone.querySelectorAll(".name")[0].textContent=row.Name;
     clone.querySelectorAll(".action")[0].textContent=row.lastEvent.Action;
+    if (row.lastEvent.Action.indexOf("Committee") != -1 ) {
+      clone.querySelectorAll(".action")[0].textContent=row.lastEvent.Action.replace("Committee", "") + row.lastEvent.BodyName;
+    }
     clone.querySelectorAll(".action-date")[0].textContent=shortDate(row.lastEventDt);
     var enacted = false;
     if (row.StatusName == "Enacted (Mayor's Desk for Signature)" || row.StatusName == "Enacted") {
