@@ -67,6 +67,11 @@ h3 {
   /*display: block;*/
   display: none;
 }
+.legislation .last-update {
+  font-size: .7em;
+  background-color: #fff0c6;
+  padding: .1rem .2rem;
+}
 
 
 .file {
@@ -156,6 +161,7 @@ Search Loading...
     <span class="badge bg-success status">Enacted</span>
     <br>
     <span class="title"></span>
+    <span class="last-update"></span>
   </div>
 </template>
 
@@ -172,7 +178,7 @@ Search Loading...
     <span class="action-date"></span>
     <span class="action"></span>
     <br>
-     <span class="name"></span>
+    <span class="name"></span> 
     <span class="badge bg-success status">Enacted</span>
   </div>
 </template>
@@ -203,6 +209,33 @@ Search Loading...
 // is 'template' supported
 // if ('content' in document.createElement('template')) {
 
+function diffDates(start, end) {
+    // const date1 = new Date(start);
+    // const date2 = new Date(end);
+
+    // One day in milliseconds
+    const oneDay = 1000 * 60 * 60 * 24;
+    const oneHour = 1000 * 60 * 60;
+    const oneMinute = 1000 * 60;
+
+    // Calculating the time difference between two dates
+    const diffInTime = start.getTime() - end.getTime();
+
+    // Calculating the no. of days between two dates
+    const days = Math.round(diffInTime / oneDay);
+    if (days != 0) {
+      return {unit:"day", units:days}
+    }
+    const hours = Math.round(diffInTime / oneHour);
+    if (hours != 0) {
+      return {unit:"hour", units:hours}
+    }
+    const minutes = Math.round(diffInTime / oneMinute);
+    if (minutes != 0) {
+      return {unit:"minute", units:minutes}
+    }
+    return {unit:"second", units: Math.round(diffInTime / 1000) }
+}
 
 function shortDate(d, opt) {
   return d.toLocaleString(undefined, {
@@ -211,6 +244,13 @@ function shortDate(d, opt) {
     day: 'numeric',
   })
 }
+
+
+const rtf = new Intl.RelativeTimeFormat("en", {
+    // localeMatcher: "best fit", // other values: "lookup"
+    numeric: "always", // other values: "auto"
+    style: "long", // other values: "short" or "narrow"
+});
 
 // bootstrap search from URL
 const urlSearchParams = new URLSearchParams(window.location.search)
@@ -238,8 +278,8 @@ var lookupData = {};
 var recentData = [];
 // isRecentDate checks if a date is in the last 30 days
 const today = (new Date()).valueOf()
-function isRecentDate(d) {
-  const start = today - (30*24*60*60*1000);
+function isRecentDate(d, cuttoffDays) {
+  const start = today - (cuttoffDays*24*60*60*1000);
   const ms = d.valueOf()
   return start <= ms && ms <= today
 }
@@ -268,7 +308,7 @@ Promise.all([
       dd.lastEvent = lastInterestingHistory(dd.History);
       if ( dd.lastEvent != null ) {
         dd.lastEventDt = new Date(dd.lastEvent.Date)
-        if (isRecentDate(dd.lastEventDt)) {
+        if (isRecentDate(dd.lastEventDt, 30)) {
           recentData.push(dd)
         }
       }
@@ -369,6 +409,15 @@ function addSearchResult(row) {
       enacted = true;
     }
     clone.querySelectorAll(".status")[0].style.display = enacted ? "" : "none";
+
+    if (isRecentDate(row.lastEventDt, 14)) {
+      const diff = diffDates(row.lastEventDt, new Date());
+      // console.log(diff, row.lastEventDt)
+      clone.querySelectorAll(".last-update")[0].textContent = "Updated " + rtf.format(diff.units, diff.unit)
+    } else {
+      clone.querySelectorAll(".last-update")[0].remove()
+    }
+
     target.appendChild(clone);
 }
 function addRecentResult(row) {
