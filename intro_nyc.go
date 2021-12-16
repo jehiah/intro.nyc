@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"embed"
 	_ "embed"
 	"flag"
@@ -14,7 +15,9 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"time"
 
+	"cloud.google.com/go/storage"
 	"github.com/gorilla/handlers"
 	"github.com/jehiah/legislator/legistar"
 	"github.com/julienschmidt/httprouter"
@@ -29,6 +32,7 @@ var static embed.FS
 type App struct {
 	legistar *legistar.Client
 	devMode  bool
+	gsclient *storage.Client
 
 	cachedRedirects map[string]string
 	staticHandler   http.Handler
@@ -85,22 +89,33 @@ func (a *App) IntroJSON(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 		http.Error(w, "Not Found", 404)
 		return
 	}
-	req, err := http.NewRequestWithContext(r.Context(), "GET", fmt.Sprintf("https://raw.githubusercontent.com/jehiah/nyc_legislation/master/introduction/%d/index.json", year), nil)
+
+	rc, err := a.gsclient.Bucket("intronyc").Object(fmt.Sprintf("build/%d.json", year)).NewReader(r.Context())
 	if err != nil {
+		if err == storage.ErrObjectNotExist {
+			if !a.devMode {
+				w.Header().Add("Cache-Control", "public; max-age=300")
+				w.Header().Add("Expires", time.Now().Add(time.Minute*5).Format(http.TimeFormat))
+			}
+			http.Error(w, "Not Found", 404)
+			return
+		}
 		log.Printf("err %#v", err)
 		http.Error(w, "error", 500)
 		return
 	}
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil || resp.StatusCode != 200 {
-		http.Error(w, "error", 503)
-		return
-	}
-	defer resp.Body.Close()
+	defer rc.Close()
 	w.Header().Add("content-type", "application/json")
-	w.Header().Add("Cache-Control", "public; max-age=300")
-	w.Header().Add("expires", resp.Header.Get("expires"))
-	io.Copy(w, resp.Body)
+	if !a.devMode {
+		w.Header().Add("Cache-Control", "public; max-age=300")
+		w.Header().Add("Expires", time.Now().Add(time.Minute*5).Format(http.TimeFormat))
+	}
+
+	_, err = io.Copy(w, rc)
+	if err != nil {
+		log.Printf("%#v", err)
+	}
+
 }
 
 // FileRedirect redirects from /1234-2020 to the URL for File "Intro 1234-2020"
@@ -167,8 +182,15 @@ func main() {
 
 	log.Print("starting server...")
 
+	client, err := storage.NewClient(context.Background())
+	if err != nil {
+		log.Fatalf("Failed to create client: %v", err)
+	}
+	defer client.Close()
+
 	app := &App{
 		legistar:        legistar.NewClient("nyc", os.Getenv("NYC_LEGISLATOR_TOKEN")),
+		gsclient:        client,
 		devMode:         *devMode,
 		cachedRedirects: make(map[string]string),
 		staticHandler:   http.FileServer(http.FS(static)),
@@ -176,7 +198,6 @@ func main() {
 	if *devMode {
 		app.staticHandler = http.StripPrefix("/static/", http.FileServer(http.Dir("static")))
 	}
-	var err error
 	app.legistar.LookupURL, err = url.Parse("https://legistar.council.nyc.gov/gateway.aspx?m=l&id=")
 	if err != nil {
 		panic(err)
