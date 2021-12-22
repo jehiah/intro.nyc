@@ -4,13 +4,14 @@ go 1.17
 
 require (
 	github.com/gorilla/handlers v1.5.1
-	github.com/jehiah/legislator v0.0.0-20211112144850-03783eea0671
+	github.com/jehiah/legislator v0.0.0-20211222205252-82b634cd0c2d
 	github.com/julienschmidt/httprouter v1.3.0
 )
 
 require (
 	cloud.google.com/go v0.97.0 // indirect
 	cloud.google.com/go/storage v1.18.2 // indirect
+	github.com/dustin/go-humanize v1.0.0 // indirect
 	github.com/felixge/httpsnoop v1.0.2 // indirect
 	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
 	github.com/golang/protobuf v1.5.2 // indirect

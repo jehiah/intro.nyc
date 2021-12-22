@@ -9,3 +9,6 @@ Link to searches with `/?q=${query}`. In-browser searching is implemented with [
 
 `https://intro.nyc/${intro_number}-${intro_year}`
 i.e. https://intro.nyc/2159-2020
+
+`https://intro.nyc/${intro_number}-${intro_year}/local-law`
+i.e. https://intro.nyc/1394-2019/local-law
