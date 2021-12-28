@@ -23,6 +23,7 @@ import (
 
 	"cloud.google.com/go/storage"
 	"github.com/gorilla/handlers"
+	"github.com/jehiah/legislator/db"
 	"github.com/jehiah/legislator/legistar"
 	"github.com/julienschmidt/httprouter"
 )
@@ -158,6 +159,63 @@ func (a *App) LocalLaws(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 	w.Header().Set("content-type", "text/html")
 	a.addExpireHeaders(w, cacheTTL)
 	err = t.ExecuteTemplate(w, "local_laws.html", body)
+	if err != nil {
+		log.Print(err)
+		http.Error(w, "Internal Server Error", 500)
+	}
+}
+
+func activeMemberships(o []db.OfficeRecord) []db.OfficeRecord {
+	var final []db.OfficeRecord
+	now := time.Now()
+	for _, oo := range o {
+		if oo.End.Before(now) {
+			continue
+		}
+		switch oo.BodyName {
+		case "Committee of the Whole":
+			continue
+		case "City Council":
+			continue
+		case "Minority (Republican) Conference of the Council of the City of New York":
+			continue
+		case "Democratic Conference of the Council of the City of New Yorke":
+			continue
+		}
+		final = append(final, oo)
+	}
+	return final
+}
+
+// Councilmembers returns the list of councilmembers at /councilmembers
+func (a *App) Councilmembers(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+
+	t := newTemplate(a.templateFS, "councilmembers.html")
+
+	var people []db.Person
+	err := a.getJSONFile(r.Context(), "build/people_active.json", &people)
+	if err != nil {
+		log.Print(err)
+		http.Error(w, "Internal Server Error", 500)
+	}
+	for i, _ := range people {
+		people[i].OfficeRecords = activeMemberships(people[i].OfficeRecords)
+	}
+
+	cacheTTL := time.Minute * 5
+
+	type Page struct {
+		Page   string
+		People []db.Person
+	}
+	body := Page{
+		Page:   "councilmembers",
+		People: people,
+	}
+
+	w.Header().Set("content-type", "text/html")
+	a.addExpireHeaders(w, cacheTTL)
+	err = t.ExecuteTemplate(w, "councilmembers.html", body)
 	if err != nil {
 		log.Print(err)
 		http.Error(w, "Internal Server Error", 500)
@@ -321,7 +379,9 @@ func (a *App) FileRedirect(w http.ResponseWriter, r *http.Request, ps httprouter
 	case "local-laws":
 		a.LocalLaws(w, r, ps)
 		return
-
+	case "councilmembers":
+		a.Councilmembers(w, r, ps)
+		return
 	}
 	if !IsValidFileNumber(file) {
 		http.Error(w, "Not Found", 404)

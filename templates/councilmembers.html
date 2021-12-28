@@ -1,0 +1,56 @@
+{{template "base" .}}
+{{define "title"}}NYC Councilmembers{{end}}
+{{define "head"}}
+
+<style>
+.comittee {
+  font-size: 9px;
+}
+</style>
+{{end}}
+
+
+{{define "middle"}}
+
+<div class="row">
+
+<div class="col">
+
+<h3>Councilmembers</h3>
+
+<table class="table">
+<thead>
+  <tr>
+    <th>Councilmember</th>
+    <th>Class</th>
+    <th>Comitties</th>
+    <th>Links</th>
+  </tr>
+</thead>
+<tbody>
+{{range .People}}
+<tr>
+  <td>{{.FullName}}</td>
+  <td>{{.Start.Format "Jan 2006"}} - {{.End.Format "Jan 2006"}}</td>
+  <td>{{range .OfficeRecords }}
+  <span class="comittee">{{.BodyName}}</span><br>
+  {{end }}</td>
+  <td>
+    {{ if .WWW }}
+    <a href="{{.WWW}}">Official Website</a>
+    {{ end }}
+  </td>
+</tr>
+{{end}}
+
+</tbody>
+</table>
+
+</div>
+
+</div>
+
+{{end}}
+
+{{ block "last-updated" .}}{{end}}
+
