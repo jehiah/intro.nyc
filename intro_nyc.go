@@ -55,10 +55,16 @@ func (a *App) Index(w http.ResponseWriter, r *http.Request, ps httprouter.Params
 	}
 	defer f.Close()
 	w.Header().Set("content-type", "text/html")
-	if !a.devMode {
-		w.Header().Add("Cache-Control", "public; max-age=300")
-	}
+	a.addExpireHeaders(w, time.Minute*5)
 	io.Copy(w, f)
+}
+
+func (a *App) addExpireHeaders(w http.ResponseWriter, duration time.Duration) {
+	if a.devMode {
+		return
+	}
+	w.Header().Add("Cache-Control", fmt.Sprintf("public; max-age=%d", duration.Seconds()))
+	w.Header().Add("Expires", time.Now().Add(duration).Format(http.TimeFormat))
 }
 
 // IntroJSON proxies to /data/${year}.json to github:jehiah/nyc_legislation:introduction/$year/index.json
@@ -97,10 +103,7 @@ func (a *App) IntroJSON(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 	rc, err := a.gsclient.Bucket("intronyc").Object(fmt.Sprintf("build/%d.json", year)).NewReader(r.Context())
 	if err != nil {
 		if err == storage.ErrObjectNotExist {
-			if !a.devMode {
-				w.Header().Add("Cache-Control", "public; max-age=300")
-				w.Header().Add("Expires", time.Now().Add(time.Minute*5).Format(http.TimeFormat))
-			}
+			a.addExpireHeaders(w, time.Minute*5)
 			http.Error(w, "Not Found", 404)
 			return
 		}
@@ -110,10 +113,7 @@ func (a *App) IntroJSON(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 	}
 	defer rc.Close()
 	w.Header().Add("content-type", "application/json")
-	if !a.devMode {
-		w.Header().Add("Cache-Control", "public; max-age=300")
-		w.Header().Add("Expires", time.Now().Add(time.Minute*5).Format(http.TimeFormat))
-	}
+	a.addExpireHeaders(w, time.Minute*5)
 
 	_, err = io.Copy(w, rc)
 	if err != nil {
@@ -150,10 +150,7 @@ func (a *App) LocalLaw(w http.ResponseWriter, r *http.Request, file string) {
 	attachments, err := a.legistar.MatterAttachments(ctx, matters[0].ID)
 	for _, attachment := range attachments {
 		if strings.HasPrefix(attachment.Name, "Local Law") {
-			if !a.devMode {
-				w.Header().Add("Cache-Control", "public; max-age=604800")
-				w.Header().Add("Expires", time.Now().Add(time.Hour*24*7).Format(http.TimeFormat))
-			}
+			a.addExpireHeaders(w, time.Hour*24*7)
 			http.Redirect(w, r, attachment.Link, 301)
 			return
 		}
@@ -192,9 +189,7 @@ func (a *App) FileRedirect(w http.ResponseWriter, r *http.Request, ps httprouter
 	file = fmt.Sprintf("Int %s", file)
 
 	if redirect, ok := a.cachedRedirects[file]; ok {
-		if !a.devMode {
-			w.Header().Add("Cache-Control", "public; max-age=300")
-		}
+		a.addExpireHeaders(w, time.Hour)
 		http.Redirect(w, r, redirect, 302)
 		return
 	}
@@ -224,9 +219,7 @@ func (a *App) FileRedirect(w http.ResponseWriter, r *http.Request, ps httprouter
 		return
 	}
 	a.cachedRedirects[file] = redirect
-	if !a.devMode {
-		w.Header().Set("Cache-Control", "max-age=3600")
-	}
+	a.addExpireHeaders(w, time.Hour)
 	http.Redirect(w, r, redirect, 302)
 }
 
