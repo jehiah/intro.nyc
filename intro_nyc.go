@@ -56,7 +56,11 @@ func (a *App) Index(w http.ResponseWriter, r *http.Request, ps httprouter.Params
 	t := newTemplate(a.templateFS, "index.html")
 	w.Header().Set("content-type", "text/html")
 	a.addExpireHeaders(w, time.Minute*5)
-	err := t.ExecuteTemplate(w, "index.html", nil)
+	type Page struct {
+		Page string
+	}
+	body := Page{Page: "search"}
+	err := t.ExecuteTemplate(w, "index.html", body)
 	if err != nil {
 		log.Print(err)
 		http.Error(w, "Internal Server Error", 500)
@@ -125,11 +129,13 @@ func (a *App) LocalLaws(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 	}
 
 	type Page struct {
+		Page string
 		LocalLawYear
 		All []LocalLawYear
 	}
 	body := Page{
-		All: g,
+		Page: "local-laws",
+		All:  g,
 	}
 	for _, gg := range g {
 		if strconv.Itoa(gg.Year) == path {

@@ -17,22 +17,49 @@ body {
   font-family: 'Be Vietnam Pro', sans-serif;
 }
 
-.navbar {
+.navbar-header {
   background: #2f56a6;
   color: #fff;
   padding-top: 1rem;
   padding-bottom: 1rem;
+}
+.subnav {
   margin-bottom: 3rem;
+  text-align: center;
+}
+.subnav a {
+  max-width: 20em;
+  padding: .5rem 1rem;
+}
+.subnav .nav-link {
+  color: #000;
+  font-weight: 200;
+  display: inline-block;
+}
+.subnav .nav-link:hover {
+  color: #2f56a6;
+  background-color: #f0f0f0;
+  border-bottom: 1px solid #2f56a6;  
+}
+.subnav .nav-link.active {
+  font-weight: 400;
+  border-bottom: 2px solid #2f56a6;
 }
 .navbar-brand {
   padding-right: 1em;
+  width: 240px;
+  text-align: left;
+  margin-right: 0;
 }
-.navbar a {
+.navbar-header a {
   color: inherit;
 }
 .navbar-right {
   padding: 0.3em 0.75em;
+  width: 240px;
+  text-align: right;
 }
+
 .h1 {
   font-size: 2rem;
 }
@@ -85,7 +112,7 @@ footer p {
 </head>
 <body>
 
-<nav class="navbar">
+<nav class="navbar navbar-header">
   <div class="container-fluid">
     <a class="navbar-brand" href="https://intro.nyc/">
     <img src="/static/intro_nyc_logo.png" alt="" width="55" height="55" class="d-inline-block align-text-middle" style="margin:-10px;">Intro.nyc</a>
@@ -93,6 +120,15 @@ footer p {
     <a href="https://legistar.council.nyc.gov/Legislation.aspx" class="navbar-right"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-external-link"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg> legistar.council.nyc.gov</a> 
   </div>
 </nav>
+
+<nav class="subnav">
+  <div>
+    <a class="nav-link {{if eq .Page "search"}}active{{end}}" href="/">Search</a>
+    <a class="nav-link " href="/">Recent Legislation</a>
+    <a class="nav-link {{if eq .Page "local-laws"}}active{{end}}" href="/local-laws">Local Laws</a>
+  </div>
+</nav>
+
 
 <div class="container">
   {{ template "middle" .}}
