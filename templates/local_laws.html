@@ -1,0 +1,59 @@
+{{template "base" .}}
+{{define "title"}}NYC Local Laws of {{.Year}}{{end}}
+{{define "head"}}
+
+<style>
+.local-law {
+  margin-bottom: 1em;
+}
+.title {
+  font-weight: 200;
+  font-size: .9rem;
+}
+.callout {
+  border-radius: 1em;
+  padding: 1em;
+}
+
+</style>
+{{end}}
+
+
+{{define "middle"}}
+
+<div class="row">
+
+<div class="col-sm-12 col-lg-6 col-md-9">
+
+<h3 id="{{.Year}}">Local Laws of {{.Year}}</h3>
+
+{{range .Laws}}
+<div class="local-law" id="{{.LocalLawNumber}}-{{.Year}}">
+  <a href="{{.LocalLawLink}}">{{.LocalLaw}} of {{.Year}}</a> <a href="{{.IntroLink}}" class="file-link"><span class="badge file">{{.IntroLinkText}}</span></a> 
+  <p class="title">{{.Title}}</p>
+</div>
+{{end}}
+
+</div>
+
+<div class="col-sm-12 col-lg-2 offset-lg-3 offset-md-0 col-md-3">
+
+<div class="callout border">
+Local Laws
+<ul>
+{{range .All}}
+<li><a href="/local-laws/{{.Year}}">{{.Year}}</a></li>
+{{end}}
+</ul>
+
+</div>
+
+</div>
+
+
+</div>
+
+{{end}}
+
+{{ block "last-updated" .}}{{end}}
+

@@ -4,15 +4,19 @@ import (
 	"context"
 	"embed"
 	_ "embed"
+	"encoding/json"
 	"flag"
 	"fmt"
+	"html/template"
 	"io"
 	"io/fs"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -23,7 +27,7 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
-//go:embed templates/index.html
+//go:embed templates/*
 var content embed.FS
 
 //go:embed static/*
@@ -36,27 +40,128 @@ type App struct {
 
 	cachedRedirects map[string]string
 	staticHandler   http.Handler
+	templateFS      fs.FS
+}
+
+func newTemplate(fs fs.FS, n string) *template.Template {
+	funcMap := template.FuncMap{
+		"ToLower": strings.ToLower,
+	}
+	t := template.New("empty").Funcs(funcMap)
+	return template.Must(t.ParseFS(fs, filepath.Join("templates", n), "templates/base.html"))
 }
 
 // Index returns the root path of `/`
 func (a *App) Index(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	var f fs.File
-	var err error
-	if a.devMode {
-		f, err = os.Open("templates/index.html")
-	} else {
-		f, err = content.Open("templates/index.html")
-	}
-
-	if err != nil {
-		log.Printf("%#v", err)
-		http.Error(w, "error", 500)
-		return
-	}
-	defer f.Close()
+	t := newTemplate(a.templateFS, "index.html")
 	w.Header().Set("content-type", "text/html")
 	a.addExpireHeaders(w, time.Minute*5)
-	io.Copy(w, f)
+	err := t.ExecuteTemplate(w, "index.html", nil)
+	if err != nil {
+		log.Print(err)
+		http.Error(w, "Internal Server Error", 500)
+	}
+}
+
+type LocalLaw struct {
+	File, Name, LocalLaw, Title string
+	Year, LocalLawNumber        int
+	LocalLawLink                template.URL
+}
+
+func (ll LocalLaw) IntroLink() template.URL {
+	return template.URL("/" + strings.TrimPrefix(ll.File, "Int "))
+}
+func (ll LocalLaw) IntroLinkText() string {
+	return "intro.nyc/" + strings.TrimPrefix(ll.File, "Int ")
+}
+
+type LocalLawYear struct {
+	Year int
+	Laws []LocalLaw
+}
+
+func groupLaws(l []LocalLaw) []LocalLawYear {
+	years := make(map[int]*LocalLawYear)
+	for _, ll := range l {
+		g, ok := years[ll.Year]
+		if !ok {
+			g = &LocalLawYear{Year: ll.Year}
+			years[ll.Year] = g
+		}
+		g.Laws = append(g.Laws, ll)
+	}
+	var groups []LocalLawYear
+	for _, g := range years {
+		groups = append(groups, *g)
+	}
+	sort.Slice(groups, func(i, j int) bool { return groups[i].Year > groups[j].Year })
+	return groups
+}
+
+// LocalLaws returns the list of local laws at /local-laws
+func (a *App) LocalLaws(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+
+	t := newTemplate(a.templateFS, "local_laws.html")
+
+	var laws []LocalLaw
+	err := a.getJSONFile(r.Context(), "build/local_laws.json", &laws)
+	if err != nil {
+		log.Print(err)
+		http.Error(w, "Internal Server Error", 500)
+	}
+
+	g := groupLaws(laws)
+
+	path := ps.ByName("year")
+	if path == "" {
+		a.addExpireHeaders(w, time.Hour)
+		http.Redirect(w, r, fmt.Sprintf("/local-laws/%d", g[0].Year), 302)
+		return
+	}
+	cacheTTL := time.Minute * 5
+	if path != strconv.Itoa(time.Now().Year()) {
+		cacheTTL = time.Hour * 24
+	}
+
+	type Page struct {
+		LocalLawYear
+		All []LocalLawYear
+	}
+	body := Page{
+		All: g,
+	}
+	for _, gg := range g {
+		if strconv.Itoa(gg.Year) == path {
+			body.LocalLawYear = gg
+			break
+		}
+	}
+	if body.LocalLawYear.Year == 0 {
+		http.Error(w, "Not Found", 404)
+		return
+	}
+
+	w.Header().Set("content-type", "text/html")
+	a.addExpireHeaders(w, cacheTTL)
+	err = t.ExecuteTemplate(w, "local_laws.html", body)
+	if err != nil {
+		log.Print(err)
+		http.Error(w, "Internal Server Error", 500)
+	}
+}
+
+func (a *App) getJSONFile(ctx context.Context, filename string, v interface{}) error {
+	f, err := a.getFile(ctx, filename)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	return json.NewDecoder(f).Decode(v)
+}
+
+func (a *App) getFile(ctx context.Context, filename string) (io.ReadCloser, error) {
+	return a.gsclient.Bucket("intronyc").Object(filename).NewReader(ctx)
 }
 
 func (a *App) addExpireHeaders(w http.ResponseWriter, duration time.Duration) {
@@ -67,20 +172,31 @@ func (a *App) addExpireHeaders(w http.ResponseWriter, duration time.Duration) {
 	w.Header().Add("Expires", time.Now().Add(duration).Format(http.TimeFormat))
 }
 
-// IntroJSON proxies to /data/${year}.json to github:jehiah/nyc_legislation:introduction/$year/index.json
-//
-// Note: the router match pattern is `/:file/:year` so `:file` must be == "data"
-func (a *App) IntroJSON(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func (a *App) L2(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	path := ps.ByName("year")
 	file := ps.ByName("file")
 	if path == "local-law" && IsValidFileNumber(file) {
 		a.LocalLaw(w, r, file)
 		return
 	}
-	switch file {
-	case "static":
+	if file == "local-laws" {
+		a.LocalLaws(w, r, ps)
+		return
+	}
+	if file == "static" {
 		a.staticHandler.ServeHTTP(w, r)
 		return
+	}
+	a.IntroJSON(w, r, ps)
+}
+
+// IntroJSON proxies to /data/${year}.json to github:jehiah/nyc_legislation:introduction/$year/index.json
+//
+// Note: the router match pattern is `/:file/:year` so `:file` must be == "data"
+func (a *App) IntroJSON(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	path := ps.ByName("year")
+	file := ps.ByName("file")
+	switch file {
 	case "data":
 	default:
 		log.Printf("file != data %q", file)
@@ -100,7 +216,7 @@ func (a *App) IntroJSON(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 		return
 	}
 
-	rc, err := a.gsclient.Bucket("intronyc").Object(fmt.Sprintf("build/%d.json", year)).NewReader(r.Context())
+	rc, err := a.getFile(r.Context(), fmt.Sprintf("build/%d.json", year))
 	if err != nil {
 		if err == storage.ErrObjectNotExist {
 			a.addExpireHeaders(w, time.Minute*5)
@@ -122,6 +238,9 @@ func (a *App) IntroJSON(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 
 }
 
+// LocalLaw redirects to the attachment with name "Local Law ..."
+// URL: /1234-2020/local-law
+//
 // file == 1234-2020
 func (a *App) LocalLaw(w http.ResponseWriter, r *http.Request, file string) {
 	ctx := r.Context()
@@ -182,6 +301,12 @@ func IsValidFileNumber(file string) bool {
 func (a *App) FileRedirect(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 	file := ps.ByName("file")
+	switch file {
+	case "local-laws":
+		a.LocalLaws(w, r, ps)
+		return
+
+	}
 	if !IsValidFileNumber(file) {
 		http.Error(w, "Not Found", 404)
 		return
@@ -242,8 +367,10 @@ func main() {
 		devMode:         *devMode,
 		cachedRedirects: make(map[string]string),
 		staticHandler:   http.FileServer(http.FS(static)),
+		templateFS:      content,
 	}
 	if *devMode {
+		app.templateFS = os.DirFS(".")
 		app.staticHandler = http.StripPrefix("/static/", http.FileServer(http.Dir("static")))
 	}
 	app.legistar.LookupURL, err = url.Parse("https://legistar.council.nyc.gov/gateway.aspx?m=l&id=")
@@ -253,7 +380,7 @@ func main() {
 
 	router := httprouter.New()
 	router.GET("/", app.Index)
-	router.GET("/:file/:year", app.IntroJSON)
+	router.GET("/:file/:year", app.L2)
 	router.GET("/:file", app.FileRedirect)
 
 	// Determine port for HTTP service.

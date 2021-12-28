@@ -1,0 +1,116 @@
+{{define "base"}}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{template "title" .}}</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css" integrity="sha512-GQGU0fMMi238uA+a/bdWJfpUGKUkBdgfFdgBm72SUQ6BeyWjoY/ton0tEjH+OSH9iP4Dfh+7HM0I9f5eR0L/4w==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="shortcut icon" type="image/png" href="/static/intro_nyc_logo.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@200;400&display=swap');
+
+body {
+  font-family: 'Be Vietnam Pro', sans-serif;
+}
+
+.navbar {
+  background: #2f56a6;
+  color: #fff;
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+  margin-bottom: 3rem;
+}
+.navbar-brand {
+  padding-right: 1em;
+}
+.navbar a {
+  color: inherit;
+}
+.navbar-right {
+  padding: 0.3em 0.75em;
+}
+.h1 {
+  font-size: 2rem;
+}
+
+h3 {
+  font-size: calc(1.3rem + .1vw);
+}
+
+.btn-primary {
+  background: #2f56a6;
+  border-color: #2f56a6;
+}
+
+.file {
+  line-height: 1rem;
+  font-size: .75rem;
+  padding: .25em 0.6em;
+  text-decoration: inherit;
+  /*font-weight: 200;*/
+}
+a.file-link:link {
+  text-decoration: none;
+}
+.file {
+  /*background-color: #d0d4dd;*/
+  background-color: #e4e6ef;
+  color: #2f56a6;
+}
+
+.file:hover{
+  color: #e4e6ef;
+  background-color: #2f56a6;
+}
+
+footer {
+  text-align: center;
+  font-size: .75rem;
+  color: #999;
+  padding: 2rem 1rem;
+}
+footer a:link, footer a:visited {
+  color: #777;
+}
+footer p {
+  margin-bottom: .5rem;
+}
+</style>
+{{block "head" .}}{{end}}
+
+</head>
+<body>
+
+<nav class="navbar">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="https://intro.nyc/">
+    <img src="/static/intro_nyc_logo.png" alt="" width="55" height="55" class="d-inline-block align-text-middle" style="margin:-10px;">Intro.nyc</a>
+    <span class="h1">New York City Council Legislation</span>
+    <a href="https://legistar.council.nyc.gov/Legislation.aspx" class="navbar-right"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-external-link"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg> legistar.council.nyc.gov</a> 
+  </div>
+</nav>
+
+<div class="container">
+  {{ template "middle" .}}
+
+<div class="row">
+
+<footer>
+<p>Made with ❤️ by <a href="https://jehiah.cz/">@jehiah</a>. Code on <a href="https://github.com/jehiah/intro.nyc/">GitHub</a>. <a href="https://twitter.com/@intro_nyc">@intro_nyc</a> on Twitter.</p>
+<p>Data from <a href="https://council.nyc.gov/legislation/api/">NYC Council Legislative API</a></p>
+{{ block "last-updated" .}}{{end}}
+</footer>
+
+</div>
+
+</div>
+
+{{ block "javascript" .}}{{end}}
+
+  </body>
+</html>
+{{end}}
