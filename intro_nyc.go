@@ -52,6 +52,13 @@ func newTemplate(fs fs.FS, n string) *template.Template {
 }
 
 // Index returns the root path of `/`
+func (a *App) RobotsTXT(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	w.Header().Set("content-type", "text/plain")
+	a.addExpireHeaders(w, time.Hour*24*7)
+	io.WriteString(w, "# robots welcome\n# https://github.com/jehiah/intro.nyc\n")
+}
+
+// Index returns the root path of `/`
 func (a *App) Index(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	t := newTemplate(a.templateFS, "index.html")
 	w.Header().Set("content-type", "text/html")
@@ -308,6 +315,9 @@ func (a *App) FileRedirect(w http.ResponseWriter, r *http.Request, ps httprouter
 
 	file := ps.ByName("file")
 	switch file {
+	case "robots.txt":
+		a.RobotsTXT(w, r, ps)
+		return
 	case "local-laws":
 		a.LocalLaws(w, r, ps)
 		return
