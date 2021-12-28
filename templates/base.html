@@ -29,7 +29,7 @@ body {
 }
 .subnav a {
   max-width: 20em;
-  padding: .5rem 1rem;
+  padding: .5rem .5rem;
 }
 .subnav .nav-link {
   color: #000;
@@ -61,8 +61,35 @@ body {
 }
 
 .h1 {
-  font-size: 2rem;
+  font-size: 1.2rem;
 }
+@media (min-width: 992px) {
+  .h1 {
+    font-size: 1.75rem;
+  }
+}
+@media (max-width: 575.98px) {
+  .h1 {
+    font-size: 1.2rem;
+    order: -1!important;
+  }
+  .navbar-right {
+    font-size: .8rem;
+    width: auto;
+    padding: 0.25rem 0;
+  }
+  .navbar-brand {
+    font-size: .8rem;
+    padding-right: 0;
+    width: auto;
+  }
+  .navbar-brand > img {
+    width: 30px;
+    height: 30px;
+    padding-right: 5px;
+  }
+}
+
 
 h3 {
   font-size: calc(1.3rem + .1vw);

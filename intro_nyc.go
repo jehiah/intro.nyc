@@ -51,7 +51,7 @@ func newTemplate(fs fs.FS, n string) *template.Template {
 	return template.Must(t.ParseFS(fs, filepath.Join("templates", n), "templates/base.html"))
 }
 
-// Index returns the root path of `/`
+// RobotsTXT renders /robots.txt
 func (a *App) RobotsTXT(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	w.Header().Set("content-type", "text/plain")
 	a.addExpireHeaders(w, time.Hour*24*7)
