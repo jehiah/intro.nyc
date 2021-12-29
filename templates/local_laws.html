@@ -55,5 +55,7 @@ Local Laws
 
 {{end}}
 
-{{ block "last-updated" .}}{{end}}
+{{ define "last-updated"}}
+<p>Data Last Updated <span class="last-updated" title="{{.LastSync.LastRun}}">{{.LastSync.LastRun | Time}}</span></p>
+{{end}}
 

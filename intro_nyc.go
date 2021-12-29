@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/storage"
+	"github.com/dustin/go-humanize"
 	"github.com/gorilla/handlers"
 	"github.com/jehiah/legislator/db"
 	"github.com/jehiah/legislator/legistar"
@@ -52,9 +53,15 @@ func twitterUsername(s string) string {
 	return "@" + strings.TrimPrefix(u.Path, "/")
 }
 
+func commaInt(i int) string {
+	return humanize.Comma(int64(i))
+}
+
 func newTemplate(fs fs.FS, n string) *template.Template {
 	funcMap := template.FuncMap{
 		"ToLower":         strings.ToLower,
+		"Comma":           commaInt,
+		"Time":            humanize.Time,
 		"TwitterUsername": twitterUsername,
 	}
 	t := template.New("empty").Funcs(funcMap)
@@ -82,6 +89,10 @@ func (a *App) Index(w http.ResponseWriter, r *http.Request, ps httprouter.Params
 		log.Print(err)
 		http.Error(w, "Internal Server Error", 500)
 	}
+}
+
+type LastSync struct {
+	LastRun time.Time
 }
 
 type LocalLaw struct {
@@ -148,7 +159,8 @@ func (a *App) LocalLaws(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 	type Page struct {
 		Page string
 		LocalLawYear
-		All []LocalLawYear
+		All      []LocalLawYear
+		LastSync LastSync
 	}
 	body := Page{
 		Page: "local-laws",
@@ -163,6 +175,12 @@ func (a *App) LocalLaws(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 	if body.LocalLawYear.Year == 0 {
 		http.Error(w, "Not Found", 404)
 		return
+	}
+
+	err = a.getJSONFile(r.Context(), "build/last_sync.json", &body.LastSync)
+	if err != nil {
+		log.Print(err)
+		http.Error(w, "Internal Server Error", 500)
 	}
 
 	w.Header().Set("content-type", "text/html")
@@ -244,8 +262,9 @@ func (a *App) Councilmembers(w http.ResponseWriter, r *http.Request, ps httprout
 	cacheTTL := time.Minute * 5
 
 	type Page struct {
-		Page   string
-		People []Person
+		Page     string
+		People   []Person
+		LastSync LastSync
 	}
 	body := Page{
 		Page: "councilmembers",
@@ -265,6 +284,12 @@ func (a *App) Councilmembers(w http.ResponseWriter, r *http.Request, ps httprout
 				body.People[i].Twitter = t
 			}
 		}
+	}
+
+	err = a.getJSONFile(r.Context(), "build/last_sync.json", &body.LastSync)
+	if err != nil {
+		log.Print(err)
+		http.Error(w, "Internal Server Error", 500)
 	}
 
 	w.Header().Set("content-type", "text/html")
@@ -293,7 +318,7 @@ func (a *App) addExpireHeaders(w http.ResponseWriter, duration time.Duration) {
 	if a.devMode {
 		return
 	}
-	w.Header().Add("Cache-Control", fmt.Sprintf("public; max-age=%d", duration.Seconds()))
+	w.Header().Add("Cache-Control", fmt.Sprintf("public; max-age=%d", int(duration.Seconds())))
 	w.Header().Add("Expires", time.Now().Add(duration).Format(http.TimeFormat))
 }
 
