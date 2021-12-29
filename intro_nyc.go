@@ -151,7 +151,7 @@ func (a *App) LocalLaws(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 		http.Redirect(w, r, fmt.Sprintf("/local-laws/%d", g[0].Year), 302)
 		return
 	}
-	cacheTTL := time.Minute * 5
+	cacheTTL := time.Minute * 10
 	if path != strconv.Itoa(time.Now().Year()) {
 		cacheTTL = time.Hour * 24
 	}
@@ -259,7 +259,7 @@ func (a *App) Councilmembers(w http.ResponseWriter, r *http.Request, ps httprout
 		http.Error(w, "Internal Server Error", 500)
 	}
 
-	cacheTTL := time.Minute * 5
+	cacheTTL := time.Minute * 30
 
 	type Page struct {
 		Page     string
