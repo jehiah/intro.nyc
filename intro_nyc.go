@@ -44,9 +44,18 @@ type App struct {
 	templateFS      fs.FS
 }
 
+func twitterUsername(s string) string {
+	u, err := url.Parse(s)
+	if err != nil {
+		return ""
+	}
+	return "@" + strings.TrimPrefix(u.Path, "/")
+}
+
 func newTemplate(fs fs.FS, n string) *template.Template {
 	funcMap := template.FuncMap{
-		"ToLower": strings.ToLower,
+		"ToLower":         strings.ToLower,
+		"TwitterUsername": twitterUsername,
 	}
 	t := template.New("empty").Funcs(funcMap)
 	return template.Must(t.ParseFS(fs, filepath.Join("templates", n), "templates/base.html"))
@@ -165,10 +174,30 @@ func (a *App) LocalLaws(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 	}
 }
 
-func activeMemberships(o []db.OfficeRecord) []db.OfficeRecord {
+type Person struct {
+	db.Person
+	Twitter
+}
+type Twitter struct {
+	ID              int
+	Twitter         string
+	TwitterPersonal string
+}
+
+func (t Twitter) TwitterAccounts() []string {
+	var s []string
+	for _, a := range []string{t.Twitter, t.TwitterPersonal} {
+		if a != "" {
+			s = append(s, a)
+		}
+	}
+	return s
+}
+
+func (p Person) ActiveOfficeRecords() []db.OfficeRecord {
 	var final []db.OfficeRecord
 	now := time.Now()
-	for _, oo := range o {
+	for _, oo := range p.OfficeRecords {
 		if oo.End.Before(now) {
 			continue
 		}
@@ -177,14 +206,27 @@ func activeMemberships(o []db.OfficeRecord) []db.OfficeRecord {
 			continue
 		case "City Council":
 			continue
-		case "Minority (Republican) Conference of the Council of the City of New York":
+		case "Minority (Republican) Conference of the Council of the City of New York ":
 			continue
-		case "Democratic Conference of the Council of the City of New Yorke":
+		case "Democratic Conference of the Council of the City of New York ":
 			continue
 		}
 		final = append(final, oo)
 	}
+	sort.Slice(final, func(i, j int) bool { return final[i].BodyName < final[j].BodyName })
+
 	return final
+}
+func (p Person) Party() string {
+	for _, oo := range p.OfficeRecords {
+		switch oo.BodyName {
+		case "Minority (Republican) Conference of the Council of the City of New York ":
+			return "(R)"
+		case "Democratic Conference of the Council of the City of New York ":
+			return "(D)"
+		}
+	}
+	return ""
 }
 
 // Councilmembers returns the list of councilmembers at /councilmembers
@@ -198,19 +240,31 @@ func (a *App) Councilmembers(w http.ResponseWriter, r *http.Request, ps httprout
 		log.Print(err)
 		http.Error(w, "Internal Server Error", 500)
 	}
-	for i, _ := range people {
-		people[i].OfficeRecords = activeMemberships(people[i].OfficeRecords)
-	}
 
 	cacheTTL := time.Minute * 5
 
 	type Page struct {
 		Page   string
-		People []db.Person
+		People []Person
 	}
 	body := Page{
-		Page:   "councilmembers",
-		People: people,
+		Page: "councilmembers",
+	}
+	for _, p := range people {
+		body.People = append(body.People, Person{Person: p})
+	}
+	var twitter []Twitter
+	err = a.getJSONFile(r.Context(), "build/twitter.json", &twitter)
+	if err != nil {
+		log.Print(err)
+		http.Error(w, "Internal Server Error", 500)
+	}
+	for _, t := range twitter {
+		for i, u := range body.People {
+			if u.Person.ID == t.ID {
+				body.People[i].Twitter = t
+			}
+		}
 	}
 
 	w.Header().Set("content-type", "text/html")

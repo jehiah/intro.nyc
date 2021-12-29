@@ -1,10 +1,32 @@
 {{template "base" .}}
-{{define "title"}}NYC Councilmembers{{end}}
+{{define "title"}}NYC Council Members{{end}}
 {{define "head"}}
 
 <style>
-.comittee {
-  font-size: 9px;
+.committees {
+  line-height: 18px;
+  font-size: 11px;
+}
+.committee {
+}
+.class {
+  font-size: .8rem;
+  font-weight: 200;
+}
+.party {
+  font-size: .8rem;
+  font-weight: 200;
+}
+.member-type {
+  font-size: 10px;
+  background-color: #f7f0bc;
+  padding: 0 .25rem;
+}
+.social {
+  font-size: .9rem;
+}
+.external-links {
+  font-size: .9rem;
 }
 </style>
 {{end}}
@@ -16,26 +38,33 @@
 
 <div class="col">
 
-<h3>Councilmembers</h3>
+<h3>Council Members</h3>
 
 <table class="table">
 <thead>
   <tr>
-    <th>Councilmember</th>
-    <th>Class</th>
-    <th>Comitties</th>
+    <th>Council Members</th>
+    <th>Committees</th>
+    <th>Social</th>
     <th>Links</th>
   </tr>
 </thead>
 <tbody>
 {{range .People}}
 <tr>
-  <td>{{.FullName}}</td>
-  <td>{{.Start.Format "Jan 2006"}} - {{.End.Format "Jan 2006"}}</td>
-  <td>{{range .OfficeRecords }}
-  <span class="comittee">{{.BodyName}}</span><br>
+  <td><span class="full-name">{{.FullName}}</span> <span class="party">{{.Party}}</span><br>
+    <span class="class">{{.Start.Format "Jan 2006"}} - {{.End.Format "Jan 2006"}}</span>
+  </td>
+  <td class="committees">{{range .ActiveOfficeRecords }}
+  <span class="committee">{{.BodyName}}</span>
+  {{ if eq .MemberType "CHAIR" }}<span class="member-type">(chair)</span>{{end}}
+  <br>
   {{end }}</td>
-  <td>
+  <td class="social">{{ range .TwitterAccounts }}
+  <a href="{{.}}" class="twitter">{{. | TwitterUsername}}</a><br>
+  {{end}}
+  </td>
+  <td class="external-links">
     {{ if .WWW }}
     <a href="{{.WWW}}">Official Website</a>
     {{ end }}
