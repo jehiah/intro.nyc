@@ -1,0 +1,136 @@
+{{template "base" .}}
+{{define "title"}}{{.Person.FullName}} Legislation{{end}}
+{{define "head"}}
+
+<style>
+.committees {
+  line-height: 18px;
+  font-size: 11px;
+}
+.committee {
+}
+.class {
+  font-size: .8rem;
+  font-weight: 200;
+}
+.party {
+  font-size: .8rem;
+  font-weight: 200;
+}
+.member-type {
+  font-size: 10px;
+  background-color: #f7f0bc;
+  padding: 0 .25rem;
+}
+.social {
+  font-size: .9rem;
+}
+.external-links {
+  font-size: .9rem;
+}
+.note {
+	font-weight: 200;
+}
+
+.table-condensed>:not(caption)>*>* {
+	padding: 0.5rem 0;
+}
+.status-enacted {
+	--bs-bg-opacity: 1;
+	background-color: rgba(var(--bs-success-rgb),var(--bs-bg-opacity))!important;
+}
+.status-introduced, .status-committee, .status-laied {
+	background-color: #2f56a6 !important;
+}
+.status-withdrawn, .status-filed {
+	--bs-bg-opacity: 1;
+	background-color: rgba(var(--bs-secondary-rgb),var(--bs-bg-opacity))!important;
+}
+.status-vetoed {
+	--bs-bg-opacity: 1;
+	background-color: rgba(var(--bs-danger-rgb),var(--bs-bg-opacity))!important;
+}
+
+}
+</style>
+{{end}}
+
+
+{{define "middle"}}
+
+<div class="row">
+<div class="col">
+
+<h3>{{.Person.FullName}}</h3>
+<p><span class="class">{{.Person.Start.Format "Jan 2006"}} - {{.Person.End.Format "Jan 2006"}}</span></p>
+
+{{ if .Person.ActiveOfficeRecords }}
+<h4>Comittees</h4>
+<p class="committees">
+  {{range .Person.ActiveOfficeRecords }}
+  <span class="committee">{{.BodyName}}</span>
+  {{ if eq .MemberType "CHAIR" }}<span class="member-type">(chair)</span>{{end}}
+  <br>
+  {{end }}
+</p>
+{{ end }}
+
+</div>
+</div>
+
+<div class="row">
+
+{{ if .PrimarySponsor.All }}
+<div class="col-sm-12 col-md-6">
+
+<h4>Legislation</h4>
+<p class="note">Introduced in active legislative session</p>
+
+<table class="table table-condensed">
+<tbody>
+{{ range .PrimarySponsor.Statuses}}
+<tr><td>{{.Count}} <span class="status">{{.Name}}</span><br>
+<div class="progress">
+  <div class="progress-bar {{.CSSClass}}" role="progressbar" style="width: {{printf "%0.f" .Percent}}%;" aria-valuenow="{{printf "%0.f" .Percent}}" aria-valuemin="0" aria-valuemax="100">{{printf "%0.f" .Percent}}%</div>
+</div>	
+</td></tr>
+{{ end }}
+</tbody>
+</table>
+</div>
+
+{{ end }}
+
+
+{{ if .SecondarySponsor.All }}
+<div class="col-sm-12 col-md-6">
+
+<h4>Legislation (Sponsored)</h4>
+<p class="note">Sponsored in active legislative session</p>
+
+<table class="table table-condensed">
+<tbody>
+{{ range .SecondarySponsor.Statuses}}
+<tr><td>{{.Count}} <span class="status">{{.Name}}</span><br>
+<div class="progress">
+  <div class="progress-bar {{.CSSClass}}" role="progressbar" style="width: {{printf "%0.f" .Percent}}%;" aria-valuenow="{{printf "%0.f" .Percent}}" aria-valuemin="0" aria-valuemax="100">{{printf "%0.f" .Percent}}%</div>
+</div>	
+</td></tr>
+{{ end }}
+</tbody>
+</table>
+</div>
+
+{{ end }}
+
+
+</div>
+
+
+{{end}}
+
+{{ define "last-updated"}}
+<p>Data Last Updated <span class="last-updated" title="{{.LastSync.LastRun}}">{{.LastSync.LastRun | Time}}</span></p>
+{{end}}
+
+

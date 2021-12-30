@@ -51,7 +51,7 @@
 <tbody>
 {{range .People}}
 <tr>
-  <td><span class="full-name">{{.FullName}}</span> <span class="party">{{.Party}}</span><br>
+  <td><span class="full-name"><a href="/councilmembers/{{.Slug}}">{{.FullName}}</a></span> <span class="party">{{.Party}}</span><br>
     <span class="class">{{.Start.Format "Jan 2006"}} - {{.End.Format "Jan 2006"}}</span>
   </td>
   <td class="committees">{{range .ActiveOfficeRecords }}
