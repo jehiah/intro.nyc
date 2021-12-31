@@ -136,6 +136,24 @@ footer a:link, footer a:visited {
 footer p {
   margin-bottom: .5rem;
 }
+.twitter::before, .facebook::before, .instagram::before {
+  background-size: 1em 1em;
+  content: ' ';
+  vertical-align: middle;
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  margin: 0 .3em;
+}
+.twitter::before {
+  background-image: url("/static/twitter.svg");
+}
+.facebook::before {
+  background-image: url("/static/facebook.svg");
+}
+.instagram::before {
+  background-image: url("/static/instagram.svg");
+}
 </style>
 {{block "head" .}}{{end}}
 
