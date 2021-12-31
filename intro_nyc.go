@@ -45,24 +45,15 @@ type App struct {
 	templateFS      fs.FS
 }
 
-func twitterUsername(s string) string {
-	u, err := url.Parse(s)
-	if err != nil {
-		return ""
-	}
-	return "@" + strings.TrimPrefix(u.Path, "/")
-}
-
 func commaInt(i int) string {
 	return humanize.Comma(int64(i))
 }
 
 func newTemplate(fs fs.FS, n string) *template.Template {
 	funcMap := template.FuncMap{
-		"ToLower":         strings.ToLower,
-		"Comma":           commaInt,
-		"Time":            humanize.Time,
-		"TwitterUsername": twitterUsername,
+		"ToLower": strings.ToLower,
+		"Comma":   commaInt,
+		"Time":    humanize.Time,
 	}
 	t := template.New("empty").Funcs(funcMap)
 	return template.Must(t.ParseFS(fs, filepath.Join("templates", n), "templates/base.html"))
@@ -194,22 +185,67 @@ func (a *App) LocalLaws(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 
 type Person struct {
 	db.Person
-	Twitter
+	PersonMetadata
 }
-type Twitter struct {
-	ID              int
-	Twitter         string
-	TwitterPersonal string
+type PersonMetadata struct {
+	ID                           int
+	Twitter, TwitterPersonal     string
+	Facebook, FacebookPersonal   string
+	Instagram, InstagramPersonal string
+}
+type SocialAccount struct {
+	Username string
+	Link     string
+	CSSClass string
 }
 
-func (t Twitter) TwitterAccounts() []string {
-	var s []string
-	for _, a := range []string{t.Twitter, t.TwitterPersonal} {
-		if a != "" {
-			s = append(s, a)
+func twitterUsername(s string) string {
+	if s == "" {
+		return ""
+	}
+	u, err := url.Parse(s)
+	if err != nil {
+		return ""
+	}
+	return "@" + strings.TrimPrefix(u.Path, "/")
+}
+func facebookUsername(s string) string {
+	if s == "" {
+		return ""
+	}
+	u, err := url.Parse(s)
+	if err != nil {
+		return ""
+	}
+	return strings.Trim(u.Path, "/")
+}
+func instagramUsername(s string) string {
+	if s == "" {
+		return ""
+	}
+	u, err := url.Parse(s)
+	if err != nil {
+		return ""
+	}
+	return strings.Trim(u.Path, "/")
+}
+
+func (t PersonMetadata) SocialAccounts() []SocialAccount {
+	accounts := []SocialAccount{
+		{twitterUsername(t.Twitter), t.Twitter, "twitter"},
+		{twitterUsername(t.TwitterPersonal), t.TwitterPersonal, "twitter"},
+		{facebookUsername(t.Facebook), t.Facebook, "facebook"},
+		{facebookUsername(t.FacebookPersonal), t.FacebookPersonal, "facebook"},
+		{instagramUsername(t.Instagram), t.Instagram, "instagram"},
+		{instagramUsername(t.InstagramPersonal), t.InstagramPersonal, "instagram"},
+	}
+	var o []SocialAccount
+	for _, a := range accounts {
+		if a.Link != "" {
+			o = append(o, a)
 		}
 	}
-	return s
+	return o
 }
 
 func (p Person) ActiveOfficeRecords() []db.OfficeRecord {
@@ -272,16 +308,16 @@ func (a *App) Councilmembers(w http.ResponseWriter, r *http.Request, ps httprout
 	for _, p := range people {
 		body.People = append(body.People, Person{Person: p})
 	}
-	var twitter []Twitter
-	err = a.getJSONFile(r.Context(), "build/twitter.json", &twitter)
+	var metadata []PersonMetadata
+	err = a.getJSONFile(r.Context(), "build/people_metadata.json", &metadata)
 	if err != nil {
 		log.Print(err)
 		http.Error(w, "Internal Server Error", 500)
 	}
-	for _, t := range twitter {
+	for _, s := range metadata {
 		for i, u := range body.People {
-			if u.Person.ID == t.ID {
-				body.People[i].Twitter = t
+			if u.Person.ID == s.ID {
+				body.People[i].PersonMetadata = s
 			}
 		}
 	}
@@ -450,18 +486,6 @@ func (a *App) Councilmember(w http.ResponseWriter, r *http.Request, ps httproute
 		Page:   "councilmembers",
 		Person: Person{Person: person},
 	}
-
-	// var twitter []Twitter
-	// err = a.getJSONFile(r.Context(), "build/twitter.json", &twitter)
-	// if err != nil {
-	// 	log.Print(err)
-	// 	http.Error(w, "Internal Server Error", 500)
-	// }
-	// for _, t := range twitter {
-	// 	if t.ID == body.Person.Person.ID {
-	// 		body.Person.Twitter = t
-	// 	}
-	// }
 
 	err = a.getJSONFile(r.Context(), fmt.Sprintf("build/legislation_%s.json", person.Slug), &body.Legislation.All)
 	if err != nil {

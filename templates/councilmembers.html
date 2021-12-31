@@ -59,8 +59,8 @@
   {{ if eq .MemberType "CHAIR" }}<span class="member-type">(chair)</span>{{end}}
   <br>
   {{end }}</td>
-  <td class="social">{{ range .TwitterAccounts }}
-  <a href="{{.}}" class="twitter">{{. | TwitterUsername}}</a><br>
+  <td class="social">{{ range .SocialAccounts }}
+  <a href="{{.Link}}" class="{{.CSSClass}}">{{.Username}}</a><br>
   {{end}}
   </td>
   <td class="external-links">
