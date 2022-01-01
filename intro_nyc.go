@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"embed"
 	_ "embed"
@@ -19,6 +20,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"cloud.google.com/go/storage"
@@ -35,6 +37,8 @@ var content embed.FS
 //go:embed static/*
 var static embed.FS
 
+var americaNewYork, _ = time.LoadLocation("America/New_York")
+
 type App struct {
 	legistar *legistar.Client
 	devMode  bool
@@ -43,6 +47,14 @@ type App struct {
 	cachedRedirects map[string]string
 	staticHandler   http.Handler
 	templateFS      fs.FS
+
+	fileCache  map[string]CachedFile
+	cacheMutex sync.RWMutex
+}
+
+type CachedFile struct {
+	Body []byte
+	Date time.Time
 }
 
 func commaInt(i int) string {
@@ -367,6 +379,61 @@ func (l Legislation) FilterSecondarySponsor(sponsor int) Legislation {
 	return Legislation{All: o}
 }
 
+type RecentLegislation struct {
+	File       string
+	Name       string
+	Date       time.Time // recent change
+	Action     string
+	StatusName string
+	BodyName   string
+}
+
+func (l RecentLegislation) IntroLink() template.URL {
+	return template.URL("/" + strings.TrimPrefix(l.File, "Int "))
+}
+func (l RecentLegislation) IntroLinkText() string {
+	return "intro.nyc/" + strings.TrimPrefix(l.File, "Int ")
+}
+
+func NewRecentLegislation(l db.Legislation) RecentLegislation {
+	r := RecentLegislation{
+		File:       l.File,
+		Name:       l.Name,
+		BodyName:   l.BodyName,
+		StatusName: l.StatusName,
+		Date:       l.IntroDate,
+	}
+	// walk in reverse
+	for i := len(l.History) - 1; i >= 0; i-- {
+		h := l.History[i]
+		switch h.Action {
+		case "Introduced by Council",
+			"Amended by Committee",
+			"Approved by Committee",
+			"Approved by Council",
+			"City Charter Rule Adopted":
+			r.Action = h.Action
+			r.Date = h.Date
+			return r
+		}
+	}
+	return r
+}
+
+func (l Legislation) Recent(d time.Duration) []RecentLegislation {
+	cut := time.Now().In(americaNewYork).Add(-1 * d)
+	var r []RecentLegislation
+	for _, ll := range l.All {
+		rr := NewRecentLegislation(ll)
+		if rr.Date.Before(cut) {
+			continue
+		}
+		r = append(r, rr)
+	}
+	sort.Slice(r, func(i, j int) bool { return r[i].Date.Before(r[j].Date) })
+	return r
+}
+
 func (l Legislation) Statuses() []Status {
 	d := make(map[string]int)
 	for _, ll := range l.All {
@@ -516,18 +583,111 @@ func (a *App) Councilmember(w http.ResponseWriter, r *http.Request, ps httproute
 	}
 }
 
+func isSameDate(a, b time.Time) bool {
+	y1, m1, d1 := a.In(americaNewYork).Date()
+	y2, m2, d2 := b.In(americaNewYork).Date()
+	return y1 == y2 && m1 == m2 && d1 == d2
+}
+
+type DateGroup struct {
+	Date        time.Time
+	Legislation []RecentLegislation
+}
+
+func NewDateGroups(r []RecentLegislation) []DateGroup {
+	var o []DateGroup
+	if len(r) == 0 {
+		return o
+	}
+	o = append(o, DateGroup{Date: r[0].Date})
+	for _, rr := range r {
+		if !isSameDate(rr.Date, o[len(o)-1].Date) {
+			o = append(o, DateGroup{Date: rr.Date})
+		}
+		o[len(o)-1].Legislation = append(o[len(o)-1].Legislation, rr)
+	}
+	return o
+}
+
+// RecentLegislation returns the list of legislation changes /recent
+func (a *App) RecentLegislation(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+
+	t := newTemplate(a.templateFS, "recent_legislation.html")
+
+	var legislation Legislation
+
+	// TODO: make dyanmic to the current year (w/ fallback to previous year)
+	// get all the years for the legislative session
+	for year := 2018; year <= 2021; year++ {
+		var l []db.Legislation
+		err := a.getJSONFile(r.Context(), fmt.Sprintf("build/%d.json", year), &l)
+		if err != nil {
+			if err == storage.ErrObjectNotExist {
+				continue
+			}
+			log.Print(err)
+			http.Error(w, "Internal Server Error", 500)
+		}
+		legislation.All = append(legislation.All, l...)
+	}
+
+	cacheTTL := time.Minute * 30
+
+	type Page struct {
+		Page     string
+		LastSync LastSync
+		Dates    []DateGroup
+	}
+	body := Page{
+		Page:  "recent",
+		Dates: NewDateGroups(legislation.Recent(time.Hour * 24 * 14)),
+	}
+
+	err := a.getJSONFile(r.Context(), "build/last_sync.json", &body.LastSync)
+	if err != nil {
+		log.Print(err)
+		http.Error(w, "Internal Server Error", 500)
+	}
+
+	w.Header().Set("content-type", "text/html")
+	a.addExpireHeaders(w, cacheTTL)
+	err = t.ExecuteTemplate(w, "recent_legislation.html", body)
+	if err != nil {
+		log.Print(err)
+		http.Error(w, "Internal Server Error", 500)
+	}
+}
+
 func (a *App) getJSONFile(ctx context.Context, filename string, v interface{}) error {
 	f, err := a.getFile(ctx, filename)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
 	return json.NewDecoder(f).Decode(v)
 }
 
-func (a *App) getFile(ctx context.Context, filename string) (io.ReadCloser, error) {
+func (a *App) getFile(ctx context.Context, filename string) (io.Reader, error) {
+	maxTTL := time.Minute * 5
+	cut := time.Now().Add(-1 * maxTTL)
+	a.cacheMutex.RLock()
+	if c, ok := a.fileCache[filename]; ok && c.Date.After(cut) {
+		a.cacheMutex.RUnlock()
+		return bytes.NewBuffer(c.Body), nil
+	}
+	a.cacheMutex.RUnlock()
 	log.Printf("get gs://intronyc/%s", filename)
-	return a.gsclient.Bucket("intronyc").Object(filename).NewReader(ctx)
+	r, err := a.gsclient.Bucket("intronyc").Object(filename).NewReader(ctx)
+	if err != nil {
+		return nil, err
+	}
+	body, err := io.ReadAll(r)
+	if err != nil {
+		return nil, err
+	}
+	a.cacheMutex.Lock()
+	defer a.cacheMutex.Unlock()
+	a.fileCache[filename] = CachedFile{Body: body, Date: time.Now()}
+	return bytes.NewBuffer(body), nil
 }
 
 func (a *App) addExpireHeaders(w http.ResponseWriter, duration time.Duration) {
@@ -595,7 +755,6 @@ func (a *App) IntroJSON(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 		http.Error(w, "error", 500)
 		return
 	}
-	defer rc.Close()
 	w.Header().Add("content-type", "application/json")
 	a.addExpireHeaders(w, time.Minute*5)
 
@@ -679,6 +838,9 @@ func (a *App) FileRedirect(w http.ResponseWriter, r *http.Request, ps httprouter
 	case "councilmembers":
 		a.Councilmembers(w, r, ps)
 		return
+	case "recent":
+		a.RecentLegislation(w, r, ps)
+		return
 	}
 	if !IsValidFileNumber(file) {
 		http.Error(w, "Not Found", 404)
@@ -741,6 +903,7 @@ func main() {
 		cachedRedirects: make(map[string]string),
 		staticHandler:   http.FileServer(http.FS(static)),
 		templateFS:      content,
+		fileCache:       make(map[string]CachedFile),
 	}
 	if *devMode {
 		app.templateFS = os.DirFS(".")

@@ -1,0 +1,56 @@
+{{template "base" .}}
+{{define "title"}}Recent NYC Council Legislation Changes{{end}}
+{{define "head"}}
+
+<style>
+.action-date {
+  font-weight: 200;
+  font-size: .8rem;
+  margin: 0 .4em;
+}
+.action {
+  font-weight: 200;
+  font-size: .9em;
+}
+.legislation {
+  margin-bottom: 1.25rem;
+}
+
+
+</style>
+{{end}}
+
+
+{{define "middle"}}
+
+<div class="row">
+
+<div class="col">
+
+<h3>Recent Legislation Changes</h3>
+<p>The following legislation changes happened in the past 14 days</p>
+
+{{range .Dates}}
+  <h4>{{.Date.Format "Jan 02 2006"}}</h4>
+  {{range .Legislation}}
+  <div class="legislation">
+    <a href="{{.IntroLink}}" class="file-link"><span class="badge file">{{.IntroLinkText}}</span></a>
+    <span class="action">{{.Action}}</span>
+    {{ if eq .StatusName "Enacted" }}
+    <span class="badge bg-success status">Enacted</span>
+    {{end}}
+    <br>
+    <span class="name">{{.Name}}</span>
+  </div>
+  {{end}}
+{{end}}
+
+</div>
+</div>
+
+{{end}}
+
+{{ define "last-updated"}}
+<p>Data Last Updated <span class="last-updated" title="{{.LastSync.LastRun}}">{{.LastSync.LastRun | Time}}</span></p>
+{{end}}
+
