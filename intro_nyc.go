@@ -217,6 +217,9 @@ func facebookUsername(s string) string {
 	if err != nil {
 		return ""
 	}
+	if strings.Contains(u.Path, "profile.php") {
+		return "Facebook"
+	}
 	return strings.Trim(u.Path, "/")
 }
 func instagramUsername(s string) string {
