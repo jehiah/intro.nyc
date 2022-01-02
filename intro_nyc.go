@@ -380,12 +380,14 @@ func (l Legislation) FilterSecondarySponsor(sponsor int) Legislation {
 }
 
 type RecentLegislation struct {
-	File       string
-	Name       string
-	Date       time.Time // recent change
-	Action     string
-	StatusName string
-	BodyName   string
+	File           string
+	Name           string
+	Date           time.Time // recent change
+	Action         string
+	StatusName     string
+	BodyName       string
+	PrimarySponsor db.PersonReference
+	NumberSponsors int
 }
 
 func (l RecentLegislation) IntroLink() template.URL {
@@ -397,11 +399,13 @@ func (l RecentLegislation) IntroLinkText() string {
 
 func NewRecentLegislation(l db.Legislation) RecentLegislation {
 	r := RecentLegislation{
-		File:       l.File,
-		Name:       l.Name,
-		BodyName:   l.BodyName,
-		StatusName: l.StatusName,
-		Date:       l.IntroDate,
+		File:           l.File,
+		Name:           l.Name,
+		BodyName:       l.BodyName,
+		StatusName:     l.StatusName,
+		Date:           l.IntroDate,
+		PrimarySponsor: l.Sponsors[0],
+		NumberSponsors: len(l.Sponsors),
 	}
 	// walk in reverse
 	for i := len(l.History) - 1; i >= 0; i-- {
@@ -518,7 +522,7 @@ func (a *App) Councilmember(w http.ResponseWriter, r *http.Request, ps httproute
 	t := newTemplate(a.templateFS, "councilmember.html")
 
 	var people []db.Person
-	err := a.getJSONFile(r.Context(), "build/people_active.json", &people)
+	err := a.getJSONFile(r.Context(), "build/people_all.json", &people)
 	if err != nil {
 		if err == storage.ErrObjectNotExist {
 			a.addExpireHeaders(w, time.Minute*5)
@@ -542,7 +546,10 @@ func (a *App) Councilmember(w http.ResponseWriter, r *http.Request, ps httproute
 		return
 	}
 
-	cacheTTL := time.Minute
+	cacheTTL := time.Minute * 15
+	if person.End.Before(time.Now()) {
+		cacheTTL = time.Hour
+	}
 
 	type Page struct {
 		Page             string
@@ -557,6 +564,7 @@ func (a *App) Councilmember(w http.ResponseWriter, r *http.Request, ps httproute
 		Person: Person{Person: person},
 	}
 
+	// TODO: some files may be cached from previous sessions
 	err = a.getJSONFile(r.Context(), fmt.Sprintf("build/legislation_%s.json", person.Slug), &body.Legislation.All)
 	if err != nil {
 		// not found is ok; it means they are likely not active in current session (yet?)

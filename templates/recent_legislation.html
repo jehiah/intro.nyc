@@ -15,7 +15,10 @@
 .legislation {
   margin-bottom: 1.25rem;
 }
-
+.attribution {
+  font-weight: 200;
+  font-size: .8rem;
+}
 
 </style>
 {{end}}
@@ -40,7 +43,8 @@
     <span class="badge bg-success status">Enacted</span>
     {{end}}
     <br>
-    <span class="name">{{.Name}}</span>
+    <span class="name">{{.Name}}</span><br>
+    <span class="attribution">by <a href="/councilmembers/{{.PrimarySponsor.Slug}}" class="sponsor">{{.PrimarySponsor.FullName}}</a> {{if gt .NumberSponsors 1}} with {{.NumberSponsors}} sponsors{{end}}</span>
   </div>
   {{end}}
 {{end}}
