@@ -727,17 +727,17 @@ func (a *App) L2(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		return
 	}
 	if file == "data" {
-		a.IntroJSON(w, r, ps)
+		a.ProxyJSON(w, r, ps)
 		return
 	}
 	http.Error(w, "Not Found", 404)
 	return
 }
 
-// IntroJSON proxies to /data/${year}.json to github:jehiah/nyc_legislation:introduction/$year/index.json
+// ProxyJSON proxies to /data/file.json to gs://intronyc/build/$file.json
 //
 // Note: the router match pattern is `/:file/:year` so `:file` must be == "data"
-func (a *App) IntroJSON(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func (a *App) ProxyJSON(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	path := ps.ByName("year")
 
 	if !strings.HasSuffix(path, ".json") {
@@ -745,17 +745,17 @@ func (a *App) IntroJSON(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 		http.Error(w, "Not Found", 404)
 		return
 	}
-	year, err := strconv.Atoi(strings.TrimSuffix(path, ".json"))
-	if err != nil || year < 2014 || year > 2022 {
-		log.Printf("year %d not found", year)
-		http.Error(w, "Not Found", 404)
-		return
+
+	cacheTTL := time.Minute * 15
+	switch path {
+	case "search_index_2018_2021.json":
+		cacheTTL = time.Hour * 24
 	}
 
-	rc, err := a.getFile(r.Context(), fmt.Sprintf("build/%d.json", year))
+	rc, err := a.getFile(r.Context(), fmt.Sprintf("build/%s", path))
 	if err != nil {
 		if err == storage.ErrObjectNotExist {
-			a.addExpireHeaders(w, time.Minute*5)
+			a.addExpireHeaders(w, time.Minute*10)
 			http.Error(w, "Not Found", 404)
 			return
 		}
@@ -764,13 +764,13 @@ func (a *App) IntroJSON(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 		return
 	}
 	w.Header().Add("content-type", "application/json")
-	a.addExpireHeaders(w, time.Minute*5)
+	a.addExpireHeaders(w, cacheTTL)
 
 	_, err = io.Copy(w, rc)
 	if err != nil {
 		log.Printf("%#v", err)
+		http.Error(w, "error", 500)
 	}
-
 }
 
 // LocalLaw redirects to the attachment with name "Local Law ..."

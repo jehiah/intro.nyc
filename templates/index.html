@@ -35,6 +35,12 @@
 #q {
   max-width: 100rem;
 }
+#search-results {
+  min-height: 200px;
+}
+.form-check {
+  font-size: .8rem;
+}
 
 </style>
 {{end}}
@@ -43,25 +49,44 @@
 {{define "middle"}}
 
 <div class="row">
+<div class="col-sm-12 col-md-6">
 
-
-<div class="col-sm-12 col-lg-6 col-md-9">
 <div id="search-loading">
 <div class="spinner-border text-primary" role="status" ></div>
 Loading...
 </div>
 
 <div id="search" style="display:none;">
-<form action="/" method="GET">
+<form action="/" method="GET" id="searchform">
+  <div class="input-group mb-1">
+    <input type="text" class="form-control" placeholder='ex: "sidewalk" or "emissions"' id="q" name="q">
+    <button class="btn btn-primary" type="submit" id="search-btn">🔍 Search</button>
+  </div>
 
-<div class="input-group mb-1">
-  <input type="text" class="form-control" placeholder='ex: "transportation"' id="q" name="q">
-  <button class="btn btn-primary" type="submit" id="search-btn">🔍 Search</button>
+<div class="form-check">
+  <input class="form-check-input" type="radio" name="session" id="session_2018" value="2018-2021">
+  <label class="form-check-label" for="session_2018">
+    2018-2021 Legislative Session
+  </label>
+</div>
+<div class="form-check">
+  <input class="form-check-input" type="radio" name="session" id="session_2022" value="2022-2023" checked>
+  <label class="form-check-label" for="session_2022">
+    2022-2023 Legislative Session
+  </label>
 </div>
 
 </form>
 
+<p>Search Legislation from the NYC Council</p>
+
 </div>
+
+</div>
+</div>
+
+<div class="row">
+<div class="col">
 
 
 <template id="legislation-template">
@@ -75,26 +100,6 @@ Loading...
 </template>
 
 <div id="search-results"></div>
-
-</div>
-
-<div class="col-md-3 col-lg-6 col-sm-12">
-<h3>Recent Legislation Changes</h3>
-
-<template id="recent-legislation-template">
-  <div class="legislation">
-    <a href="" class="file-link"><span class="badge file"></span></a>
-    <span class="action-date"></span>
-    <span class="action"></span>
-    <br>
-    <span class="name"></span> 
-    <span class="badge bg-success status">Enacted</span>
-  </div>
-</template>
-
-<div id="recent-legislation">
-
-</div>
 
 </div>
 
@@ -155,19 +160,21 @@ const rtf = new Intl.RelativeTimeFormat("en", {
 // bootstrap search from URL
 const urlSearchParams = new URLSearchParams(window.location.search)
 document.getElementById("q").value = urlSearchParams.get("q");
+if (urlSearchParams.get("session") == "2018-2021") {
+  document.getElementsByName("session")[0].checked = true
+}
 
-
-// tokenizer: forward
-// encoder: advanced
-const index = new FlexSearch.Document({
+const index_2018 = new FlexSearch.Document({
     charset: "latin:advanced", 
     tokenize: "forward",
-    // filter: [
-    // // words to filter out
-    // "in"
-    // "legislation"
-    // ]
-    // resolution: 15,
+    document : {
+      id: "File",
+      index: ["File", "Name", "Title", "Summary"],
+    }
+});
+const index_2022 = new FlexSearch.Document({
+    charset: "latin:advanced", 
+    tokenize: "forward",
     document : {
       id: "File",
       index: ["File", "Name", "Title", "Summary"],
@@ -191,10 +198,8 @@ function compareDates(a, b) {
 }
 
 Promise.all([
-  fetch('/data/2021.json'),
-  fetch('/data/2020.json'),
-  fetch('/data/2019.json'),
-  fetch('/data/2018.json'),
+  fetch('/data/search_index_2018_2021.json'),
+  fetch('/data/search_index_2022_2023.json'),
 ]).then(responses => {
   // Get a JSON object from each of the responses [odd quirk]
   return Promise.all(responses.map(function (response) {
@@ -204,15 +209,13 @@ Promise.all([
   // console.log("data", data)
   data.forEach(d => {    
     d.forEach(dd => {
-      dd.IntroDt = new Date(dd.IntroDate)
-      dd.lastEvent = lastInterestingHistory(dd.History);
-      if ( dd.lastEvent != null ) {
-        dd.lastEventDt = new Date(dd.lastEvent.Date)
-        if (isRecentDate(dd.lastEventDt, 30)) {
-          recentData.push(dd)
-        }
+      dd.LastModifiedDt = new Date(dd.LastModified)
+      const year = dd.File.split('-').pop()
+      if (["2018", "2019", "2020", "2021"].indexOf(year) >= 0 ) {
+        index_2018.add(dd)
+      } else {
+        index_2022.add(dd)        
       }
-      index.add(dd)
       lookupData[dd.File] = dd
     })
   })
@@ -221,55 +224,48 @@ Promise.all([
 
   const q = document.getElementById("q");
   document.getElementById('search').style.display = '';
-  search(q.value)
+  search(q.value, radioSelectedValue("session"))
   q.addEventListener("input", onsearchupdate);
-
-  renderRecent()
+  document.getElementsByName("session").forEach(d => {
+    d.addEventListener("change", onsearchupdate)
+  })
+  document.getElementById("searchform").addEventListener("submit", event => {event.preventDefault()})
 })
 
-function renderRecent() {
-  document.querySelector("#recent-legislation").innerHTML = '';
-  // sort
-  recentData.sort((a, b) => {return compareDates(b.lastEventDt, a.lastEventDt)})
-  recentData.splice(25)
-  // recentData.forEach(dd => {
-  //   console.log("recentData", dd);
-  // })
-  recentData.forEach(d => addRecentResult(d))
-}
-
-function lastInterestingHistory(h)  {
-  if (typeof(h) == "undefined") {
-    return null
-  }
-  const interestingEvents = [
-    'Introduced by Council',
-    'Amended by Committee',
-    'Approved by Committee',
-    'Approved by Council',
-    'City Charter Rule Adopted',
-  ]
-  for (let i = h.length-1; i >= 0; i--) {
-    if (interestingEvents.indexOf(h[i].Action) != -1) {
-      return h[i];
+function radioSelectedValue(field) {
+  const e = document.getElementsByName(field);
+  for (let i = 0; i < e.length; i++) { 
+    if (e[i].checked) {
+      return e[i].value;
     }
   }
-  return null
 }
 
 function onsearchupdate() {
+  var qs = new URLSearchParams()
   const q = document.getElementById("q");
   if (q.value.length > 0) {
-    history.pushState(null, document.title, "/?q=" + encodeURIComponent(q.value))
-  } else {
-    history.pushState(null, document.title, "/")
+    qs.set("q", q.value)
   }
-  search(q.value)
+
+  const session = radioSelectedValue("session");
+  if (session != "2022-2023") {
+    qs.set("session", session)
+  }
+
+  const l = qs.toString();
+  history.pushState(null, document.title, l.length == 0 ? "/" : "/?" + l)
+  search(q.value, session)
 }
 
-function search(q) {
+function search(q, session) {
   document.querySelector("#search-results").innerHTML = '';
-  var results = index.search(q, 50)
+  var results = undefined;
+  if (session == "2018-2021") {
+    results = index_2018.search(q, 50)
+  } else {
+    results = index_2022.search(q, 50)
+  }
   // console.log("results", results)
   var seen = {};
   var resultArray = [];
@@ -310,9 +306,9 @@ function addSearchResult(row) {
     }
     clone.querySelectorAll(".status")[0].style.display = enacted ? "" : "none";
 
-    if (isRecentDate(row.lastEventDt, 14)) {
-      const diff = diffDates(row.lastEventDt, new Date());
-      // console.log(diff, row.lastEventDt)
+    if (isRecentDate(row.LastModifiedDt, 14)) {
+      const diff = diffDates(row.LastModifiedDt, new Date());
+      // console.log(diff, row.LastModifiedDt)
       clone.querySelectorAll(".last-update")[0].textContent = "Updated " + rtf.format(diff.units, diff.unit)
     } else {
       clone.querySelectorAll(".last-update")[0].remove()
@@ -320,29 +316,6 @@ function addSearchResult(row) {
 
     target.appendChild(clone);
 }
-function addRecentResult(row) {
-    // console.log("addResult", row)
-    var target = document.querySelector("#recent-legislation");
-    var template = document.querySelector('#recent-legislation-template');
-    var clone = template.content.cloneNode(true);
-    const file = row.File.replace("Int ", "")
-    clone.querySelectorAll(".file-link")[0].href="/" + file;
-    clone.querySelectorAll(".file")[0].textContent="intro.nyc/"+file;
-    clone.querySelectorAll(".name")[0].textContent=row.Name;
-    clone.querySelectorAll(".action")[0].textContent=row.lastEvent.Action;
-    if (row.lastEvent.Action.indexOf("Committee") != -1 ) {
-      clone.querySelectorAll(".action")[0].textContent=row.lastEvent.Action.replace("Committee", "") + row.lastEvent.BodyName;
-    }
-    clone.querySelectorAll(".action-date")[0].textContent=shortDate(row.lastEventDt);
-    var enacted = false;
-    if (row.StatusName == "Enacted (Mayor's Desk for Signature)" || row.StatusName == "Enacted") {
-      enacted = true;
-    }
-    // clone.querySelectorAll(".status")[0].style.display = enacted ? "" : "none";
-    clone.querySelectorAll(".status")[0].style.display = "none";
-    target.appendChild(clone);
-}
-
 </script>
 {{end}}
 
