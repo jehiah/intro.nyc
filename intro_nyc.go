@@ -102,6 +102,7 @@ type LocalLaw struct {
 	File, Name, LocalLaw, Title string
 	Year, LocalLawNumber        int
 	LocalLawLink                template.URL
+	EnactmentDate               time.Time
 }
 
 func (ll LocalLaw) IntroLink() template.URL {
@@ -144,6 +145,41 @@ func (a *App) LocalLaws(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 	if err != nil {
 		log.Print(err)
 		http.Error(w, "Internal Server Error", 500)
+	}
+
+	// the "Local Law" attachment doesn't have the year
+	// We guess the year by the last History Entry
+	// but sometimes (i.e. 2017) that's ambiguous (there is no letter to the mayor attached)
+	//
+	// Walk the laws; when we find duplicates bump the one enacted in December to the next year
+	for try := 1; try < 50; try++ {
+		found := false
+		for i := 1; i < len(laws); i++ {
+			y1, y2 := laws[i-1].Year, laws[i].Year
+			n1, n2 := laws[i-1].LocalLawNumber, laws[i].LocalLawNumber
+			d1, d2 := laws[i-1].EnactmentDate, laws[i].EnactmentDate
+
+			if y1 == y2 && n1 == n2 {
+				found = true
+				if d1.After(d2) && d1.Month() == time.December {
+					laws[i-1].Year = d1.Year() + 1
+				} else if d2.After(d1) && d2.Month() == time.December {
+					laws[i].Year = d2.Year() + 1
+				}
+				// re-sort
+				sort.Slice(laws, func(i, j int) bool {
+					if laws[i].Year == laws[j].Year {
+						return laws[i].LocalLawNumber < laws[j].LocalLawNumber
+					} else {
+						return laws[i].Year < laws[j].Year
+					}
+				})
+				break
+			}
+		}
+		if !found {
+			break
+		}
 	}
 
 	g := groupLaws(laws)
