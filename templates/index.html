@@ -5,6 +5,14 @@
 <style>
 
 #search {
+  background-color: #F9F9F7;
+  padding: 1em;
+  border-radius: 1em;
+}
+#search > h2 {
+  font-size: 1em;
+  font-weight: 200;
+  border-bottom: 1px solid #ddd;
 }
 .action-date {
   font-weight: 200;
@@ -37,6 +45,10 @@
 }
 #search-results {
   min-height: 200px;
+  padding: 1em 0;
+}
+.search-term {
+  background-color: #fff0c6;
 }
 .form-check {
   font-size: .8rem;
@@ -57,10 +69,11 @@ Loading...
 </div>
 
 <div id="search" style="display:none;">
+<h2>🔍 Search NYC Council Legislation</h2>
 <form action="/" method="GET" id="searchform">
   <div class="input-group mb-1">
     <input type="text" class="form-control" placeholder='ex: "sidewalk" or "emissions"' id="q" name="q">
-    <button class="btn btn-primary" type="submit" id="search-btn">🔍 Search</button>
+    <button class="btn btn-primary" type="submit" id="search-btn">Search</button>
   </div>
 
 <div class="form-check">
@@ -77,8 +90,6 @@ Loading...
 </div>
 
 </form>
-
-<p>Search Legislation from the NYC Council</p>
 
 </div>
 
@@ -99,7 +110,9 @@ Loading...
   </div>
 </template>
 
-<div id="search-results"></div>
+<div id="search-results">
+
+</div>
 
 </div>
 
@@ -262,9 +275,9 @@ function search(q, session) {
   document.querySelector("#search-results").innerHTML = '';
   var results = undefined;
   if (session == "2018-2021") {
-    results = index_2018.search(q, 50)
+    results = index_2018.search(q, 75)
   } else {
-    results = index_2022.search(q, 50)
+    results = index_2022.search(q, 75)
   }
   // console.log("results", results)
   var seen = {};
@@ -282,10 +295,17 @@ function search(q, session) {
     if (q !== "") {
       // add "no results"
       p = document.createElement("p")
+      p.class="no-results"
       p.textContent = "No results"
       document.querySelector("#search-results").appendChild(p)
     }
   } else {
+      p = document.createElement("p")
+      p.class="search-summary"
+      p.innerHTML =  `${resultArray.length} result${resultArray.length > 1 ? "s"  : ""} for <span class='search-term'></span>`
+      document.querySelector("#search-results").appendChild(p)
+      document.querySelector(".search-term").textContent = "\"" + q +"\""
+
     resultArray.sort((a, b) => {return b.IntroDt - a.IntroDt})
     resultArray.forEach(d => addSearchResult(d))
   }
