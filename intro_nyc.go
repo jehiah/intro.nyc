@@ -80,13 +80,18 @@ func (a *App) RobotsTXT(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 
 // Index returns the root path of `/`
 func (a *App) Index(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	T := Printer(r.Context())
 	t := newTemplate(a.templateFS, "index.html")
 	w.Header().Set("content-type", "text/html")
 	a.addExpireHeaders(w, time.Minute*5)
 	type Page struct {
-		Page string
+		Page  string
+		Title string
 	}
-	body := Page{Page: "search"}
+	body := Page{
+		Page:  "search",
+		Title: T.Sprintf("NYC Council Legislation Search"),
+	}
 	err := t.ExecuteTemplate(w, "index.html", body)
 	if err != nil {
 		log.Print(err)
@@ -139,6 +144,7 @@ func groupLaws(l []LocalLaw) []LocalLawYear {
 func (a *App) LocalLaws(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 
 	t := newTemplate(a.templateFS, "local_laws.html")
+	T := Printer(r.Context())
 
 	var laws []LocalLaw
 	err := a.getJSONFile(r.Context(), "build/local_laws.json", &laws)
@@ -194,22 +200,26 @@ func (a *App) LocalLaws(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 	if path != strconv.Itoa(time.Now().Year()) {
 		cacheTTL = time.Hour * 24
 	}
+	var localLaw LocalLawYear
+	for _, gg := range g {
+		if strconv.Itoa(gg.Year) == path {
+			localLaw = gg
+			break
+		}
+	}
 
 	type Page struct {
 		Page string
 		LocalLawYear
 		All      []LocalLawYear
 		LastSync LastSync
+		Title    string
 	}
 	body := Page{
-		Page: "local-laws",
-		All:  g,
-	}
-	for _, gg := range g {
-		if strconv.Itoa(gg.Year) == path {
-			body.LocalLawYear = gg
-			break
-		}
+		Page:         "local-laws",
+		Title:        T.Sprintf("NYC Local Laws of %d", localLaw.Year),
+		LocalLawYear: localLaw,
+		All:          g,
 	}
 	if body.LocalLawYear.Year == 0 {
 		http.Error(w, "Not Found", 404)
@@ -336,7 +346,7 @@ func (p Person) Party() string {
 
 // Councilmembers returns the list of councilmembers at /councilmembers
 func (a *App) Councilmembers(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-
+	T := Printer(r.Context())
 	t := newTemplate(a.templateFS, "councilmembers.html")
 
 	var people []db.Person
@@ -350,11 +360,13 @@ func (a *App) Councilmembers(w http.ResponseWriter, r *http.Request, ps httprout
 
 	type Page struct {
 		Page     string
+		Title    string
 		People   []Person
 		LastSync LastSync
 	}
 	body := Page{
-		Page: "councilmembers",
+		Page:  "councilmembers",
+		Title: T.Sprintf("NYC Council Members"),
 	}
 	for _, p := range people {
 		body.People = append(body.People, Person{Person: p})
@@ -969,7 +981,7 @@ func main() {
 		port = "8080"
 	}
 
-	var h http.Handler = router
+	var h http.Handler = newI18nMiddleware(router)
 	if *logRequests {
 		h = handlers.LoggingHandler(os.Stdout, h)
 	}

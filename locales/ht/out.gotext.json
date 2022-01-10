@@ -1,0 +1,30 @@
+{
+    "language": "ht",
+    "messages": [
+        {
+            "id": "NYC Council Legislation Search",
+            "message": "NYC Council Legislation Search",
+            "translation": ""
+        },
+        {
+            "id": "NYC Local Laws of {Year}",
+            "message": "NYC Local Laws of {Year}",
+            "translation": "",
+            "placeholders": [
+                {
+                    "id": "Year",
+                    "string": "%[1]d",
+                    "type": "int",
+                    "underlyingType": "int",
+                    "argNum": 1,
+                    "expr": "localLaw.Year"
+                }
+            ]
+        },
+        {
+            "id": "NYC Council Members",
+            "message": "NYC Council Members",
+            "translation": ""
+        }
+    ]
+}
