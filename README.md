@@ -22,6 +22,9 @@ i.e. https://intro.nyc/1394-2019/local-law
 `https://intro.nyc/local-laws` and `https://intro.nyc/local-laws/$year`
 i.e. https://intro.nyc/local-laws/2021
 
+`https://intro.nyc/local-laws/$year-$law`
+i.e. https://intro.nyc/local-laws/2021-055
+
 `https://intro.nyc/councilmembers` and `https://intro.nyc/councilmembers/$name` i.e. https://intro.nyc/councilmembers/tiffany-caban
 
 ### Questions? Suggestions?
