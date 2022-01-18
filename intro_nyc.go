@@ -111,7 +111,7 @@ func (ll LocalLaw) IntroLink() template.URL {
 	return template.URL("/" + strings.TrimPrefix(ll.File, "Int "))
 }
 func (ll LocalLaw) LocalLawLink() template.URL {
-	return template.URL("/local-laws/" + strings.ReplaceAll(ll.LocalLaw, "/", "-"))
+	return template.URL("/local-laws/" + fmt.Sprintf("%d-%d", ll.Year(), ll.LocalLawNumber()))
 }
 func (ll LocalLaw) IntroLinkText() string {
 	return "intro.nyc/" + strings.TrimPrefix(ll.File, "Int ")
@@ -162,10 +162,11 @@ func (a *App) LocalLaws(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 	path := ps.ByName("year")
 	ctx := r.Context()
 	if matched, _ := regexp.MatchString("^20[12][0-9]-[0-9]{1,3}$", path); matched {
-
+		c := strings.Split(path, "-")
+		n, _ := strconv.Atoi(c[1])
 		filter := legistar.AndFilters(
 			legistar.MatterTypeFilter("Introduction"),
-			legistar.MatterEnactmentNumberFilter(strings.ReplaceAll(path, "-", "/")),
+			legistar.MatterEnactmentNumberFilter(fmt.Sprintf("%s/%03d", c[0], n)),
 		)
 
 		matters, err := a.legistar.Matters(ctx, filter)
