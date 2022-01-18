@@ -42,6 +42,9 @@
     {{ if eq .StatusName "Enacted" }}
     <span class="badge bg-success status">Enacted</span>
     {{end}}
+    {{ if eq .StatusName "Vetoed"}}
+    <span class="badge bg-danger status">Vetoed</span>
+    {{end}}
     <br>
     <span class="name">{{.Name}}</span><br>
     <span class="attribution">by <a href="/councilmembers/{{.PrimarySponsor.Slug}}" class="sponsor">{{.PrimarySponsor.FullName}}</a> {{if gt .NumberSponsors 1}} with {{.NumberSponsors}} sponsors{{end}}</span>

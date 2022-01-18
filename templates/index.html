@@ -104,6 +104,7 @@ Loading...
   <div class="legislation">
     <a href="" class="file-link"><span class="badge file"></span></a> <span class="name"></span>
     <span class="badge bg-success status">Enacted</span>
+    <span class="badge bg-danger status">Vetoed</span>
     <br>
     <span class="title"></span>
     <span class="last-update"></span>
@@ -321,10 +322,15 @@ function addSearchResult(row) {
     clone.querySelectorAll(".name")[0].textContent=row.Name;
     clone.querySelectorAll(".title")[0].textContent=row.Title;
     var enacted = false;
+    var vetoed = false;
     if (row.StatusName == "Enacted (Mayor's Desk for Signature)" || row.StatusName == "Enacted") {
       enacted = true;
     }
+    if (row.StatusName == "Vetoed") {
+      vetoed = true;
+    }
     clone.querySelectorAll(".status")[0].style.display = enacted ? "" : "none";
+    clone.querySelectorAll(".status")[1].style.display = vetoed ? "" : "none";
 
     if (isRecentDate(row.LastModifiedDt, 14)) {
       const diff = diffDates(row.LastModifiedDt, new Date());

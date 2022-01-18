@@ -104,17 +104,33 @@ type LastSync struct {
 }
 
 type LocalLaw struct {
-	File, Name, LocalLaw, Title string
-	Year, LocalLawNumber        int
-	LocalLawLink                template.URL
-	EnactmentDate               time.Time
+	File, LocalLaw, Title string
 }
 
 func (ll LocalLaw) IntroLink() template.URL {
 	return template.URL("/" + strings.TrimPrefix(ll.File, "Int "))
 }
+func (ll LocalLaw) LocalLawLink() template.URL {
+	return template.URL("/local-laws/" + strings.ReplaceAll(ll.LocalLaw, "/", "-"))
+}
 func (ll LocalLaw) IntroLinkText() string {
 	return "intro.nyc/" + strings.TrimPrefix(ll.File, "Int ")
+}
+func (ll LocalLaw) Year() int {
+	c := strings.Split(ll.LocalLaw, "/")
+	if len(c) == 2 {
+		n, _ := strconv.Atoi(c[0])
+		return n
+	}
+	return 0
+}
+func (ll LocalLaw) LocalLawNumber() int {
+	c := strings.Split(ll.LocalLaw, "/")
+	if len(c) == 2 {
+		n, _ := strconv.Atoi(c[1])
+		return n
+	}
+	return 0
 }
 
 type LocalLawYear struct {
@@ -125,15 +141,16 @@ type LocalLawYear struct {
 func groupLaws(l []LocalLaw) []LocalLawYear {
 	years := make(map[int]*LocalLawYear)
 	for _, ll := range l {
-		g, ok := years[ll.Year]
+		g, ok := years[ll.Year()]
 		if !ok {
-			g = &LocalLawYear{Year: ll.Year}
-			years[ll.Year] = g
+			g = &LocalLawYear{Year: ll.Year()}
+			years[ll.Year()] = g
 		}
 		g.Laws = append(g.Laws, ll)
 	}
 	var groups []LocalLawYear
 	for _, g := range years {
+		sort.Slice(g.Laws, func(i, j int) bool { return g.Laws[i].LocalLawNumber() < g.Laws[j].LocalLawNumber() })
 		groups = append(groups, *g)
 	}
 	sort.Slice(groups, func(i, j int) bool { return groups[i].Year > groups[j].Year })
@@ -142,6 +159,54 @@ func groupLaws(l []LocalLaw) []LocalLawYear {
 
 // LocalLaws returns the list of local laws at /local-laws
 func (a *App) LocalLaws(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+	path := ps.ByName("year")
+	ctx := r.Context()
+	if matched, _ := regexp.MatchString("^20[12][0-9]-[0-9]{1,3}$", path); matched {
+
+		filter := legistar.AndFilters(
+			legistar.MatterTypeFilter("Introduction"),
+			legistar.MatterEnactmentNumberFilter(strings.ReplaceAll(path, "-", "/")),
+		)
+
+		matters, err := a.legistar.Matters(ctx, filter)
+		if err != nil {
+			log.Print(err)
+			http.Error(w, "unknown error", 500)
+			return
+		}
+		if len(matters) != 1 {
+			// TODO: cache?
+			http.Error(w, "Not Found", 404)
+			return
+		}
+
+		attachments, err := a.legistar.MatterAttachments(ctx, matters[0].ID)
+		if err != nil {
+			log.Print(err)
+			http.Error(w, "unknown error", 500)
+			return
+		}
+		for _, attachment := range attachments {
+			if strings.HasPrefix(attachment.Name, "Local Law") {
+				a.addExpireHeaders(w, time.Hour*24*7)
+				http.Redirect(w, r, attachment.Link, 301)
+				return
+			}
+		}
+
+		// no attachment - redirect to the legislation page
+		redirect, err := a.legistar.LookupWebURL(r.Context(), matters[0].ID)
+		if err != nil {
+			log.Print(err)
+			http.Error(w, "unknown error", 500)
+			return
+		}
+		// a.cachedRedirects[file] = redirect
+		a.addExpireHeaders(w, time.Hour)
+		http.Redirect(w, r, redirect, 302)
+
+		return
+	}
 
 	t := newTemplate(a.templateFS, "local_laws.html")
 	T := Printer(r.Context())
@@ -153,44 +218,8 @@ func (a *App) LocalLaws(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 		http.Error(w, "Internal Server Error", 500)
 	}
 
-	// the "Local Law" attachment doesn't have the year
-	// We guess the year by the last History Entry
-	// but sometimes (i.e. 2017) that's ambiguous (there is no letter to the mayor attached)
-	//
-	// Walk the laws; when we find duplicates bump the one enacted in December to the next year
-	for try := 1; try < 50; try++ {
-		found := false
-		for i := 1; i < len(laws); i++ {
-			y1, y2 := laws[i-1].Year, laws[i].Year
-			n1, n2 := laws[i-1].LocalLawNumber, laws[i].LocalLawNumber
-			d1, d2 := laws[i-1].EnactmentDate, laws[i].EnactmentDate
-
-			if y1 == y2 && n1 == n2 {
-				found = true
-				if d1.After(d2) && d1.Month() == time.December {
-					laws[i-1].Year = d1.Year() + 1
-				} else if d2.After(d1) && d2.Month() == time.December {
-					laws[i].Year = d2.Year() + 1
-				}
-				// re-sort
-				sort.Slice(laws, func(i, j int) bool {
-					if laws[i].Year == laws[j].Year {
-						return laws[i].LocalLawNumber < laws[j].LocalLawNumber
-					} else {
-						return laws[i].Year < laws[j].Year
-					}
-				})
-				break
-			}
-		}
-		if !found {
-			break
-		}
-	}
-
 	g := groupLaws(laws)
 
-	path := ps.ByName("year")
 	if path == "" {
 		a.addExpireHeaders(w, time.Hour)
 		http.Redirect(w, r, fmt.Sprintf("/local-laws/%d", g[0].Year), 302)
@@ -463,6 +492,7 @@ func NewRecentLegislation(l db.Legislation) RecentLegislation {
 			"Amended by Committee",
 			"Approved by Committee",
 			"Approved by Council",
+			"Vetoed by Mayor",
 			"City Charter Rule Adopted":
 			r.Action = h.Action
 			r.Date = h.Date
@@ -662,6 +692,7 @@ func NewDateGroups(r []RecentLegislation) []DateGroup {
 		}
 		o[len(o)-1].Legislation = append(o[len(o)-1].Legislation, rr)
 	}
+	sort.Slice(o, func(i, j int) bool { return o[i].Date.After(o[j].Date) })
 	return o
 }
 
@@ -850,6 +881,11 @@ func (a *App) LocalLaw(w http.ResponseWriter, r *http.Request, file string) {
 		return
 	}
 	attachments, err := a.legistar.MatterAttachments(ctx, matters[0].ID)
+	if err != nil {
+		log.Print(err)
+		http.Error(w, "unknown error", 500)
+		return
+	}
 	for _, attachment := range attachments {
 		if strings.HasPrefix(attachment.Name, "Local Law") {
 			a.addExpireHeaders(w, time.Hour*24*7)

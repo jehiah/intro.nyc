@@ -29,7 +29,7 @@
 
 {{range .Laws}}
 <div class="local-law" id="{{.LocalLawNumber}}-{{.Year}}">
-  <a href="{{.LocalLawLink}}">{{.LocalLaw}} of {{.Year}}</a> <a href="{{.IntroLink}}" class="file-link"><span class="badge file">{{.IntroLinkText}}</span></a> 
+  <a href="{{.LocalLawLink}}">Local Law {{.LocalLawNumber}} of {{.Year}}</a> <a href="{{.IntroLink}}" class="file-link"><span class="badge file">{{.IntroLinkText}}</span></a> 
   <p class="title">{{.Title}}</p>
 </div>
 {{end}}
