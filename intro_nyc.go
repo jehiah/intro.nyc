@@ -706,7 +706,7 @@ func (a *App) RecentLegislation(w http.ResponseWriter, r *http.Request, ps httpr
 
 	// TODO: make dyanmic to the current year (w/ fallback to previous year)
 	// get all the years for the legislative session
-	for year := 2018; year <= 2021; year++ {
+	for year := 2018; year <= 2022; year++ {
 		var l []db.Legislation
 		err := a.getJSONFile(r.Context(), fmt.Sprintf("build/%d.json", year), &l)
 		if err != nil {
