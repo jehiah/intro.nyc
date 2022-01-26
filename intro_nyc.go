@@ -108,13 +108,18 @@ type LocalLaw struct {
 }
 
 func (ll LocalLaw) IntroLink() template.URL {
-	return template.URL("/" + strings.TrimPrefix(ll.File, "Int "))
+	f := strings.TrimPrefix(ll.File, "Int ")
+	// some older entries have "Int 0349-1998-A"
+	if strings.Count(f, "-") == 2 {
+		f = strings.Join(strings.Split(f, "-")[:2], "-")
+	}
+	return template.URL("/" + f)
 }
 func (ll LocalLaw) LocalLawLink() template.URL {
 	return template.URL("/local-laws/" + fmt.Sprintf("%d-%d", ll.Year(), ll.LocalLawNumber()))
 }
 func (ll LocalLaw) IntroLinkText() string {
-	return "intro.nyc/" + strings.TrimPrefix(ll.File, "Int ")
+	return "intro.nyc" + string(ll.IntroLink())
 }
 func (ll LocalLaw) Year() int {
 	c := strings.Split(ll.LocalLaw, "/")
@@ -161,7 +166,7 @@ func groupLaws(l []LocalLaw) []LocalLawYear {
 func (a *App) LocalLaws(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	path := ps.ByName("year")
 	ctx := r.Context()
-	if matched, _ := regexp.MatchString("^20[012][0-9]-[0-9]{1,3}$", path); matched {
+	if matched, _ := regexp.MatchString("^(19|20)[9012][0-9]-[0-9]{1,3}$", path); matched {
 		c := strings.Split(path, "-")
 		n, _ := strconv.Atoi(c[1])
 		filter := legistar.AndFilters(
@@ -951,6 +956,9 @@ func (a *App) FileRedirect(w http.ResponseWriter, r *http.Request, ps httprouter
 		legistar.MatterTypeFilter("Introduction"),
 		legistar.MatterFileFilter(file),
 	)
+
+	// TODO: retry with a suffix -A for older years
+	// i.e. Int 0804-1996-A
 
 	matters, err := a.legistar.Matters(r.Context(), filter)
 	if err != nil {
