@@ -161,7 +161,7 @@ func groupLaws(l []LocalLaw) []LocalLawYear {
 func (a *App) LocalLaws(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	path := ps.ByName("year")
 	ctx := r.Context()
-	if matched, _ := regexp.MatchString("^20[12][0-9]-[0-9]{1,3}$", path); matched {
+	if matched, _ := regexp.MatchString("^20[012][0-9]-[0-9]{1,3}$", path); matched {
 		c := strings.Split(path, "-")
 		n, _ := strconv.Atoi(c[1])
 		filter := legistar.AndFilters(
@@ -898,9 +898,9 @@ func (a *App) LocalLaw(w http.ResponseWriter, r *http.Request, file string) {
 	return
 }
 
-// IsValidFileNumber matches 01234-2020
+// IsValidFileNumber matches 0123-2020
 func IsValidFileNumber(file string) bool {
-	if ok, _ := regexp.MatchString("^[0-9]{4}-20(14|15|16|17|18|19|20|21|22|23|24)$", file); !ok {
+	if ok, _ := regexp.MatchString("^[0-9]{4}-(19|20)[9012][0-9]$", file); !ok {
 		return false
 	}
 	n := strings.Split(file, "-")
@@ -909,7 +909,7 @@ func IsValidFileNumber(file string) bool {
 		return false
 	}
 	year, _ := strconv.Atoi(n[1])
-	if year > time.Now().Year() || year < 2014 {
+	if year > time.Now().Year() || year < 1996 {
 		return false
 	}
 	return true
