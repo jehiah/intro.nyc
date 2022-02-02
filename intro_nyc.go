@@ -37,6 +37,24 @@ var static embed.FS
 
 var americaNewYork, _ = time.LoadLocation("America/New_York")
 
+type Session struct {
+	StartYear, EndYear int // inclusive
+}
+
+func (s Session) String() string { return fmt.Sprintf("%d-%d", s.StartYear, s.EndYear) }
+
+var Sessions = []Session{
+	{2022, 2023},
+	{2018, 2021},
+	{2014, 2017},
+	{2010, 2013},
+	{2006, 2009},
+	{2004, 2005},
+	{2002, 2003},
+	{1998, 2001},
+}
+var CurrentSession = Sessions[0]
+
 type App struct {
 	legistar *legistar.Client
 	devMode  bool
@@ -203,7 +221,7 @@ func (a *App) ProxyJSON(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 
 	cacheTTL := time.Minute * 15
 	switch path {
-	case "search_index_2018_2021.json":
+	case "search_index_2018-2021.json":
 		cacheTTL = time.Hour * 24
 	}
 

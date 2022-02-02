@@ -76,18 +76,14 @@ Loading...
     <button class="btn btn-primary" type="submit" id="search-btn">Search</button>
   </div>
 
+{{ range .Sessions }}
 <div class="form-check">
-  <input class="form-check-input" type="radio" name="session" id="session_2018" value="2018-2021">
-  <label class="form-check-label" for="session_2018">
-    2018-2021 Legislative Session
+  <input class="form-check-input" type="radio" name="session" id="session_{{.StartYear}}" value="{{.}}">
+  <label class="form-check-label" for="session_{{.StartYear}}">
+    {{.}} Legislative Session
   </label>
 </div>
-<div class="form-check">
-  <input class="form-check-input" type="radio" name="session" id="session_2022" value="2022-2023" checked>
-  <label class="form-check-label" for="session_2022">
-    2022-2023 Legislative Session
-  </label>
-</div>
+{{end}}
 
 </form>
 
@@ -174,26 +170,22 @@ const rtf = new Intl.RelativeTimeFormat("en", {
 // bootstrap search from URL
 const urlSearchParams = new URLSearchParams(window.location.search)
 document.getElementById("q").value = urlSearchParams.get("q");
-if (urlSearchParams.get("session") == "2018-2021") {
-  document.getElementsByName("session")[0].checked = true
-}
+const defaultSession = urlSearchParams.get("session") ? urlSearchParams.get("session") : "{{index .Sessions 0}}";
+document.getElementsByName("session").forEach(e => {e.checked = (e.value == defaultSession)})
 
-const index_2018 = new FlexSearch.Document({
+
+function newIndex() {
+  return new FlexSearch.Document({
     charset: "latin:advanced", 
     tokenize: "forward",
     document : {
       id: "File",
       index: ["File", "Name", "Title", "Summary"],
     }
-});
-const index_2022 = new FlexSearch.Document({
-    charset: "latin:advanced", 
-    tokenize: "forward",
-    document : {
-      id: "File",
-      index: ["File", "Name", "Title", "Summary"],
-    }
-});
+  });
+}
+var index = {}
+index[defaultSession] = newIndex();
 
 var lookupData = {};
 var recentData = [];
@@ -211,29 +203,15 @@ function compareDates(a, b) {
   return (a>b)-(a<b)
 }
 
-Promise.all([
-  fetch('/data/search_index_2018_2021.json'),
-  fetch('/data/search_index_2022_2023.json'),
-]).then(responses => {
-  // Get a JSON object from each of the responses [odd quirk]
-  return Promise.all(responses.map(function (response) {
-    return response.json();
-  }));
-}).then(data => {
-  // console.log("data", data)
-  data.forEach(d => {    
+  fetch(`/data/search_index_${defaultSession}.json`)
+  .then(response => {return response.json();})
+  .then(d => {
     d.forEach(dd => {
       dd.LastModifiedDt = new Date(dd.LastModified)
-      const year = dd.File.split('-').pop()
-      if (["2018", "2019", "2020", "2021"].indexOf(year) >= 0 ) {
-        index_2018.add(dd)
-      } else {
-        index_2022.add(dd)        
-      }
+      index[defaultSession].add(dd);
       lookupData[dd.File] = dd
     })
-  })
-}).then(_ =>{
+  }).then(_ =>{
   document.getElementById("search-loading").style.display = 'none';
 
   const q = document.getElementById("q");
@@ -263,23 +241,36 @@ function onsearchupdate() {
   }
 
   const session = radioSelectedValue("session");
-  if (session != "2022-2023") {
+  if (session != "{{index .Sessions 0}}") {
     qs.set("session", session)
   }
 
   const l = qs.toString();
   history.pushState(null, document.title, l.length == 0 ? "/" : "/?" + l)
-  search(q.value, session)
+
+  if (index[session] == undefined) {
+    document.querySelector("#search-results").innerHTML = '<div class="spinner-border text-primary" role="status" ></div>';
+    // clear previous results before fetch
+
+    index[session] = newIndex();
+    fetch(`/data/search_index_${session}.json`)
+    .then(response => {return response.json();})
+    .then(d => {
+      d.forEach(dd => {
+        dd.LastModifiedDt = new Date(dd.LastModified)
+        index[session].add(dd);
+        lookupData[dd.File] = dd
+      })
+      search(q.value, session)
+    })
+  } else {
+    search(q.value, session)
+  }
 }
 
 function search(q, session) {
   document.querySelector("#search-results").innerHTML = '';
-  var results = undefined;
-  if (session == "2018-2021") {
-    results = index_2018.search(q, 75)
-  } else {
-    results = index_2022.search(q, 75)
-  }
+  var results = index[session].search(q, 75)
   // console.log("results", results)
   var seen = {};
   var resultArray = [];
