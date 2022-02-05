@@ -19,6 +19,13 @@ type LocalLaw struct {
 	File, LocalLaw, Title string
 }
 
+func (ll LocalLaw) TitleShort() string {
+	if i := strings.Index(ll.Title, "thoroughfares and public places"); i > 0 {
+		return ll.Title[:i+len("thoroughfares and public places")]
+	}
+	return ll.Title
+}
+
 func (ll LocalLaw) IntroLink() template.URL {
 	f := strings.TrimPrefix(ll.File, "Int ")
 	// some older entries have "Int 0349-1998-A"
