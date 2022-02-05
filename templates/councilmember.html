@@ -51,6 +51,20 @@
 	background-color: rgba(var(--bs-danger-rgb),var(--bs-bg-opacity))!important;
 }
 
+.attribution {
+  font-weight: 200;
+  font-size: .8rem;
+}
+.legislation {
+  margin-bottom: 1.25rem;
+}
+.legislation .last-update {
+  font-size: .7em;
+  background-color: #fff0c6;
+  padding: .1rem .2rem;
+}
+
+
 }
 </style>
 {{end}}
@@ -58,8 +72,8 @@
 
 {{define "middle"}}
 
-<div class="row">
-<div class="col">
+<div class="row justify-content-between">
+<div class="col-4">
 
 <h3>{{.Person.FullName}}</h3>
 <p><span class="class">{{.Person.Start.Format "Jan 2006"}} - {{.Person.End.Format "Jan 2006"}}</span></p>
@@ -76,16 +90,21 @@
 {{ end }}
 
 </div>
+<div class="col-3">
+{{ range .Person.SocialAccounts }}
+  <a href="{{.Link}}" class="{{.CSSClass}}">{{.Username}}</a><br>
+{{end}}
+</div>
 </div>
 
 <div class="row">
 
-{{ if .PrimarySponsor.All }}
 <div class="col-sm-12 col-md-6">
 
-<h4>Legislation</h4>
-<p class="note">Introduced in active legislative session</p>
+<h4>Legislation ({{.CurrentSession}} Session)</h4>
+<p class="note">Council member {{.Person.FullName}} has introduced {{.PrimarySponsor.Number}} bills in the current legislative session.</p>
 
+<!--
 <table class="table table-condensed">
 <tbody>
 {{ range .PrimarySponsor.Statuses}}
@@ -97,16 +116,33 @@
 {{ end }}
 </tbody>
 </table>
+-->
+
+
+
+  {{range .PrimarySponsor}}
+  <div class="legislation">
+    <a href="{{.IntroLink}}" class="file-link"><span class="badge file">{{.IntroLinkText}}</span></a>
+
+    {{ if eq .StatusName "Enacted" }}
+    <span class="badge bg-success status">Enacted</span>
+    {{else if eq .StatusName "Vetoed"}}
+    <span class="badge bg-danger status">Vetoed</span>
+    {{end}}
+    <span class="name">{{.Name}}</span><br>
+
+    <span class="attribution">{{if gt (len .Sponsors) 1}} with {{len .Sponsors}} sponsors{{end}}</span>
+  </div>
+  {{end}}
+
 </div>
 
-{{ end }}
 
-
-{{ if .SecondarySponsor.All }}
+{{ if .SecondarySponsor }}
 <div class="col-sm-12 col-md-6">
 
-<h4>Legislation (Sponsored)</h4>
-<p class="note">Sponsored in active legislative session</p>
+<h4>Sponsored Legislation</h4>
+<p class="note">Council member {{.Person.FullName}} has sponsored {{.SecondarySponsor.Number}} bills originally introduced by other Council members in the current legislative session.</p>
 
 <table class="table table-condensed">
 <tbody>

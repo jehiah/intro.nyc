@@ -16,7 +16,6 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
-	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -24,7 +23,6 @@ import (
 	"cloud.google.com/go/storage"
 	"github.com/dustin/go-humanize"
 	"github.com/gorilla/handlers"
-	"github.com/jehiah/legislator/db"
 	"github.com/jehiah/legislator/legistar"
 	"github.com/julienschmidt/httprouter"
 )
@@ -96,47 +94,6 @@ func (a *App) RobotsTXT(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 
 type LastSync struct {
 	LastRun time.Time
-}
-
-type Legislation struct {
-	All []db.Legislation
-}
-
-func (l Legislation) FilterPrimarySponsor(sponsor int) Legislation {
-	var o []db.Legislation
-	for _, ll := range l.All {
-		if len(ll.Sponsors) > 0 && ll.Sponsors[0].ID == sponsor {
-			o = append(o, ll)
-		}
-	}
-	return Legislation{All: o}
-}
-func (l Legislation) FilterSecondarySponsor(sponsor int) Legislation {
-	var o []db.Legislation
-	for _, ll := range l.All {
-		if len(ll.Sponsors) > 1 {
-			for _, s := range ll.Sponsors[1:] {
-				if s.ID == sponsor {
-					o = append(o, ll)
-				}
-			}
-		}
-	}
-	return Legislation{All: o}
-}
-
-func (l Legislation) Recent(d time.Duration) []RecentLegislation {
-	cut := time.Now().In(americaNewYork).Add(-1 * d)
-	var r []RecentLegislation
-	for _, ll := range l.All {
-		rr := NewRecentLegislation(ll)
-		if rr.Date.Before(cut) {
-			continue
-		}
-		r = append(r, rr)
-	}
-	sort.Slice(r, func(i, j int) bool { return r[i].Date.Before(r[j].Date) })
-	return r
 }
 
 func (a *App) getJSONFile(ctx context.Context, filename string, v interface{}) error {
@@ -243,6 +200,7 @@ func (a *App) ProxyJSON(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 	if err != nil {
 		log.Printf("%#v", err)
 		http.Error(w, "error", 500)
+		return
 	}
 }
 

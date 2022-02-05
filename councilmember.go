@@ -14,14 +14,14 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
-func (l Legislation) Statuses() []Status {
+func (l LegislationList) Statuses() []Status {
 	d := make(map[string]int)
-	for _, ll := range l.All {
+	for _, ll := range l {
 		d[ll.StatusName] += 1
 	}
 	var o []Status
 	for n, c := range d {
-		o = append(o, Status{Name: n, Count: c, Percent: (float64(c) / float64(len(l.All))) * 100})
+		o = append(o, Status{Name: n, Count: c, Percent: (float64(c) / float64(len(l))) * 100})
 	}
 	sortSeq := []string{
 		// exhaustive from MatterStatuses
@@ -108,10 +108,10 @@ func (a *App) Councilmember(w http.ResponseWriter, r *http.Request, ps httproute
 		log.Print(err)
 		http.Error(w, "Internal Server Error", 500)
 	}
-	var person db.Person
+	var person Person
 	for _, p := range people {
 		if p.Slug == councilmember {
-			person = p
+			person = Person{Person: p}
 			break
 		}
 	}
@@ -120,6 +120,19 @@ func (a *App) Councilmember(w http.ResponseWriter, r *http.Request, ps httproute
 		a.addExpireHeaders(w, time.Minute*5)
 		http.Error(w, "Not Found", 404)
 		return
+	}
+
+	var metadata []PersonMetadata
+	err = a.getJSONFile(r.Context(), "build/people_metadata.json", &metadata)
+	if err != nil {
+		log.Print(err)
+		http.Error(w, "Internal Server Error", 500)
+		return
+	}
+	for _, m := range metadata {
+		if m.ID == person.Person.ID {
+			person.PersonMetadata = m
+		}
 	}
 
 	cacheTTL := time.Minute * 15
@@ -131,31 +144,35 @@ func (a *App) Councilmember(w http.ResponseWriter, r *http.Request, ps httproute
 		Page             string
 		Person           Person
 		LastSync         LastSync
-		Legislation      Legislation
-		PrimarySponsor   Legislation
-		SecondarySponsor Legislation
+		Legislation      LegislationList
+		PrimarySponsor   LegislationList
+		SecondarySponsor LegislationList
+		CurrentSession   Session
 	}
 	body := Page{
-		Page:   "councilmembers",
-		Person: Person{Person: person},
+		Page:           "councilmembers",
+		Person:         person,
+		CurrentSession: CurrentSession,
 	}
 
 	// TODO: some files may be cached from previous sessions
-	err = a.getJSONFile(r.Context(), fmt.Sprintf("build/legislation_%s.json", person.Slug), &body.Legislation.All)
+	err = a.getJSONFile(r.Context(), fmt.Sprintf("build/legislation_%s.json", person.Slug), &body.Legislation)
 	if err != nil {
 		// not found is ok; it means they are likely not active in current session (yet?)
 		if err != storage.ErrObjectNotExist {
 			log.Print(err)
 			http.Error(w, "Internal Server Error", 500)
+			return
 		}
 	}
-	body.PrimarySponsor = body.Legislation.FilterPrimarySponsor(person.ID)
-	body.SecondarySponsor = body.Legislation.FilterSecondarySponsor(person.ID)
+	body.PrimarySponsor = body.Legislation.FilterPrimarySponsor(person.ID())
+	body.SecondarySponsor = body.Legislation.FilterSecondarySponsor(person.ID())
 
 	err = a.getJSONFile(r.Context(), "build/last_sync.json", &body.LastSync)
 	if err != nil {
 		log.Print(err)
 		http.Error(w, "Internal Server Error", 500)
+		return
 	}
 
 	w.Header().Set("content-type", "text/html")
@@ -164,5 +181,6 @@ func (a *App) Councilmember(w http.ResponseWriter, r *http.Request, ps httproute
 	if err != nil {
 		log.Print(err)
 		http.Error(w, "Internal Server Error", 500)
+		return
 	}
 }

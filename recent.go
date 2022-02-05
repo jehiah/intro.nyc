@@ -32,7 +32,7 @@ func (l RecentLegislation) IntroLinkText() string {
 	return "intro.nyc/" + strings.TrimPrefix(l.File, "Int ")
 }
 
-func NewRecentLegislation(l db.Legislation) RecentLegislation {
+func NewRecentLegislation(l Legislation) RecentLegislation {
 	r := RecentLegislation{
 		File:           l.File,
 		Name:           l.Name,
@@ -92,11 +92,11 @@ func (a *App) RecentLegislation(w http.ResponseWriter, r *http.Request, ps httpr
 
 	t := newTemplate(a.templateFS, "recent_legislation.html")
 
-	var legislation Legislation
+	var legislation LegislationList
 
 	// get all the years for the legislative session
 	for year := CurrentSession.StartYear; year <= CurrentSession.EndYear && year <= time.Now().Year(); year++ {
-		var l []db.Legislation
+		var l []Legislation
 		err := a.getJSONFile(r.Context(), fmt.Sprintf("build/%d.json", year), &l)
 		if err != nil {
 			if err == storage.ErrObjectNotExist {
@@ -104,8 +104,9 @@ func (a *App) RecentLegislation(w http.ResponseWriter, r *http.Request, ps httpr
 			}
 			log.Print(err)
 			http.Error(w, "Internal Server Error", 500)
+			return
 		}
-		legislation.All = append(legislation.All, l...)
+		legislation = append(legislation, l...)
 	}
 
 	cacheTTL := time.Minute * 30
@@ -117,13 +118,14 @@ func (a *App) RecentLegislation(w http.ResponseWriter, r *http.Request, ps httpr
 	}
 	body := Page{
 		Page:  "recent",
-		Dates: NewDateGroups(legislation.Recent(time.Hour * 24 * 14)),
+		Dates: NewDateGroups(legislation.Recent(time.Hour * 24 * 30)),
 	}
 
 	err := a.getJSONFile(r.Context(), "build/last_sync.json", &body.LastSync)
 	if err != nil {
 		log.Print(err)
 		http.Error(w, "Internal Server Error", 500)
+		return
 	}
 
 	w.Header().Set("content-type", "text/html")
@@ -132,5 +134,6 @@ func (a *App) RecentLegislation(w http.ResponseWriter, r *http.Request, ps httpr
 	if err != nil {
 		log.Print(err)
 		http.Error(w, "Internal Server Error", 500)
+		return
 	}
 }

@@ -16,6 +16,11 @@ type Person struct {
 	db.Person
 	PersonMetadata
 }
+
+func (p Person) ID() int {
+	return p.Person.ID
+}
+
 type PersonMetadata struct {
 	ID                           int
 	Twitter, TwitterPersonal     string
@@ -125,6 +130,7 @@ func (a *App) Councilmembers(w http.ResponseWriter, r *http.Request, ps httprout
 	if err != nil {
 		log.Print(err)
 		http.Error(w, "Internal Server Error", 500)
+		return
 	}
 
 	cacheTTL := time.Minute * 30
@@ -139,27 +145,26 @@ func (a *App) Councilmembers(w http.ResponseWriter, r *http.Request, ps httprout
 		Page:  "councilmembers",
 		Title: T.Sprintf("NYC Council Members"),
 	}
-	for _, p := range people {
-		body.People = append(body.People, Person{Person: p})
-	}
 	var metadata []PersonMetadata
 	err = a.getJSONFile(r.Context(), "build/people_metadata.json", &metadata)
 	if err != nil {
 		log.Print(err)
 		http.Error(w, "Internal Server Error", 500)
+		return
 	}
-	for _, s := range metadata {
-		for i, u := range body.People {
-			if u.Person.ID == s.ID {
-				body.People[i].PersonMetadata = s
-			}
-		}
+	metadataLookup := make(map[int]PersonMetadata)
+	for _, m := range metadata {
+		metadataLookup[m.ID] = m
+	}
+	for _, p := range people {
+		body.People = append(body.People, Person{Person: p, PersonMetadata: metadataLookup[p.ID]})
 	}
 
 	err = a.getJSONFile(r.Context(), "build/last_sync.json", &body.LastSync)
 	if err != nil {
 		log.Print(err)
 		http.Error(w, "Internal Server Error", 500)
+		return
 	}
 
 	w.Header().Set("content-type", "text/html")
@@ -168,5 +173,6 @@ func (a *App) Councilmembers(w http.ResponseWriter, r *http.Request, ps httprout
 	if err != nil {
 		log.Print(err)
 		http.Error(w, "Internal Server Error", 500)
+		return
 	}
 }

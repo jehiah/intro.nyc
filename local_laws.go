@@ -134,6 +134,7 @@ func (a *App) LocalLaws(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 	if err != nil {
 		log.Print(err)
 		http.Error(w, "Internal Server Error", 500)
+		return
 	}
 
 	g := groupLaws(laws)
@@ -177,6 +178,7 @@ func (a *App) LocalLaws(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 	if err != nil {
 		log.Print(err)
 		http.Error(w, "Internal Server Error", 500)
+		return
 	}
 
 	w.Header().Set("content-type", "text/html")
@@ -185,6 +187,7 @@ func (a *App) LocalLaws(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 	if err != nil {
 		log.Print(err)
 		http.Error(w, "Internal Server Error", 500)
+		return
 	}
 }
 
