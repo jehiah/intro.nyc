@@ -9,11 +9,7 @@
 }
 .committee {
 }
-.class {
-  font-size: .8rem;
-  font-weight: 200;
-}
-.party {
+.class, .district, .borough, .party {
   font-size: .8rem;
   font-weight: 200;
 }
@@ -76,7 +72,11 @@
 <div class="col-4">
 
 <h3>{{.Person.FullName}}</h3>
-<p><span class="class">{{.Person.Start.Format "Jan 2006"}} - {{.Person.End.Format "Jan 2006"}}</span></p>
+<p><span class="class">{{.Person.Start.Format "Jan 2006"}} - {{.Person.End.Format "Jan 2006"}}</span><br>
+  {{if .Person.District}}
+    <span class="district">District {{.Person.District}}</span> <span class="borough">({{.Person.Borough}})</span>
+  {{end}}
+</p>
 
 {{ if .Person.ActiveOfficeRecords }}
 <h4>Comittees</h4>

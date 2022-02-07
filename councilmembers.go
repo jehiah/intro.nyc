@@ -20,9 +20,20 @@ type Person struct {
 func (p Person) ID() int {
 	return p.Person.ID
 }
+func (p Person) Borough() string {
+	city := p.Person.DistrictOffice.City
+	switch city {
+	case "Brooklyn", "Bronx", "Queens", "Staten Island", "Bronx and Manhattan":
+		return city
+	case "New York", "New York, NY 10033":
+		return "Manhattan"
+	}
+	return "Queens"
+}
 
 type PersonMetadata struct {
 	ID                           int
+	District                     int
 	Twitter, TwitterPersonal     string
 	Facebook, FacebookPersonal   string
 	Instagram, InstagramPersonal string

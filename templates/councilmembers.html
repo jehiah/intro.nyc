@@ -9,11 +9,7 @@
 }
 .committee {
 }
-.class {
-  font-size: .8rem;
-  font-weight: 200;
-}
-.party {
+.class, .district, .borough, .party {
   font-size: .8rem;
   font-weight: 200;
 }
@@ -42,7 +38,7 @@
 <table class="table">
 <thead>
   <tr>
-    <th>Council Members</th>
+    <th>Council Member</th>
     <th>Committees</th>
     <th>Social</th>
     <th>Links</th>
@@ -52,7 +48,10 @@
 {{range .People}}
 <tr>
   <td><span class="full-name"><a href="/councilmembers/{{.Slug}}">{{.FullName}}</a></span> <span class="party">{{.Party}}</span><br>
-    <span class="class">{{.Start.Format "Jan 2006"}} - {{.End.Format "Jan 2006"}}</span>
+    <span class="class">{{.Start.Format "Jan 2006"}} - {{.End.Format "Jan 2006"}}</span><br>
+    {{if .District}}
+      <span class="district">District {{.District}}</span> <span class="borough">({{.Borough}})</span>
+    {{end}}
   </td>
   <td class="committees">{{range .ActiveOfficeRecords }}
   <span class="committee">{{.BodyName}}</span>
