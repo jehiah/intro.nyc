@@ -104,6 +104,14 @@
 <h4>Legislation ({{.CurrentSession}} Session)</h4>
 <p class="note">Council member {{.Person.FullName}} has introduced {{.PrimarySponsor.Number}} bills in the current legislative session.</p>
 
+{{ if .PrimarySponsor.Number}}
+<p class="note">
+{{ range $i, $s := .PrimarySponsor.Statuses}}
+  {{if ne $i 0 }},{{end}} {{$s.Count}} bills are {{$s.Description -}}
+{{end}}
+</p>
+{{end}}
+
 <!--
 <table class="table table-condensed">
 <tbody>
@@ -120,7 +128,7 @@
 
 
 
-  {{range .PrimarySponsor}}
+ {{range .PrimarySponsor}}
   <div class="legislation">
     <a href="{{.IntroLink}}" class="file-link"><span class="badge file">{{.IntroLinkText}}</span></a>
 
@@ -133,7 +141,7 @@
 
     <span class="attribution">{{if gt (len .Sponsors) 1}} with {{len .Sponsors}} sponsors{{end}}</span>
   </div>
-  {{end}}
+{{end}}
 
 </div>
 
@@ -144,6 +152,7 @@
 <h4>Sponsored Legislation</h4>
 <p class="note">Council member {{.Person.FullName}} has sponsored {{.SecondarySponsor.Number}} bills originally introduced by other Council members in the current legislative session.</p>
 
+<!--
 <table class="table table-condensed">
 <tbody>
 {{ range .SecondarySponsor.Statuses}}
@@ -155,6 +164,24 @@
 {{ end }}
 </tbody>
 </table>
+-->
+
+ {{range .SecondarySponsor}}
+  <div class="legislation">
+    <a href="{{.IntroLink}}" class="file-link"><span class="badge file">{{.IntroLinkText}}</span></a>
+
+    {{ if eq .StatusName "Enacted" }}
+    <span class="badge bg-success status">Enacted</span>
+    {{else if eq .StatusName "Vetoed"}}
+    <span class="badge bg-danger status">Vetoed</span>
+    {{end}}
+    <span class="name">{{.Name}}</span><br>
+
+    <span class="attribution">Introduced by <a href="/councilmembers/{{(index .Sponsors 0).Slug}}">{{(index .Sponsors 0).FullName}}</a></span>
+  </div>
+{{end}}
+
+
 </div>
 
 {{ end }}

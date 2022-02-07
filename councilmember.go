@@ -77,6 +77,14 @@ type Status struct {
 	Percent float64
 }
 
+func (s Status) Description() string {
+	switch s.Name {
+	case "Committee":
+		return "in Committee"
+	}
+	return s.Name
+}
+
 func (s Status) CSSClass() string {
 	return "status-" + strings.ToLower(strings.Fields(s.Name)[0])
 }
