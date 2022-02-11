@@ -15,7 +15,7 @@
 .legislation {
   margin-bottom: 1.25rem;
 }
-.attribution {
+.attribution, .body {
   font-weight: 200;
   font-size: .8rem;
 }
@@ -47,7 +47,7 @@
     {{end}}
     <br>
     <span class="name">{{.Name}}</span><br>
-    <span class="attribution">by <a href="/councilmembers/{{.PrimarySponsor.Slug}}" class="sponsor">{{.PrimarySponsor.FullName}}</a> {{if gt .NumberSponsors 1}} with {{.NumberSponsors}} sponsors{{end}}</span>
+    <span class="attribution">by <a href="/councilmembers/{{.PrimarySponsor.Slug}}" class="sponsor">{{.PrimarySponsor.FullName}}</a> {{if gt .NumberSponsors 1}} with {{.NumberSponsors}} sponsors{{end}},</span> <span class="body">{{.BodyName}}</span>
   </div>
   {{end}}
 {{end}}

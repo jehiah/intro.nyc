@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -23,6 +24,15 @@ type RecentLegislation struct {
 	BodyName       string
 	PrimarySponsor db.PersonReference
 	NumberSponsors int
+}
+
+func (r RecentLegislation) Number() int {
+	c := strings.Split(strings.TrimPrefix(r.File, "Int "), "-")
+	if len(c) == 2 {
+		n, _ := strconv.Atoi(c[0])
+		return n
+	}
+	return 0
 }
 
 func (l RecentLegislation) IntroLink() template.URL {
@@ -82,8 +92,12 @@ func NewDateGroups(r []RecentLegislation) []DateGroup {
 			o = append(o, DateGroup{Date: rr.Date})
 		}
 		o[len(o)-1].Legislation = append(o[len(o)-1].Legislation, rr)
+
 	}
 	sort.Slice(o, func(i, j int) bool { return o[i].Date.After(o[j].Date) })
+	for _, g := range o {
+		sort.Slice(g.Legislation, func(i, j int) bool { return g.Legislation[i].Number() < g.Legislation[j].Number() })
+	}
 	return o
 }
 
