@@ -60,6 +60,7 @@ func NewRecentLegislation(l Legislation) RecentLegislation {
 			"Amended by Committee",
 			"Approved by Committee",
 			"Approved by Council",
+			"Withdrawn",
 			"Vetoed by Mayor",
 			"City Charter Rule Adopted":
 			r.Action = h.Action

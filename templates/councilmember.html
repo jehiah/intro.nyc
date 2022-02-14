@@ -31,7 +31,10 @@
 .table-condensed>:not(caption)>*>* {
 	padding: 0.5rem 0;
 }
-.status-enacted {
+.status-withdrawn > .name {
+  text-decoration: line-through;
+}
+/*.status-enacted {
 	--bs-bg-opacity: 1;
 	background-color: rgba(var(--bs-success-rgb),var(--bs-bg-opacity))!important;
 }
@@ -45,7 +48,7 @@
 .status-vetoed {
 	--bs-bg-opacity: 1;
 	background-color: rgba(var(--bs-danger-rgb),var(--bs-bg-opacity))!important;
-}
+}*/
 
 .attribution {
   font-weight: 200;
@@ -129,7 +132,7 @@
 
 
  {{range .PrimarySponsor}}
-  <div class="legislation">
+  <div class="legislation status-{{.StatusName | CSSClass}}">
     <a href="{{.IntroLink}}" class="file-link"><span class="badge file">{{.IntroLinkText}}</span></a>
 
     {{ if eq .StatusName "Enacted" }}

@@ -19,6 +19,9 @@
   font-weight: 200;
   font-size: .8rem;
 }
+.status-withdrawn > .name {
+  text-decoration: line-through;
+}
 
 </style>
 {{end}}
@@ -36,7 +39,7 @@
 {{range .Dates}}
   <h4>{{.Date.Format "Jan 02 2006"}}</h4>
   {{range .Legislation}}
-  <div class="legislation">
+  <div class="legislation status-{{.StatusName | CSSClass}}">
     <a href="{{.IntroLink}}" class="file-link"><span class="badge file">{{.IntroLinkText}}</span></a>
     <span class="action">{{.Action}}</span>
     {{ if eq .StatusName "Enacted" }}
