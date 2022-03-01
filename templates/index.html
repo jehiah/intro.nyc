@@ -53,6 +53,10 @@
 .form-check {
   font-size: .8rem;
 }
+.status-withdrawn > .name {
+  text-decoration: line-through;
+}
+
 
 </style>
 {{end}}
@@ -307,6 +311,9 @@ function addSearchResult(row) {
     var target = document.querySelector("#search-results");
     var template = document.querySelector('#legislation-template');
     var clone = template.content.cloneNode(true);
+    if (row.StatusName == "Withdrawn") {
+      clone.querySelectorAll(".legislation")[0].className += " status-withdrawn";
+    }
     const file = row.File.replace("Int ", "")
     clone.querySelectorAll(".file-link")[0].href="/" + file;
     clone.querySelectorAll(".file")[0].textContent="intro.nyc/"+file;
