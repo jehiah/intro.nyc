@@ -22,7 +22,12 @@
 .status-withdrawn > .name {
   text-decoration: line-through;
 }
-
+.scheduled {
+  margin: 0 .25rem;
+  font-size: .8rem;
+  background-color: #fff0c6;
+  padding: .1rem .2rem;
+}
 </style>
 {{end}}
 
@@ -37,7 +42,7 @@
 <p>The following legislation changes happened in the past 30 days</p>
 
 {{range .Dates}}
-  <h4>{{.Date.Format "Jan 02 2006"}}</h4>
+  <h4>{{.Date.Format "Jan 02 2006"}}{{if .IsFuture }}<span class="scheduled">⚠️ event scheduled on future date</span>{{end}}</h4>
   {{range .Legislation}}
   <div class="legislation status-{{.StatusName | CSSClass}}">
     <a href="{{.IntroLink}}" class="file-link"><span class="badge file">{{.IntroLinkText}}</span></a>

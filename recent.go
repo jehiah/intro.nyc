@@ -82,6 +82,10 @@ type DateGroup struct {
 	Legislation []RecentLegislation
 }
 
+func (d DateGroup) IsFuture() bool {
+	return d.Date.After(time.Now())
+}
+
 func NewDateGroups(r []RecentLegislation) []DateGroup {
 	var o []DateGroup
 	if len(r) == 0 {
