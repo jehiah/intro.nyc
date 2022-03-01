@@ -163,18 +163,21 @@ func (a *App) Councilmember(w http.ResponseWriter, r *http.Request, ps httproute
 		CurrentSession: CurrentSession,
 	}
 
-	// TODO: some files may be cached from previous sessions
-	err = a.getJSONFile(r.Context(), fmt.Sprintf("build/legislation_%s.json", person.Slug), &body.Legislation)
-	if err != nil {
-		// not found is ok; it means they are likely not active in current session (yet?)
-		if err != storage.ErrObjectNotExist {
-			log.Print(err)
-			http.Error(w, "Internal Server Error", 500)
-			return
+	if person.IsActive {
+
+		// TODO: some files may be cached from previous sessions
+		err = a.getJSONFile(r.Context(), fmt.Sprintf("build/legislation_%s.json", person.Slug), &body.Legislation)
+		if err != nil {
+			// not found is ok; it means they are likely not active in current session (yet?)
+			if err != storage.ErrObjectNotExist {
+				log.Print(err)
+				http.Error(w, "Internal Server Error", 500)
+				return
+			}
 		}
+		body.PrimarySponsor = body.Legislation.FilterPrimarySponsor(person.ID())
+		body.SecondarySponsor = body.Legislation.FilterSecondarySponsor(person.ID())
 	}
-	body.PrimarySponsor = body.Legislation.FilterPrimarySponsor(person.ID())
-	body.SecondarySponsor = body.Legislation.FilterSecondarySponsor(person.ID())
 
 	err = a.getJSONFile(r.Context(), "build/last_sync.json", &body.LastSync)
 	if err != nil {
