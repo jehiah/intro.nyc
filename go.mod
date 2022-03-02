@@ -6,7 +6,7 @@ require (
 	cloud.google.com/go/storage v1.18.2
 	github.com/dustin/go-humanize v1.0.0
 	github.com/gorilla/handlers v1.5.1
-	github.com/jehiah/legislator v0.0.0-20220207013105-ab54713b0978
+	github.com/jehiah/legislator v0.0.0-20220302024936-2f1e8a231b46
 	github.com/julienschmidt/httprouter v1.3.0
 	golang.org/x/text v0.3.6
 )

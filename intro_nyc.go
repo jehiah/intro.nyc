@@ -232,11 +232,14 @@ func (a *App) L1(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		a.RecentLegislation(w, r, ps)
 		return
 	}
-	if !IsValidFileNumber(file) {
-		http.Error(w, "Not Found", 404)
-		return
+	if IsValidFileNumber(file) {
+		a.IntroRedirect(w, r, ps)
 	}
-	a.IntroRedirect(w, r, ps)
+	if strings.HasSuffix(file, ".json") && IsValidFileNumber(strings.TrimSuffix(file, ".json")) {
+		a.IntroJSON(w, r, ps)
+	}
+	http.Error(w, "Not Found", 404)
+	return
 }
 
 func main() {
