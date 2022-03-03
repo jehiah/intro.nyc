@@ -164,7 +164,7 @@ func (a *App) IntroJSON(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 
 	ttl := time.Hour
 	if l.IntroDate.Year() < CurrentSession.StartYear {
-		ttl := time.Hour * 48
+		ttl = time.Hour * 48
 	}
 
 	a.addExpireHeaders(w, ttl)
