@@ -60,6 +60,7 @@ func NewRecentLegislation(l Legislation) RecentLegislation {
 			"Amended by Committee",
 			"Approved by Committee",
 			"Approved by Council",
+			"Hearing Held by Committee",
 			"Withdrawn",
 			"Vetoed by Mayor",
 			"City Charter Rule Adopted":
