@@ -96,6 +96,19 @@ func (t PersonMetadata) SocialAccounts() []SocialAccount {
 	return o
 }
 
+func (p Person) CouncilTitle() string {
+	now := time.Now()
+	for _, oo := range p.OfficeRecords {
+		if oo.BodyName != "City Council" { continue}
+		if oo.End.Before(now) {continue}
+		if oo.MemberType == "PRIMARY SPEAKER" {
+			return "Speaker"
+		}
+		return oo.Title
+	}
+	return ""
+}
+
 func (p Person) ActiveOfficeRecords() []db.OfficeRecord {
 	var final []db.OfficeRecord
 	now := time.Now()

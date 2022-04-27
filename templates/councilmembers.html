@@ -48,14 +48,17 @@
 {{range .People}}
 <tr>
   <td><span class="full-name"><a href="/councilmembers/{{.Slug}}">{{.FullName}}</a></span> <span class="party">{{.Party}}</span><br>
-    <span class="class">{{.Start.Format "Jan 2006"}} - {{.End.Format "Jan 2006"}}</span><br>
+    <span class="class">{{.Start.Format "Jan 2006"}} - {{.End.Format "Jan 2006"}}</span>
     {{if .District}}
-      <span class="district">District {{.District}}</span> <span class="borough">({{.Borough}})</span>
+      <br><span class="district">District {{.District}}</span> <span class="borough">({{.Borough}})</span>
+    {{end}}
+    {{if ne .CouncilTitle "Council Member"}}
+      <br><span class="badge bg-info text-dark">{{.CouncilTitle}}</span>
     {{end}}
   </td>
   <td class="committees">{{range .ActiveOfficeRecords }}
   <span class="committee">{{.BodyName}}</span>
-  {{ if eq .MemberType "CHAIR" }}<span class="member-type">(chair)</span>{{end}}
+  {{ if eq .MemberType "CHAIR" }}<span class="member-type"> {{ if eq .Title "CHAIRPERSON" }}(chair){{else}}({{.Title | ToLower}}){{end}}</span>{{end}}
   <br>
   {{end }}</td>
   <td class="social">{{ range .SocialAccounts }}

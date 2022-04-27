@@ -75,10 +75,14 @@
 <div class="col-4">
 
 <h3>{{.Person.FullName}}</h3>
-<p><span class="class">{{.Person.Start.Format "Jan 2006"}} - {{.Person.End.Format "Jan 2006"}}</span><br>
+<p><span class="class">{{.Person.Start.Format "Jan 2006"}} - {{.Person.End.Format "Jan 2006"}}</span>
   {{if .Person.District}}
-    <span class="district">District {{.Person.District}}</span> <span class="borough">({{.Person.Borough}})</span>
+    <br><span class="district">District {{.Person.District}}</span> <span class="borough">({{.Person.Borough}})</span>
   {{end}}
+  {{if ne .CouncilTitle "Council Member"}}
+    <br><span class="badge bg-info text-dark">{{.CouncilTitle}}</span>
+  {{end}}
+
 </p>
 
 {{ if .Person.ActiveOfficeRecords }}
@@ -86,7 +90,7 @@
 <p class="committees">
   {{range .Person.ActiveOfficeRecords }}
   <span class="committee">{{.BodyName}}</span>
-  {{ if eq .MemberType "CHAIR" }}<span class="member-type">(chair)</span>{{end}}
+  {{ if eq .MemberType "CHAIR" }}<span class="member-type"> {{ if eq .Title "CHAIRPERSON" }}(chair){{else}}({{.Title | ToLower}}){{end}}</span>{{end}}
   <br>
   {{end }}
 </p>
