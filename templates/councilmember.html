@@ -79,8 +79,8 @@
   {{if .Person.District}}
     <br><span class="district">District {{.Person.District}}</span> <span class="borough">({{.Person.Borough}})</span>
   {{end}}
-  {{if ne .CouncilTitle "Council Member"}}
-    <br><span class="badge bg-info text-dark">{{.CouncilTitle}}</span>
+  {{if ne .Person.CouncilTitle "Council Member"}}
+    <br><span class="badge bg-info text-dark">{{.Person.CouncilTitle}}</span>
   {{end}}
 
 </p>
