@@ -148,28 +148,23 @@ func (a *App) addExpireHeaders(w http.ResponseWriter, duration time.Duration) {
 func (a *App) L2(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	path := ps.ByName("year")
 	file := ps.ByName("file")
-	if path == "local-law" && IsValidFileNumber(file) {
+	switch {
+	case path == "local-law" && IsValidFileNumber(file):
 		a.LocalLaw(w, r, file)
-		return
-	}
-	if file == "local-laws" {
+	case file == "local-laws":
 		a.LocalLaws(w, r, ps)
-		return
-	}
-	if file == "councilmembers" {
+	case file == "councilmembers":
 		a.Councilmember(w, r, ps)
-		return
-	}
-	if file == "static" {
+	case file == "static":
 		a.staticHandler.ServeHTTP(w, r)
-		return
-	}
-	if file == "data" {
+	case file == "data":
 		a.ProxyJSON(w, r, ps)
-		return
+	case file == "reports":
+		ps = append(ps, httprouter.Param{Key: "report", Value: path})
+		a.Reports(w, r, ps)
+	default:
+		http.Error(w, "Not Found", 404)
 	}
-	http.Error(w, "Not Found", 404)
-	return
 }
 
 // ProxyJSON proxies to /data/file.json to gs://intronyc/build/$file.json
@@ -230,6 +225,9 @@ func (a *App) L1(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		return
 	case "recent":
 		a.RecentLegislation(w, r, ps)
+		return
+	case "reports":
+		a.Reports(w, r, ps)
 		return
 	}
 	if IsValidFileNumber(file) {

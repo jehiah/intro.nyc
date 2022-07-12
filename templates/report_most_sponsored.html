@@ -1,0 +1,141 @@
+{{template "base" .}}
+{{define "title"}}Report: Most Sponsored Legislation{{end}}
+{{define "head"}}
+
+<style>
+.action-date {
+  font-weight: 200;
+  font-size: .8rem;
+  margin: 0 .4em;
+}
+.action {
+  font-weight: 200;
+  font-size: .9em;
+}
+.legislation {
+  margin-bottom: 1.25rem;
+}
+.attribution, .body {
+  font-weight: 200;
+  font-size: .8rem;
+}
+.status-withdrawn > .name {
+  text-decoration: line-through;
+}
+.scheduled {
+  margin: 0 .25rem;
+  font-size: .8rem;
+  background-color: #fff0c6;
+  padding: .1rem .2rem;
+}
+.sponsor_count {
+  font-weight: bold;
+}
+.sponsors {
+  font-size: .8rem;
+  font-weight: normal;
+}
+.legislation .last-update {
+  font-size: .7em;
+  background-color: #fff0c6;
+  padding: .1rem .2rem;
+}
+
+</style>
+{{end}}
+
+
+{{define "middle"}}
+
+
+<ul class="nav nav-tabs my-3">
+  <li class="nav-item">
+    <a class="nav-link active" aria-current="page" href="/reports/most_sponsored">Most Sponsored Legislation</a>
+  </li>
+<!-- 
+  <li class="nav-item">
+    <a class="nav-link" href="#">Activity</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" href="#">Committe Reports</a>
+  </li>
+ -->
+</ul>
+
+{{range .Legislation}}
+
+<div class="row justify-content-between">
+  <div class="col-1 sponsor_count">{{.NumberSponsors}} <span class="sponsors">Sponsors</span></div>  
+  <div class="col-11 legislation status-{{.StatusName | CSSClass}}">
+
+    <a href="{{.IntroLink}}" class="file-link"><span class="badge file">{{.IntroLinkText}}</span></a>
+    <span class="name">{{.Name}}</span>
+
+    {{ if eq .StatusName "Enacted" }}
+    <span class="badge bg-success status">Enacted</span>
+    {{end}}
+    {{ if eq .StatusName "Vetoed"}}
+    <span class="badge bg-danger status">Vetoed</span>
+    {{end}}
+
+    <br>
+    <span class="attribution">by <a href="/councilmembers/{{.PrimarySponsor.Slug}}" class="sponsor">{{.PrimarySponsor.FullName}}</a></span> <span class="body">{{.BodyName}}</span>
+    {{ if .IsRecent }} <span class="last-update">{{.RecentDate}}</span> {{end}}
+  </div>
+</div>
+
+{{end}}
+
+{{end}}
+
+{{ define "last-updated"}}
+<p>Data Last Updated <span class="last-updated" title="{{.LastSync.LastRun}}">{{.LastSync.LastRun | Time}}</span></p>
+{{end}}
+
+{{define "javascript"}}
+<script type="text/javascript">
+
+function diffDates(start, end) {
+    // const date1 = new Date(start);
+    // const date2 = new Date(end);
+
+    // One day in milliseconds
+    const oneDay = 1000 * 60 * 60 * 24;
+    const oneHour = 1000 * 60 * 60;
+    const oneMinute = 1000 * 60;
+
+    // Calculating the time difference between two dates
+    const diffInTime = start.getTime() - end.getTime();
+
+    // Calculating the no. of days between two dates
+    const days = Math.round(diffInTime / oneDay);
+    if (days != 0) {
+      return {unit:"day", units:days}
+    }
+    const hours = Math.round(diffInTime / oneHour);
+    if (hours != 0) {
+      return {unit:"hour", units:hours}
+    }
+    const minutes = Math.round(diffInTime / oneMinute);
+    if (minutes != 0) {
+      return {unit:"minute", units:minutes}
+    }
+    return {unit:"second", units: Math.round(diffInTime / 1000) }
+}
+
+
+const rtf = new Intl.RelativeTimeFormat("en", {
+    // localeMatcher: "best fit", // other values: "lookup"
+    numeric: "always", // other values: "auto"
+    style: "long", // other values: "short" or "narrow"
+});
+
+const today  = new Date();
+document.querySelectorAll(".last-update").forEach(d => {
+    const diff = diffDates(new Date(d.innerHTML), today);
+    d.innerHTML = "Updated " + rtf.format(diff.units, diff.unit);
+  })
+      // clone.querySelectorAll(".last-update")[0].textContent = "Updated " + rtf.format(diff.units, diff.unit)
+</script>
+{{end}}
+

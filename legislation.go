@@ -26,6 +26,38 @@ func (ll Legislation) IntroLink() template.URL {
 func (ll Legislation) IntroLinkText() string {
 	return "intro.nyc" + string(ll.IntroLink())
 }
+func (ll Legislation) NumberSponsors() int {
+	return len(ll.Sponsors)
+}
+func (ll Legislation) PrimarySponsor() db.PersonReference {
+	return ll.Sponsors[0]
+}
+func (ll Legislation) RecentAction() (string, time.Time) {
+	// walk in reverse
+	for i := len(ll.History) - 1; i >= 0; i-- {
+		h := ll.History[i]
+		switch h.Action {
+		case "Introduced by Council",
+			"Amended by Committee",
+			"Approved by Committee",
+			"Approved by Council",
+			"Hearing Held by Committee",
+			"Withdrawn",
+			"Vetoed by Mayor",
+			"City Charter Rule Adopted":
+			return h.Action, h.Date
+		}
+	}
+	return "", time.Unix(0, 0)
+}
+func (ll Legislation) RecentDate() time.Time {
+	_, dt := ll.RecentAction()
+	return dt
+}
+func (ll Legislation) IsRecent() bool {
+	_, dt := ll.RecentAction()
+	return time.Now().Add(time.Hour * 24 * -14).Before(dt)
+}
 
 func (l LegislationList) Number() int {
 	return len(l)

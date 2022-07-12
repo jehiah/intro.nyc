@@ -49,26 +49,10 @@ func NewRecentLegislation(l Legislation) RecentLegislation {
 		BodyName:       l.BodyName,
 		StatusName:     l.StatusName,
 		Date:           l.IntroDate,
-		PrimarySponsor: l.Sponsors[0],
+		PrimarySponsor: l.PrimarySponsor(),
 		NumberSponsors: len(l.Sponsors),
 	}
-	// walk in reverse
-	for i := len(l.History) - 1; i >= 0; i-- {
-		h := l.History[i]
-		switch h.Action {
-		case "Introduced by Council",
-			"Amended by Committee",
-			"Approved by Committee",
-			"Approved by Council",
-			"Hearing Held by Committee",
-			"Withdrawn",
-			"Vetoed by Mayor",
-			"City Charter Rule Adopted":
-			r.Action = h.Action
-			r.Date = h.Date
-			return r
-		}
-	}
+	r.Action, r.Date = l.RecentAction()
 	return r
 }
 
