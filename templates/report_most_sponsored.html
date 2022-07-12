@@ -40,6 +40,9 @@
   background-color: #fff0c6;
   padding: .1rem .2rem;
 }
+.hidden {
+  display: none;
+}
 
 </style>
 {{end}}
@@ -62,9 +65,19 @@
  -->
 </ul>
 
+<fieldset class="my-3">
+  Committee: 
+  <select name="committee" id="committee">
+    <option value="" selected>All</option>
+    {{range .Committees }}
+    <option value="{{. | Slugify}}">{{.}}</option>
+    {{end}}
+  </select>
+</fieldset>
+
 {{range .Legislation}}
 
-<div class="row justify-content-between">
+<div class="row justify-content-between sponsor-row" data-committee="{{TrimPrefix .BodyName "Committee on " | Slugify }}">
   <div class="col-1 sponsor_count">{{.NumberSponsors}} <span class="sponsors">Sponsors</span></div>  
   <div class="col-11 legislation status-{{.StatusName | CSSClass}}">
 
@@ -130,11 +143,56 @@ const rtf = new Intl.RelativeTimeFormat("en", {
     style: "long", // other values: "short" or "narrow"
 });
 
+
+// bootstrap search from URL
+const urlSearchParams = new URLSearchParams(window.location.search)
+document.getElementById("committee").value = urlSearchParams.get("committee")
+
+// const defaultSession = urlSearchParams.get("session") ? urlSearchParams.get("session") : "{{index .Sessions 0}}";
+// document.getElementsByName("session").forEach(e => {e.checked = (e.value == defaultSession)})
+
+
 const today  = new Date();
 document.querySelectorAll(".last-update").forEach(d => {
     const diff = diffDates(new Date(d.innerHTML), today);
     d.innerHTML = "Updated " + rtf.format(diff.units, diff.unit);
+});
+
+
+document.getElementById("committee").addEventListener("change", () => {
+  const s = document.getElementById("committee")
+  const c = s.options[s.selectedIndex].value;
+
+  var qs = new URLSearchParams(window.location.search)
+  if(c.length >= 1) {
+    qs.set("committee", c)
+  } else {
+    qs.del("committee")
+  }
+
+  const l = qs.toString();
+  history.pushState(null, document.title, l.length == 0 ? window.location.pathname : window.location.pathname + "?" + l)
+
+  runFilter()
+})
+
+
+
+function runFilter() {
+  var qs = new URLSearchParams(window.location.search)
+  document.querySelectorAll(".sponsor-row").forEach(d => {
+    let c = qs.get("committee")
+    let desired = d.dataset.committee != c
+    if ( c === "" ) {
+      desired = false
+    }
+    d.classList.toggle("hidden", desired)
   })
+}
+runFilter()
+
+
+
       // clone.querySelectorAll(".last-update")[0].textContent = "Updated " + rtf.format(diff.units, diff.unit)
 </script>
 {{end}}

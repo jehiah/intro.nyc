@@ -8,21 +8,17 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"html/template"
 	"io"
 	"io/fs"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
-	"path/filepath"
-	"regexp"
 	"strings"
 	"sync"
 	"time"
 
 	"cloud.google.com/go/storage"
-	"github.com/dustin/go-humanize"
 	"github.com/gorilla/handlers"
 	"github.com/jehiah/legislator/legistar"
 	"github.com/julienschmidt/httprouter"
@@ -35,24 +31,6 @@ var content embed.FS
 var static embed.FS
 
 var americaNewYork, _ = time.LoadLocation("America/New_York")
-
-type Session struct {
-	StartYear, EndYear int // inclusive
-}
-
-func (s Session) String() string { return fmt.Sprintf("%d-%d", s.StartYear, s.EndYear) }
-
-var Sessions = []Session{
-	{2022, 2023},
-	{2018, 2021},
-	{2014, 2017},
-	{2010, 2013},
-	{2006, 2009},
-	{2004, 2005},
-	{2002, 2003},
-	{1998, 2001},
-}
-var CurrentSession = Sessions[0]
 
 type App struct {
 	legistar *legistar.Client
@@ -70,27 +48,6 @@ type App struct {
 type CachedFile struct {
 	Body []byte
 	Date time.Time
-}
-
-func commaInt(i int) string {
-	return humanize.Comma(int64(i))
-}
-
-var nonASCII = regexp.MustCompile(`[^a-z0-9]+`)
-
-func cssClass(s string) string {
-	return nonASCII.ReplaceAllString(strings.ToLower(s), "-")
-}
-
-func newTemplate(fs fs.FS, n string) *template.Template {
-	funcMap := template.FuncMap{
-		"ToLower":  strings.ToLower,
-		"Comma":    commaInt,
-		"Time":     humanize.Time,
-		"CSSClass": cssClass,
-	}
-	t := template.New("empty").Funcs(funcMap)
-	return template.Must(t.ParseFS(fs, filepath.Join("templates", n), "templates/base.html"))
 }
 
 // RobotsTXT renders /robots.txt

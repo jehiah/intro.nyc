@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"sort"
+	"strings"
 	"time"
 
 	"cloud.google.com/go/storage"
@@ -33,9 +34,12 @@ func (a *App) ReportMostSponsored(w http.ResponseWriter, r *http.Request) {
 		Page        string
 		LastSync    LastSync
 		Legislation LegislationList
+		Committees  []string
+		Sessions    []Session
 	}
 	body := Page{
-		Page: "reports",
+		Page:     "reports",
+		Sessions: Sessions[:3],
 	}
 
 	err := a.getJSONFile(r.Context(), "build/last_sync.json", &body.LastSync)
@@ -59,8 +63,19 @@ func (a *App) ReportMostSponsored(w http.ResponseWriter, r *http.Request) {
 		}
 		body.Legislation = append(body.Legislation, l...)
 	}
-
 	sort.Slice(body.Legislation, func(i, j int) bool { return len(body.Legislation[i].Sponsors) > len(body.Legislation[j].Sponsors) })
+
+	c := make(map[string]bool)
+	for _, l := range body.Legislation {
+		if l.BodyName == "Withdrawn" {
+			continue
+		}
+		c[l.BodyName] = true
+	}
+	for b, _ := range c {
+		body.Committees = append(body.Committees, strings.TrimPrefix(b, "Committee on "))
+	}
+	sort.Strings(body.Committees)
 
 	w.Header().Set("content-type", "text/html")
 	cacheTTL := time.Minute * 15
