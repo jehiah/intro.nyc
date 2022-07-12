@@ -146,7 +146,7 @@ const rtf = new Intl.RelativeTimeFormat("en", {
 
 // bootstrap search from URL
 const urlSearchParams = new URLSearchParams(window.location.search)
-document.getElementById("committee").value = urlSearchParams.get("committee")
+document.getElementById("committee").value = urlSearchParams.get("committee") === null? "" : urlSearchParams.get("committee")
 
 // const defaultSession = urlSearchParams.get("session") ? urlSearchParams.get("session") : "{{index .Sessions 0}}";
 // document.getElementsByName("session").forEach(e => {e.checked = (e.value == defaultSession)})
@@ -167,7 +167,7 @@ document.getElementById("committee").addEventListener("change", () => {
   if(c.length >= 1) {
     qs.set("committee", c)
   } else {
-    qs.del("committee")
+    qs.delete("committee")
   }
 
   const l = qs.toString();
@@ -183,7 +183,7 @@ function runFilter() {
   document.querySelectorAll(".sponsor-row").forEach(d => {
     let c = qs.get("committee")
     let desired = d.dataset.committee != c
-    if ( c === "" ) {
+    if ( c === "" || c == null) {
       desired = false
     }
     d.classList.toggle("hidden", desired)
