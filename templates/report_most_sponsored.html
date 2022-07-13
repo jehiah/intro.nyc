@@ -28,13 +28,19 @@
   background-color: #fff0c6;
   padding: .1rem .2rem;
 }
-.sponsor_count {
+.sponsor_count {  
   font-weight: bold;
 }
 .sponsors_suffix {
-  font-size: .8rem;
+  font-size: .6rem;
   font-weight: normal;
 }
+@media (min-width: 576px) { 
+  .sponsors_suffix {
+    font-size: .8rem;
+  }
+}
+
 .legislation .last-update {
   font-size: .7em;
   background-color: #fff0c6;
@@ -97,10 +103,10 @@
 {{range .Legislation}}
 
 <div class="row justify-content-between sponsor-row" data-committee="{{TrimPrefix .BodyName "Committee on " | Slugify }}">
-  <div class="col-1 sponsor_count">
+  <div class="col-2 col-md-1 sponsor_count">
     <span class="sponsors">{{.NumberSponsors}} <span class="sponsors_suffix">Sponsors</span></span>
   </div>
-  <div class="col-11 legislation status-{{.StatusName | CSSClass}}">
+  <div class="col-10 col-md-11 legislation status-{{.StatusName | CSSClass}}">
 
     <a href="{{.IntroLink}}" class="file-link"><span class="badge file">{{.IntroLinkText}}</span></a>
     <span class="name">{{.Name}}</span>
