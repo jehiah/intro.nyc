@@ -32,6 +32,27 @@ func (ll Legislation) NumberSponsors() int {
 func (ll Legislation) PrimarySponsor() db.PersonReference {
 	return ll.Sponsors[0]
 }
+func (ll Legislation) Hearings() []db.History {
+	var o []db.History
+	for _, h := range ll.History {
+		switch h.Action {
+		case "Hearing Held by Committee", "Hearing on P-C Item by Comm":
+			o = append(o, h)
+		}
+	}
+	return o
+}
+func (ll Legislation) Votes() []db.History {
+	var o []db.History
+	for _, h := range ll.History {
+		switch h.Action {
+		case "Approved by Committee", "Approved by Council":
+			o = append(o, h)
+		}
+	}
+	return o
+}
+
 func (ll Legislation) RecentAction() (string, time.Time) {
 	// walk in reverse
 	for i := len(ll.History) - 1; i >= 0; i-- {
