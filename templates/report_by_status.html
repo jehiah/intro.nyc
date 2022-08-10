@@ -1,0 +1,143 @@
+{{template "base" .}}
+{{define "title"}}Report: Most Sponsored Legislation{{end}}
+{{define "head"}}
+
+<style>
+
+
+.form-select {
+  width:inherit;
+  display: inline-block;
+  max-width: 350px;
+}
+.form-check {
+  display: inline-block;
+}
+.select-committee {
+  display: inline-block;
+  margin-right: 2em;
+}
+
+@media (min-width: 576px) { 
+  .form-select {
+    max-width: 450px;
+  }
+}
+
+</style>
+{{end}}
+
+
+{{define "middle"}}
+
+
+<ul class="nav nav-tabs my-3">
+  <li class="nav-item">
+    <a class="nav-link" href="/reports/most_sponsored">Most Sponsored Legislation</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link active" aria-current="page" href="/reports/status">Legislative Activity</a>
+  </li>
+<!-- 
+  <li class="nav-item">
+    <a class="nav-link" href="#">Activity</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" href="#">Committe Reports</a>
+  </li>
+ -->
+</ul>
+
+
+<fieldset class="my-5">
+  <div class="select-session">
+  <select name="session" id="session" class="form-select">
+    {{range .Sessions }}
+    <option value="{{.}}">{{.}} Legislative Session</option>
+    {{end}}
+  </select>
+  </div>
+</fieldset>
+
+<div id="chart"></div>
+
+{{end}}
+
+{{ define "last-updated"}}
+<p>Data Last Updated <span class="last-updated" title="{{.LastSync.LastRun}}">{{.LastSync.LastRun | Time}}</span></p>
+{{end}}
+
+{{define "javascript"}}
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<script src="https://cdn.jsdelivr.net/npm/@observablehq/plot@0.5"></script>
+<script type="text/javascript">
+// bootstrap current selection from URL
+const urlSearchParams = new URLSearchParams(window.location.search)
+const defaultSession = urlSearchParams.get("session") ? urlSearchParams.get("session") : "{{.Session}}";
+const sessionElement = document.getElementById("session");
+Array.from(sessionElement.options).forEach(e => {e.selected = (e.value == defaultSession)})
+sessionElement.addEventListener("change", _ => {
+  if (sessionElement.selectedIndex == 0 ) {
+    location.href = location.pathname;
+    return
+  }
+  var qs = new URLSearchParams()
+  qs.set("session", sessionElement.value)
+  location.href = location.pathname + "?" + qs.toString();
+})
+
+let data = {{.Data}};
+
+let target = document.getElementById("chart")
+
+target.append(
+  Plot.plot({
+    width:target.getBoundingClientRect().width,
+    height: 600,
+    marginBottom: 50,
+    marginRight:95,
+    color: {
+      type: "ordinal",
+      scheme: "category10",
+      legend: true, //"ramp",
+      label: null
+    },
+    y: {label:null, grid:true},
+    x: {
+      domain:[new Date({{.Session.StartYear}}, 0, 1), new Date({{.Session.EndYear}},11,31)],
+      // tickFormat: "%b-%Y",
+      type:"utc",
+      tickRotate: -45,
+      nice: true,
+    },
+    // interval: d3.utcDay,
+    marks: [
+    Plot.areaY(data, {
+        x:"Date", 
+        y2:"Count", 
+        fill:"Status", 
+        z: "Status",
+        // sort: "Date",
+        curve: "step", 
+        // fillOpacity: 1
+      }),
+    // Plot.ruleY([0])
+
+    // show last count
+    Plot.text(data, {
+      filter: d => d.Last,
+      x: "Date",
+      y: "Count",
+      text: d => {return d.Status + ": " + d.Count},
+      fill:"Status",
+      dx: 4,
+      textAnchor: "start"
+    })
+
+   ]
+
+}));
+
+</script>
+{{end}}
+
