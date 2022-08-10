@@ -161,7 +161,8 @@ func (a *App) ReportByStatus(w http.ResponseWriter, r *http.Request) {
 					hearing[day] = hearing[day] + 1
 				case "Approved by Council":
 					approved[day] = approved[day] + 1
-				case "City Charter Rule Adopted", "Signed Into Law by Mayor":
+				case "City Charter Rule Adopted", "Signed Into Law by Mayor",
+					"Overridden by Council": // possible after "Vetoed by Mayor" (See Int 1208-2013)
 					enacted[day] = enacted[day] + 1
 				default:
 					continue
