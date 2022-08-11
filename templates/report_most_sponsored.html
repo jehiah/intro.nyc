@@ -223,18 +223,13 @@ const urlSearchParams = new URLSearchParams(window.location.search)
 document.getElementById("committee").value = urlSearchParams.get("committee") === null? "" : urlSearchParams.get("committee")
 document.getElementById("enacted").checked = urlSearchParams.get("enacted") === "show"
 
-
-// const defaultSession = urlSearchParams.get("session") ? urlSearchParams.get("session") : "{{index .Sessions 0}}";
-// document.getElementsByName("session").forEach(e => {e.checked = (e.value == defaultSession)})
-
-
 const today  = new Date();
 document.querySelectorAll(".last-update").forEach(d => {
     const diff = diffDates(new Date(d.innerHTML), today);
     d.innerHTML = "Updated " + rtf.format(diff.units, diff.unit);
 });
 
-document.getElementById("enacted").addEventListener("input", () => {
+document.getElementById("enacted").addEventListener("change", () => {
   const s = document.getElementById("enacted")
   var qs = new URLSearchParams(window.location.search)
   if (s.checked) {
@@ -272,11 +267,11 @@ function runFilter() {
   const c = qs.get("committee")
   const e = qs.get("enacted") === "show"
   document.querySelectorAll(".sponsor-row").forEach(d => {
-    let desired = true;
+    var desired = true;
     if ((c !== "" && c != null) && d.dataset.committee != c ) {
       desired = false;
     }
-    if (!e && d.dataset.status === "enacted") {
+    if (!e && d.dataset.status === "enacted" ) {
       desired = false;
     }
     d.classList.toggle("hidden", !desired)
