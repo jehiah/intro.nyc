@@ -173,7 +173,7 @@ func (a *App) ReportByStatus(w http.ResponseWriter, r *http.Request) {
 
 	today := time.Now().Truncate(time.Hour * 24)
 	for i, d := range []map[time.Time]int{introduced, hearing, approved, enacted} {
-		status := []string{"Introduced", "Hearing Held", "Approved", "Enacted"}[i]
+		status := []string{"Introduced", "Hearing Held", "Passed Council", "Enacted"}[i]
 		var data []Row
 		for date, count := range d {
 			data = append(data, Row{Time: date, Date: date.Format("2006-01-02"), Count: count, Status: status})
@@ -189,7 +189,9 @@ func (a *App) ReportByStatus(w http.ResponseWriter, r *http.Request) {
 			// add current values as 'today'
 			last := data[len(data)-1]
 			if !last.Time.Equal(today) {
-				data = append(data, Row{Time: today, Date: today.Format("2006-01-02"), Count: last.Count, Status: last.Status})
+				// show tomorrow
+				tomorrow := today.AddDate(0, 0, 1)
+				data = append(data, Row{Time: tomorrow, Date: tomorrow.Format("2006-01-02"), Count: last.Count, Status: last.Status})
 			}
 		}
 		data[len(data)-1].Last = true
