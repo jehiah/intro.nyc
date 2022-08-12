@@ -36,10 +36,10 @@
     <a class="nav-link" href="/reports/most_sponsored">Most Sponsored Legislation</a>
   </li>
   <li class="nav-item">
-    <a class="nav-link active" aria-current="page" href="/reports/status">Legislative Activity</a>
+    <a class="nav-link" href="/reports/status">Legislative Activity</a>
   </li>
   <li class="nav-item">
-    <a class="nav-link" href="/reports/similarity">Council Member Similarity</a>
+    <a class="nav-link active" aria-current="page" href="/reports/similarity">Council Member Similarity</a>
   </li>
 </ul>
 
@@ -88,45 +88,40 @@ let target = document.getElementById("chart")
 target.append(
   Plot.plot({
     width:target.getBoundingClientRect().width,
-    height: 600,
-    marginBottom: 50,
-    marginRight:95,
+    height: 800,
+    marginBottom: 90,
+    marginLeft: 90,
     color: {
-      type: "ordinal",
-      scheme: "buylrd",
-      legend: true, //"ramp",
+      // type: "ordinal",
+      scheme: "blues",
+      // legend: true, //"ramp",
       label: null
     },
-    y: {label:null, grid:true},
-    x: {
-      domain:[new Date({{.Session.StartYear}}, 0, 1), new Date({{.Session.EndYear}},11,31)],
-      // tickFormat: "%b-%Y",
-      type:"utc",
-      tickRotate: -45,
-      nice: true,
+    style: {
+      fontSize:"9px"
     },
-    // interval: d3.utcDay,
+    y: {label:null, tickRotate: -45},
+    x: {label:null, tickRotate: -45},
     marks: [
-    Plot.areaY(data, {
-        x:"Date", 
-        y2:"Count", 
-        fill:"Status", 
-        z: "Status",
+    Plot.cell(data, {
+        x:"A", 
+        y:"B", 
+        fill:"Count", 
+        // z: "Status",
         // sort: "Date",
-        curve: "step-after",
+        // curve: "step-after",
         // fillOpacity: 1
       }),
     // Plot.ruleY([0])
 
-    // show last count
     Plot.text(data, {
       filter: d => d.Last,
-      x: "Date",
-      y: "Count",
-      text: d => {return d.Status + ": " + d.Count},
-      fill:"Status",
-      dx: 4,
-      textAnchor: "start"
+      x: "A",
+      y: "B",
+      text: "Count", // d => {return d.Status + ": " + d.Count},
+      // fill:"Status",
+      // dx: 4,
+      // textAnchor: "start"
     })
 
    ]
