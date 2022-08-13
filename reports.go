@@ -197,13 +197,11 @@ func (a *App) ReportByStatus(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if body.Session == CurrentSession {
-			// add current values as 'today'
+			// add current values as 'tomorrow'. This ensures todays values have a step to tomorrow
 			last := data[len(data)-1]
-			if !last.Time.Equal(today) {
-				// show tomorrow
-				tomorrow := today.AddDate(0, 0, 1)
-				data = append(data, Row{Time: tomorrow, Date: tomorrow.Format("2006-01-02"), Count: last.Count, Status: last.Status})
-			}
+			// show tomorrow
+			tomorrow := today.AddDate(0, 0, 1)
+			data = append(data, Row{Time: tomorrow, Date: tomorrow.Format("2006-01-02"), Count: last.Count, Status: last.Status})
 		}
 		data[len(data)-1].Last = true
 
