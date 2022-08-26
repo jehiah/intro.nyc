@@ -168,7 +168,7 @@ func (a *App) ReportByStatus(w http.ResponseWriter, r *http.Request) {
 				// use IntroDate directly; some bills don't have a matching action 0407-2022
 				// case "Introduced by Council":
 				// 	introduced[day] = introduced[day] + 1
-				case "Hearing Held by Committee":
+				case "Hearing Held by Committee", "Hearing on P-C Item by Comm":
 					hearing[day] = hearing[day] + 1
 				case "Approved by Council":
 					approved[day] = approved[day] + 1
