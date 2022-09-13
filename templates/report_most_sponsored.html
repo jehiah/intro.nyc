@@ -145,21 +145,21 @@
 
     <br>
     <span class="attribution">by <a href="/councilmembers/{{.PrimarySponsor.Slug}}" class="sponsor">{{.PrimarySponsor.FullName}}</a></span> <span class="body">{{.BodyName}}</span>
-    {{ if .IsRecent }} <span class="last-update">{{.RecentDate}}</span> {{end}}
+    {{ if .IsRecent }} <span class="last-update">{{.RecentDate | RFC3339}}</span> {{end}}
 
     {{ if or .Hearings .Votes }}
     <br>
     {{end}}
     {{ range .Hearings }}
-    <span class="hearing-held" title="Hearing on {{.Date.Format "Jan 01 2006"}} by {{.BodyName}}">
+    <span class="hearing-held" title="Hearing on {{.Date.Format "Jan 02 2006"}} by {{.BodyName}}">
       <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-calendar"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg> 
-      Hearing {{.Date.Format "Jan 01 2006"}}
+      Hearing {{.Date.Format "Jan 02 2006"}}
     </span>
     {{end}}
     {{ range .Votes }}
-    <span class="vote-held" title="Approved on {{.Date.Format "Jan 01 2006"}} by {{.BodyName}}">
+    <span class="vote-held" title="Approved on {{.Date.Format "Jan 02 2006"}} by {{.BodyName}}">
       <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-check-circle"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> 
-      Passed {{if eq .BodyName "City Council"}}City Council{{else}}Committee{{end}} {{.Date.Format "Jan 01 2006"}} 
+      Passed {{if eq .BodyName "City Council"}}City Council{{else}}Committee{{end}} {{.Date.Format "Jan 02 2006"}} 
     </span>
     {{end}}
 
@@ -273,10 +273,6 @@ function runFilter() {
   })
 }
 runFilter()
-
-
-
-      // clone.querySelectorAll(".last-update")[0].textContent = "Updated " + rtf.format(diff.units, diff.unit)
 </script>
 {{end}}
 

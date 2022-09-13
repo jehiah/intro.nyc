@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"strings"
+	"time"
 
 	"github.com/dustin/go-humanize"
 	"github.com/gosimple/slug"
@@ -26,6 +27,7 @@ func newTemplate(fs fs.FS, n string) *template.Template {
 		"ToLower":    strings.ToLower,
 		"Comma":      commaInt,
 		"Time":       humanize.Time,
+		"RFC3339":    func(t time.Time) string { return t.Format(time.RFC3339) },
 		"CSSClass":   cssClass,
 		"Slugify":    slug.Make,
 		"TrimPrefix": strings.TrimPrefix,
