@@ -24,6 +24,14 @@
   }
 }
 
+tr > th.number-col {
+  text-align: right;
+}
+
+#data-body > tr > td.number {
+  text-align: right;
+}
+
 </style>
 {{end}}
 
@@ -56,6 +64,33 @@
 
 <div id="chart"></div>
 <div class="my-5"><p>Note: Bills that are withdrawn are excluded. Bills with multiple hearings are counted on date of first hearing.</p></div>
+<div id="data"><table class="table">
+    <thead>
+      <tr>
+        <th>Session Day</th>
+        <th>Date</th>
+        <th class="number-col">Bills Introduced</th>
+        <th class="number-col">Hearings Held</th>
+        <th class="number-col">Passed Council</th>
+        <th class="number-col">Enacted</th>
+      </tr>
+    </thead>
+    <tbody id="data-body">
+      <template id="data-row">
+        <tr>
+          <td class="session-day"></td>
+          <td class="date"></td>
+          <td class="introduced number"></td>
+          <td class="hearings number"></td>
+          <td class="passed number"></td>
+          <td class="enacted number"></td>
+        </tr>
+      </template>
+    </tbody>
+  </table>
+  </div>
+
+
 
 {{end}}
 
@@ -133,6 +168,51 @@ target.append(
    ]
 
 }));
+
+let collate = {};
+data.forEach(d => {
+  if (collate[d.Date] === undefined ) {
+    collate[d.Date] = {Date: d.Date, Dt: new Date(d.Date)}
+  }
+  collate[d.Date][d.Status] = d.Count
+})
+let dates = Object.values(collate);
+dates.sort((a, b) => { aa = a.Dt.getTime(); bb = b.Dt.getTime(); if (aa<bb){return -1}; if (aa > bb){return 1}; return 0 } )
+let introduced = 0;
+let hearing = 0
+let passed = 0
+let enacted = 0;
+dates.forEach(d => {
+  if (d["Introduced"] === undefined ) {d["Introduced"] = introduced} else {introduced = d["Introduced"]}
+  if (d["Hearing Held"] === undefined ) {d["Hearing Held"] = hearing} else {hearing = d["Hearing Held"]}
+  if (d["Passed Council"] === undefined ) {d["Passed Council"] = passed} else {passed = d["Passed Council"]}
+  if (d["Enacted"] === undefined ) {d["Enacted"] = enacted} else {enacted = d["Enacted"]}
+})
+
+let df = new Intl.DateTimeFormat([], {dateStyle:"medium"});
+let nf = new Intl.NumberFormat();
+target = document.getElementById("data-body")
+let template = document.getElementById("data-row")
+let startDate = new Date({{.Session.StartYear}}, 0, 1);
+dates.forEach(d => {
+  var clone = template.content.cloneNode(true);
+
+  const diffInTime =  d.Dt.getTime() - startDate.getTime();
+  // One day in milliseconds
+  const oneDay = 1000 * 60 * 60 * 24;
+  const days = Math.round(diffInTime / oneDay);
+
+  clone.querySelectorAll(".session-day")[0].textContent = nf.format(days)
+  clone.querySelectorAll(".date")[0].textContent = df.format(d.Dt);
+  clone.querySelectorAll(".introduced")[0].textContent = nf.format(d["Introduced"]);
+  clone.querySelectorAll(".hearings")[0].textContent = nf.format(d["Hearing Held"]);
+  clone.querySelectorAll(".passed")[0].textContent = nf.format(d["Passed Council"]);
+  clone.querySelectorAll(".enacted")[0].textContent = nf.format(d["Enacted"]);
+  target.appendChild(clone);
+
+})
+
+
 
 </script>
 {{end}}
