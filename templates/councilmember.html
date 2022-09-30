@@ -90,7 +90,7 @@
 <p class="committees">
   {{range .Person.ActiveOfficeRecords }}
   <span class="committee">{{.BodyName}}</span>
-  {{ if eq .MemberType "CHAIR" }}<span class="member-type"> {{ if eq .Title "CHAIRPERSON" }}(chair){{else}}({{.Title | ToLower}}){{end}}</span>{{end}}
+  {{ if or (eq .MemberType "CHAIR") (eq .Title "CHAIRPERSON") }}<span class="member-type"> {{ if eq .Title "CHAIRPERSON" }}(chair){{else}}({{.Title | ToLower}}){{end}}</span>{{end}}
   <br>
   {{end }}
 </p>
