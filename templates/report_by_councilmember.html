@@ -13,6 +13,10 @@
 .form-check {
   display: inline-block;
 }
+.select-session {
+  display: inline-block;
+  margin-right: 2em;
+}
 .select-committee {
   display: inline-block;
   margin-right: 2em;
@@ -63,6 +67,15 @@ tr > th.number-col {
     {{end}}
   </select>
   </div>
+  <div class="select-committee">
+  Committee: 
+  <select name="committee" id="committee" class="form-select">
+    <option value="" selected>All</option>
+    {{range .Committees }}
+    <option value="{{. | Slugify}}">{{.}}</option>
+    {{end}}
+  </select>
+  </div>
 </fieldset>
 
 <div id="data"><table class="table">
@@ -93,7 +106,7 @@ tr > th.number-col {
   </table>
 </div>
 
-<div class="my-5"><p>Note: Bills that are withdrawn are excluded. Bills with multiple hearings are counted on date of first hearing.</p></div>
+<div class="my-5"><p>Note: Bills that are withdrawn are excluded. Bills with multiple hearings are counted once. Sponsorships that are withdrawn are not shown.</p></div>
 
 
 
@@ -109,14 +122,29 @@ tr > th.number-col {
 const urlSearchParams = new URLSearchParams(window.location.search)
 const defaultSession = urlSearchParams.get("session") ? urlSearchParams.get("session") : "{{.Session}}";
 const sessionElement = document.getElementById("session");
+document.getElementById("committee").value = urlSearchParams.get("committee") === null? "" : urlSearchParams.get("committee")
+
 Array.from(sessionElement.options).forEach(e => {e.selected = (e.value == defaultSession)})
 sessionElement.addEventListener("change", _ => {
   if (sessionElement.selectedIndex == 0 ) {
     location.href = location.pathname;
     return
   }
-  var qs = new URLSearchParams()
+  var qs = new URLSearchParams(window.location.search)
   qs.set("session", sessionElement.value)
+  location.href = location.pathname + "?" + qs.toString();
+})
+
+document.getElementById("committee").addEventListener("change", () => {
+  const s = document.getElementById("committee")
+  const c = s.options[s.selectedIndex].value;
+
+  var qs = new URLSearchParams(window.location.search)
+  if(c.length >= 1) {
+    qs.set("committee", c)
+  } else {
+    qs.delete("committee")
+  }
   location.href = location.pathname + "?" + qs.toString();
 })
 

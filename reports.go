@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"cloud.google.com/go/storage"
+	"github.com/gosimple/slug"
 	"github.com/jehiah/legislator/db"
 	"github.com/julienschmidt/httprouter"
 	// "gonum.org/v1/gonum/mat"
@@ -363,12 +364,13 @@ func (a *App) ReportCouncilmembers(w http.ResponseWriter, r *http.Request) {
 		SponsorVeto    int
 	}
 	type Page struct {
-		Page     string
-		SubPage  string
-		LastSync LastSync
-		Data     []Row
-		Session  Session
-		Sessions []Session
+		Page       string
+		SubPage    string
+		LastSync   LastSync
+		Data       []Row
+		Session    Session
+		Sessions   []Session
+		Committees []string
 	}
 	body := Page{
 		Page:     "reports",
@@ -381,6 +383,7 @@ func (a *App) ReportCouncilmembers(w http.ResponseWriter, r *http.Request) {
 			body.Session = s
 		}
 	}
+	selectedCommittee := r.Form.Get("committee")
 
 	err := a.getJSONFile(r.Context(), "build/last_sync.json", &body.LastSync)
 	if err != nil {
@@ -390,6 +393,7 @@ func (a *App) ReportCouncilmembers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := make(map[string]*Row)
+	c := make(map[string]bool)
 
 	// get all the years for the legislative session
 	for year := body.Session.StartYear; year <= body.Session.EndYear && year <= time.Now().Year(); year++ {
@@ -406,6 +410,14 @@ func (a *App) ReportCouncilmembers(w http.ResponseWriter, r *http.Request) {
 		for _, ll := range l {
 			if ll.StatusName == "Withdrawn" {
 				continue
+			}
+			c[ll.BodyName] = true
+
+			if selectedCommittee != "" {
+				shortCommittee := slug.Make(strings.TrimPrefix(ll.BodyName, "Committee on "))
+				if shortCommittee != selectedCommittee {
+					continue
+				}
 			}
 
 			var hasHearing, hasPassed, hasEnacted bool
@@ -472,6 +484,10 @@ func (a *App) ReportCouncilmembers(w http.ResponseWriter, r *http.Request) {
 
 		return body.Data[i].IntroIntro > body.Data[j].IntroIntro
 	})
+	for b, _ := range c {
+		body.Committees = append(body.Committees, strings.TrimPrefix(b, "Committee on "))
+	}
+	sort.Strings(body.Committees)
 
 	w.Header().Set("content-type", "text/html")
 	cacheTTL := time.Minute * 15
