@@ -117,6 +117,16 @@ sessionElement.addEventListener("change", _ => {
   location.href = location.pathname + "?" + qs.toString();
 })
 
+function shortDate() {
+  return d.toLocaleString(undefined, {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'America/New_York'
+  })
+}
+
+
 let data = {{.Data}};
 
 let target = document.getElementById("chart")
@@ -189,7 +199,7 @@ dates.forEach(d => {
   if (d["Enacted"] === undefined ) {d["Enacted"] = enacted} else {enacted = d["Enacted"]}
 })
 
-let df = new Intl.DateTimeFormat([], {dateStyle:"medium"});
+let df = new Intl.DateTimeFormat([], {dateStyle:"medium", timeZone:"America/New_York"});
 let nf = new Intl.NumberFormat();
 target = document.getElementById("data-body")
 let template = document.getElementById("data-row")

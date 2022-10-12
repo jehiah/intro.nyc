@@ -153,7 +153,7 @@ func (a *App) ReportByStatus(w http.ResponseWriter, r *http.Request) {
 			if ll.StatusName == "Withdrawn" {
 				continue
 			}
-			day := ll.IntroDate.Truncate(time.Hour * 24)
+			day := ll.IntroDate.In(americaNewYork).Truncate(time.Hour * 24)
 			introduced[day] = introduced[day] + 1
 
 			seen := make(map[string]bool)
@@ -162,7 +162,7 @@ func (a *App) ReportByStatus(w http.ResponseWriter, r *http.Request) {
 					continue
 				}
 				seen[h.Action] = true // only track first hearing
-				day := h.Date.Truncate(time.Hour * 24)
+				day := h.Date.In(americaNewYork).Truncate(time.Hour * 24)
 
 				switch h.Action {
 				// use IntroDate directly; some bills don't have a matching action 0407-2022
@@ -182,12 +182,12 @@ func (a *App) ReportByStatus(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	today := time.Now().Truncate(time.Hour * 24)
+	today := time.Now().In(americaNewYork).Truncate(time.Hour * 24)
 	for i, d := range []map[time.Time]int{introduced, hearing, approved, enacted} {
 		status := []string{"Introduced", "Hearing Held", "Passed Council", "Enacted"}[i]
 		var data []Row
 		for date, count := range d {
-			data = append(data, Row{Time: date, Date: date.Format("2006-01-02"), Count: count, Status: status})
+			data = append(data, Row{Time: date, Date: date.Format(time.RFC3339), Count: count, Status: status})
 		}
 		sort.Slice(data, func(i, j int) bool { return data[i].Time.Before(data[j].Time) })
 		carry := 0
@@ -201,7 +201,7 @@ func (a *App) ReportByStatus(w http.ResponseWriter, r *http.Request) {
 			last := data[len(data)-1]
 			// show tomorrow
 			tomorrow := today.AddDate(0, 0, 1)
-			data = append(data, Row{Time: tomorrow, Date: tomorrow.Format("2006-01-02"), Count: last.Count, Status: last.Status})
+			data = append(data, Row{Time: tomorrow, Date: tomorrow.Format(time.RFC3339), Count: last.Count, Status: last.Status})
 		}
 		data[len(data)-1].Last = true
 
