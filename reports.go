@@ -429,10 +429,10 @@ func (a *App) ReportCouncilmembers(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 			for i, s := range ll.Sponsors {
-				r, ok := data[s.FullName]
+				r, ok := data[s.Slug]
 				if !ok {
 					r = &Row{Person: s}
-					data[s.FullName] = r
+					data[s.Slug] = r
 				}
 				if i == 0 {
 					r.IntroIntro += 1
