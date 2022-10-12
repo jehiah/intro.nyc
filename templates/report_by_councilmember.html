@@ -1,0 +1,150 @@
+{{template "base" .}}
+{{define "title"}}Report: Councilmember Activity{{end}}
+{{define "head"}}
+
+<style>
+
+
+.form-select {
+  width:inherit;
+  display: inline-block;
+  max-width: 350px;
+}
+.form-check {
+  display: inline-block;
+}
+.select-committee {
+  display: inline-block;
+  margin-right: 2em;
+}
+
+@media (min-width: 576px) { 
+  .form-select {
+    max-width: 450px;
+  }
+}
+
+tr > th.number-col {
+  text-align: right;
+}
+
+#data-body > tr > td.number {
+  text-align: right;
+}
+
+</style>
+{{end}}
+
+
+{{define "middle"}}
+
+
+<ul class="nav nav-tabs my-3">
+  <li class="nav-item">
+    <a class="nav-link" href="/reports/most_sponsored">Most Sponsored</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" href="/reports/status">Legislative Activity</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" href="/reports/similarity">Similarity</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link active" aria-current="page"  href="/reports/councilmembers">Council Members</a>
+  </li>
+</ul>
+
+
+<fieldset class="my-5">
+  <div class="select-session">
+  <select name="session" id="session" class="form-select">
+    {{range .Sessions }}
+    <option value="{{.}}">{{.}} Legislative Session</option>
+    {{end}}
+  </select>
+  </div>
+</fieldset>
+
+<div id="data"><table class="table">
+    <thead>
+      <tr>
+        <th>Council Member</th>
+        <th class="number-col">Bills Introduced</th>
+        <th class="number-col">Hearing</th>
+        <th class="number-col">Passed</th>
+        <th class="number-col">Bills Sponsored</th>
+        <th class="number-col">Hearing</th>
+        <th class="number-col">Passed</th>
+      </tr>
+    </thead>
+    <tbody id="data-body">
+      <template id="data-row">
+        <tr>
+          <td><a class="councilmember"></a></td>
+          <td class="introduced number"></td>
+          <td class="introduced-hearing number"></td>
+          <td class="introduced-passed number"></td>
+          <td class="sponsored number"></td>
+          <td class="sponsored-hearing number"></td>
+          <td class="sponsored-passed number"></td>
+        </tr>
+      </template>
+    </tbody>
+  </table>
+</div>
+
+<div class="my-5"><p>Note: Bills that are withdrawn are excluded. Bills with multiple hearings are counted on date of first hearing.</p></div>
+
+
+
+{{end}}
+
+{{ define "last-updated"}}
+<p>Data Last Updated <span class="last-updated" title="{{.LastSync.LastRun}}">{{.LastSync.LastRun | Time}}</span></p>
+{{end}}
+
+{{define "javascript"}}
+<script type="text/javascript">
+// bootstrap current selection from URL
+const urlSearchParams = new URLSearchParams(window.location.search)
+const defaultSession = urlSearchParams.get("session") ? urlSearchParams.get("session") : "{{.Session}}";
+const sessionElement = document.getElementById("session");
+Array.from(sessionElement.options).forEach(e => {e.selected = (e.value == defaultSession)})
+sessionElement.addEventListener("change", _ => {
+  if (sessionElement.selectedIndex == 0 ) {
+    location.href = location.pathname;
+    return
+  }
+  var qs = new URLSearchParams()
+  qs.set("session", sessionElement.value)
+  location.href = location.pathname + "?" + qs.toString();
+})
+
+
+let data = {{.Data}};
+
+let nf = new Intl.NumberFormat();
+let template = document.getElementById("data-row")
+let target = document.getElementById("data-body")
+
+data.forEach(d => {
+  var clone = template.content.cloneNode(true);
+  if (d.Person.FullName == "") { return }
+
+  clone.querySelectorAll(".councilmember")[0].textContent = d.Person.FullName
+  clone.querySelectorAll(".councilmember")[0].href = "/councilmembers/" + d.Person.Slug
+  clone.querySelectorAll(".introduced")[0].textContent = nf.format(d.IntroIntro);
+  clone.querySelectorAll(".introduced-hearing")[0].textContent = nf.format(d.IntroHearing);
+  clone.querySelectorAll(".introduced-passed")[0].textContent = nf.format(d.IntroPassed);
+  clone.querySelectorAll(".sponsored")[0].textContent = nf.format(d.SponsorIntro);
+  clone.querySelectorAll(".sponsored-hearing")[0].textContent = nf.format(d.SponsorHearing);
+  clone.querySelectorAll(".sponsored-passed")[0].textContent = nf.format(d.SponsorPassed);
+  target.appendChild(clone);
+
+})
+
+
+
+</script>
+{{end}}
+
