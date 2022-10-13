@@ -78,16 +78,16 @@ tr > th.number-col {
   </div>
 </fieldset>
 
-<div id="data"><table class="table">
+<div id="data"><table class="table tablesorter" id="data-table">
     <thead>
       <tr>
         <th>Council Member</th>
-        <th class="number-col">Bills Introduced</th>
-        <th class="number-col">Hearing</th>
-        <th class="number-col">Passed</th>
-        <th class="number-col">Bills Sponsored</th>
-        <th class="number-col">Hearing</th>
-        <th class="number-col">Passed</th>
+        <th class="number-col" data-sortInitialOrder="desc">Bills Introduced</th>
+        <th class="number-col" data-sortInitialOrder="desc">Hearing</th>
+        <th class="number-col" data-sortInitialOrder="desc">Passed</th>
+        <th class="number-col" data-sortInitialOrder="desc">Bills Sponsored</th>
+        <th class="number-col" data-sortInitialOrder="desc">Hearing</th>
+        <th class="number-col" data-sortInitialOrder="desc">Passed</th>
       </tr>
     </thead>
     <tbody id="data-body">
@@ -174,5 +174,14 @@ data.forEach(d => {
 
 
 </script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.1/jquery.min.js" integrity="sha512-aVKKRRi/Q/YV+4mjoKBsE4x3H+BkegoM/em46NNlCqNTmUYADjBbeNefNxYV7giUp0VxICtqdrbqU7iVaeZNXA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.tablesorter/2.31.3/js/jquery.tablesorter.min.js" integrity="sha512-qzgd5cYSZcosqpzpn7zF2ZId8f/8CHmFKZ8j7mU4OUXTNRd5g+ZHBPsgKEwoqxCtdQvExE5LprwwPAgoicguNg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery.tablesorter/2.31.3/css/theme.bootstrap_4.min.css" integrity="sha512-2C6AmJKgt4B+bQc08/TwUeFKkq8CsBNlTaNcNgUmsDJSU1Fg+R6azDbho+ZzuxEkJnCjLZQMozSq3y97ZmgwjA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+<script type="text/javascript">
+$(function() {
+  $("#data-table").tablesorter({sortList:[[1,1]],  theme : "bootstrap"});
+});
+</script>
+
 {{end}}
 
