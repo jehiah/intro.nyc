@@ -364,23 +364,28 @@ func (a *App) ReportCouncilmembers(w http.ResponseWriter, r *http.Request) {
 		SponsorVeto    int
 	}
 	type Page struct {
-		Page       string
-		SubPage    string
-		LastSync   LastSync
-		Data       []Row
-		Session    Session
-		Sessions   []Session
-		Committees []string
+		Page             string
+		SubPage          string
+		LastSync         LastSync
+		Data             []Row
+		Session          Session
+		Sessions         []Session
+		Committees       []string
+		IsCurrentSession bool
 	}
 	body := Page{
-		Page:     "reports",
-		SubPage:  "by_councilmember",
-		Session:  CurrentSession,
-		Sessions: Sessions,
+		Page:             "reports",
+		SubPage:          "by_councilmember",
+		Session:          CurrentSession,
+		Sessions:         Sessions,
+		IsCurrentSession: true,
 	}
 	for _, s := range Sessions {
 		if s.String() == r.Form.Get("session") {
 			body.Session = s
+			if s != CurrentSession {
+				body.IsCurrentSession = false
+			}
 		}
 	}
 	selectedCommittee := r.Form.Get("committee")

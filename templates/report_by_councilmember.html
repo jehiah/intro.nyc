@@ -93,7 +93,7 @@ tr > th.number-col {
     <tbody id="data-body">
       <template id="data-row">
         <tr>
-          <td><a class="councilmember"></a></td>
+          <td class="councilmember"><a class="councilmember"></a></td>
           <td class="introduced number"></td>
           <td class="introduced-hearing number"></td>
           <td class="introduced-passed number"></td>
@@ -159,8 +159,14 @@ data.forEach(d => {
   var clone = template.content.cloneNode(true);
   if (d.Person.FullName == "") { return }
 
-  clone.querySelectorAll(".councilmember")[0].textContent = d.Person.FullName
-  clone.querySelectorAll(".councilmember")[0].href = "/councilmembers/" + d.Person.Slug
+  let a = clone.querySelectorAll("a.councilmember")[0];
+  {{if .IsCurrentSession}}
+  a.textContent = d.Person.FullName
+  a.href = "/councilmembers/" + d.Person.Slug
+  {{ else }}
+  clone.querySelectorAll("td.councilmember")[0].removeChild(a);
+  clone.querySelectorAll("td.councilmember")[0].textContent = d.Person.FullName;
+  {{end}}
   clone.querySelectorAll(".introduced")[0].textContent = nf.format(d.IntroIntro);
   clone.querySelectorAll(".introduced-hearing")[0].textContent = nf.format(d.IntroHearing);
   clone.querySelectorAll(".introduced-passed")[0].textContent = nf.format(d.IntroPassed);
