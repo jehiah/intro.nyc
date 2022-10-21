@@ -36,6 +36,14 @@ tr > th.number-col {
   text-align: right;
 }
 
+.member-type {
+  font-size: 10px;
+  background-color: #f7f0bc;
+  padding: 0 .25rem;
+  margin-left: .5rem;
+}
+
+
 </style>
 {{end}}
 
@@ -160,13 +168,26 @@ data.forEach(d => {
   if (d.Person.FullName == "") { return }
 
   let a = clone.querySelectorAll("a.councilmember")[0];
+  let td = clone.querySelectorAll("td.councilmember")[0];
   {{if .IsCurrentSession}}
   a.textContent = d.Person.FullName
   a.href = "/councilmembers/" + d.Person.Slug
   {{ else }}
-  clone.querySelectorAll("td.councilmember")[0].removeChild(a);
-  clone.querySelectorAll("td.councilmember")[0].textContent = d.Person.FullName;
+  td.removeChild(a);
+  td.textContent = d.Person.FullName;
   {{end}}
+  if (d.OfficeRecord.MemberType == "CHAIR" || d.OfficeRecord.Title == "CHAIRPERSON" ) {
+    let s = document.createElement("span")
+    s.className = "member-type"
+    s.textContent = "(chair)"
+    td.appendChild(s)
+  } else if (d.OfficeRecord.MemberType !== "") {
+    let s = document.createElement("span")
+    s.className = "member-type"
+    s.textContent = "(committee member)"
+    td.appendChild(s)
+  }
+
   clone.querySelectorAll(".introduced")[0].textContent = nf.format(d.IntroIntro);
   clone.querySelectorAll(".introduced-hearing")[0].textContent = nf.format(d.IntroHearing);
   clone.querySelectorAll(".introduced-passed")[0].textContent = nf.format(d.IntroPassed);

@@ -349,7 +349,8 @@ func (a *App) ReportCouncilmembers(w http.ResponseWriter, r *http.Request) {
 	t := newTemplate(a.templateFS, template)
 
 	type Row struct {
-		Person db.PersonReference
+		Person       db.PersonReference
+		OfficeRecord db.OfficeRecord
 
 		IntroIntro   int
 		IntroHearing int
@@ -389,6 +390,29 @@ func (a *App) ReportCouncilmembers(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	selectedCommittee := r.Form.Get("committee")
+
+	peopleOfficeRecord := make(map[string]db.OfficeRecord)
+	if selectedCommittee != "" {
+		var people []db.Person
+		err := a.getJSONFile(r.Context(), "build/people_all.json", &people)
+		if err != nil {
+			log.Print(err)
+			http.Error(w, "Internal Server Error", 500)
+		}
+		for _, p := range people {
+			for _, or := range p.OfficeRecords {
+				if or.Start.Year() != body.Session.StartYear && or.End.Year() != body.Session.EndYear {
+					// TODO: rare but someone could be partial w/o overlap on start/stop
+					continue
+				}
+				shortCommittee := slug.Make(strings.TrimPrefix(or.BodyName, "Committee on "))
+				if shortCommittee == selectedCommittee {
+					peopleOfficeRecord[p.Slug] = or
+				}
+				continue
+			}
+		}
+	}
 
 	err := a.getJSONFile(r.Context(), "build/last_sync.json", &body.LastSync)
 	if err != nil {
@@ -448,7 +472,7 @@ func (a *App) ReportCouncilmembers(w http.ResponseWriter, r *http.Request) {
 			for i, s := range ll.Sponsors {
 				r, ok := data[s.Slug]
 				if !ok {
-					r = &Row{Person: s}
+					r = &Row{Person: s, OfficeRecord: peopleOfficeRecord[s.Slug]}
 					data[s.Slug] = r
 				}
 				if i == 0 {
