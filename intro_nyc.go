@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"embed"
-	_ "embed"
 	"encoding/json"
 	"flag"
 	"fmt"

@@ -15,6 +15,10 @@ import (
 	// "gonum.org/v1/gonum/mat"
 )
 
+func TrimCommittee(s string) string {
+	return strings.TrimPrefix(s, "Committee on ")
+}
+
 // Reports handles /reports/...
 func (a *App) Reports(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	switch ps.ByName("report") {
@@ -28,6 +32,8 @@ func (a *App) Reports(w http.ResponseWriter, r *http.Request, ps httprouter.Para
 		a.ReportSimilarity(w, r)
 	case "councilmembers":
 		a.ReportCouncilmembers(w, r)
+	case "committees":
+		a.ReportCommittees(w, r)
 	default:
 		http.Error(w, "Not Found", 404)
 	}
@@ -82,7 +88,7 @@ func (a *App) ReportMostSponsored(w http.ResponseWriter, r *http.Request) {
 		c[l.BodyName] = true
 	}
 	for b, _ := range c {
-		body.Committees = append(body.Committees, strings.TrimPrefix(b, "Committee on "))
+		body.Committees = append(body.Committees, TrimCommittee(b))
 	}
 	sort.Strings(body.Committees)
 
@@ -405,7 +411,7 @@ func (a *App) ReportCouncilmembers(w http.ResponseWriter, r *http.Request) {
 					// TODO: rare but someone could be partial w/o overlap on start/stop
 					continue
 				}
-				shortCommittee := slug.Make(strings.TrimPrefix(or.BodyName, "Committee on "))
+				shortCommittee := slug.Make(TrimCommittee(or.BodyName))
 				if shortCommittee == selectedCommittee {
 					peopleOfficeRecord[p.Slug] = or
 				}
@@ -517,6 +523,146 @@ func (a *App) ReportCouncilmembers(w http.ResponseWriter, r *http.Request) {
 		body.Committees = append(body.Committees, strings.TrimPrefix(b, "Committee on "))
 	}
 	sort.Strings(body.Committees)
+
+	w.Header().Set("content-type", "text/html")
+	cacheTTL := time.Minute * 15
+	a.addExpireHeaders(w, cacheTTL)
+	err = t.ExecuteTemplate(w, template, body)
+	if err != nil {
+		log.Print(err)
+		http.Error(w, "Internal Server Error", 500)
+		return
+	}
+}
+
+// ReportCommittees shows the legislative activity of each committee
+func (a *App) ReportCommittees(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	template := "report_by_committee.html"
+
+	t := newTemplate(a.templateFS, template)
+
+	type Row struct {
+		Committee         string
+		BillTotal         int
+		BillHearing       int
+		BillCommitteeVote int
+		BillPassedCouncil int
+		BillEnacted       int
+
+		HearingDates      map[string]bool
+		OversightHearings int
+	}
+
+	type Page struct {
+		Page     string
+		SubPage  string
+		LastSync LastSync
+		Data     []Row
+		Session  Session
+		Sessions []Session
+		// Committees       []string ?
+		IsCurrentSession bool
+	}
+	body := Page{
+		Page:             "reports",
+		SubPage:          "by_committee",
+		Session:          CurrentSession,
+		Sessions:         Sessions,
+		IsCurrentSession: true,
+	}
+	for _, s := range Sessions {
+		if s.String() == r.Form.Get("session") {
+			body.Session = s
+			if s != CurrentSession {
+				body.IsCurrentSession = false
+			}
+		}
+	}
+	// selectedCommittee := r.Form.Get("committee")
+
+	err := a.getJSONFile(r.Context(), "build/last_sync.json", &body.LastSync)
+	if err != nil {
+		log.Print(err)
+		http.Error(w, "Internal Server Error", 500)
+		return
+	}
+
+	data := make(map[string]*Row)
+	c := make(map[string]bool)
+
+	// get all the years for the legislative session
+	for year := body.Session.StartYear; year <= body.Session.EndYear && year <= time.Now().Year(); year++ {
+		var l []Legislation
+		err := a.getJSONFile(r.Context(), fmt.Sprintf("build/%d.json", year), &l)
+		if err != nil {
+			if err == storage.ErrObjectNotExist {
+				continue
+			}
+			log.Print(err)
+			http.Error(w, "Internal Server Error", 500)
+			return
+		}
+		for _, ll := range l {
+			if ll.StatusName == "Withdrawn" {
+				continue
+			}
+			c[ll.BodyName] = true
+			d := data[ll.BodyName]
+			if d == nil {
+				d = &Row{
+					Committee:    TrimCommittee(ll.BodyName),
+					HearingDates: make(map[string]bool),
+				}
+				data[ll.BodyName] = d
+			}
+			d.BillTotal += 1
+
+			seen := make(map[string]bool)
+			for _, h := range ll.History {
+				switch h.BodyName {
+				case "City Council", "Administration", ll.BodyName:
+					// only count actions by primary committee
+				default:
+					continue
+				}
+				if seen[h.Action] {
+					continue
+				}
+				seen[h.Action] = true // only track first hearing per committee
+				switch h.Action {
+				case "Referred to Comm by Council":
+				case "Laid Over by Committee", "Amendment Proposed by Comm", "Amended by Committee":
+					// committees[h.BodyName] = true
+				case "Hearing Held by Committee", "Hearing on P-C Item by Comm":
+					// committees[h.BodyName] = true
+					// TODO: track all hearings on hearing dates
+					d.HearingDates[h.Date.Format("2005-01-02")] = true
+					d.BillHearing += 1
+				case "Approved by Committee":
+					d.BillCommitteeVote += 1
+				case "Approved by Council":
+					d.BillPassedCouncil += 1
+				case "City Charter Rule Adopted", "Signed Into Law by Mayor",
+					"Overridden by Council": // possible after "Vetoed by Mayor" (See Int 1208-2013)
+					d.BillEnacted += 1
+				}
+			}
+
+		}
+	}
+
+	for _, r := range data {
+		body.Data = append(body.Data, *r)
+	}
+	sort.Slice(body.Data, func(i, j int) bool {
+		return strings.Compare(body.Data[i].Committee, body.Data[j].Committee) == -1
+	})
+
+	// for b, _ := range c {
+	// 	body.Committees = append(body.Committees, strings.TrimPrefix(b, "Committee on "))
+	// }
+	// sort.Strings(body.Committees)
 
 	w.Header().Set("content-type", "text/html")
 	cacheTTL := time.Minute * 15

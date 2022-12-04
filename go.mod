@@ -6,6 +6,7 @@ require (
 	cloud.google.com/go/storage v1.22.0
 	github.com/dustin/go-humanize v1.0.0
 	github.com/gorilla/handlers v1.5.1
+	github.com/gosimple/slug v1.11.2
 	github.com/jehiah/legislator v0.0.0-20220302024936-2f1e8a231b46
 	github.com/julienschmidt/httprouter v1.3.0
 	golang.org/x/text v0.3.7
@@ -21,7 +22,6 @@ require (
 	github.com/google/go-cmp v0.5.7 // indirect
 	github.com/googleapis/gax-go/v2 v2.3.0 // indirect
 	github.com/googleapis/go-type-adapters v1.0.0 // indirect
-	github.com/gosimple/slug v1.11.2 // indirect
 	github.com/gosimple/unidecode v1.0.1 // indirect
 	go.opencensus.io v0.23.0 // indirect
 	golang.org/x/net v0.0.0-20220421235706-1d1ef9303861 // indirect
