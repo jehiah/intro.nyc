@@ -185,7 +185,7 @@ function newIndex() {
     tokenize: "forward",
     document : {
       id: "File",
-      index: ["File", "Name", "Title", "Summary"],
+      index: ["File", "ShortFile", "Name", "Title", "Summary"],
     }
   });
 }
@@ -212,6 +212,7 @@ function compareDates(a, b) {
   .then(response => {return response.json();})
   .then(d => {
     d.forEach(dd => {
+      dd.ShortFile = dd.File.split('-')[0].replace(/^Int 0+/,"") // allows searching w/o leading zero
       dd.LastModifiedDt = new Date(dd.LastModified)
       index[defaultSession].add(dd);
       lookupData[dd.File] = dd
