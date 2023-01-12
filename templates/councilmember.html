@@ -143,6 +143,8 @@
 
     {{ if eq .StatusName "Enacted" }}
     <span class="badge bg-success status">Enacted</span>
+    {{ else if eq .StatusName "Enacted (Mayor's Desk for Signature)" }}
+    <span class="badge bg-success status">Mayor's Desk for Signature</span>
     {{else if eq .StatusName "Vetoed"}}
     <span class="badge bg-danger status">Vetoed</span>
     {{end}}
@@ -181,6 +183,8 @@
 
     {{ if eq .StatusName "Enacted" }}
     <span class="badge bg-success status">Enacted</span>
+    {{ else if eq .StatusName "Enacted (Mayor's Desk for Signature)" }}
+    <span class="badge bg-success status">Mayor's Desk for Signature</span>
     {{else if eq .StatusName "Vetoed"}}
     <span class="badge bg-danger status">Vetoed</span>
     {{end}}

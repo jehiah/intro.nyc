@@ -92,7 +92,7 @@ func (s Status) CSSClass() string {
 // Councilmember returns the list of councilmembers at /councilmembers/$name
 func (a *App) Councilmember(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	councilmember := ps.ByName("year")
-	log.Printf("Councilmember %q", councilmember)
+	// log.Printf("Councilmember %q", councilmember)
 	if matched, err := regexp.MatchString("^[a-z-]+$", councilmember); err != nil {
 		log.Print(err)
 		http.Error(w, "Internal Server Error", 500)
