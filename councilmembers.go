@@ -21,14 +21,37 @@ func (p Person) ID() int {
 	return p.Person.ID
 }
 func (p Person) Borough() string {
-	city := p.Person.DistrictOffice.City
+	city := strings.TrimSpace(p.Person.DistrictOffice.City)
 	switch city {
 	case "Brooklyn", "Bronx", "Queens", "Staten Island", "Bronx and Manhattan":
 		return city
 	case "New York", "New York, NY 10033":
 		return "Manhattan"
+	case "Bayside", "Astoria", "Jackson Heights", "Far Rockaway", "Middle Village", "St. Albans", "Oakland Gardens", "Sunnyside", "Ozone Park", "Hillcrest":
+		return "Queens"
 	}
-	return "Queens"
+
+	// try based on district
+	if strings.HasPrefix(p.WWW, "https://council.nyc.gov/district-") {
+		district := strings.TrimSuffix(strings.TrimPrefix(p.WWW, "https://council.nyc.gov/district-"), "/")
+		switch district {
+		case "1", "2", "3", "4", "5", "6", "7", "9", "10":
+			return "Manhattan"
+		case "8":
+			return "Manhattan and Bronx"
+		case "11", "12", "13", "14", "15", "16", "17", "18":
+			return "Bronx"
+		case "19", "20", "21", "22", "23", "24", "25", "26", "27", "28", "29", "30", "31", "32":
+			return "Queens"
+		case "33", "35", "36", "37", "38", "39", "40", "41", "42", "43", "44", "45", "46", "47", "48":
+			return "Brooklyn"
+		case "34":
+			return "Brooklyn and Queens"
+		case "49", "50", "51":
+			return "Staten Island"
+		}
+	}
+	return ""
 }
 
 type PersonMetadata struct {
@@ -99,8 +122,12 @@ func (t PersonMetadata) SocialAccounts() []SocialAccount {
 func (p Person) CouncilTitle() string {
 	now := time.Now()
 	for _, oo := range p.OfficeRecords {
-		if oo.BodyName != "City Council" { continue}
-		if oo.End.Before(now) {continue}
+		if oo.BodyName != "City Council" {
+			continue
+		}
+		if oo.End.Before(now) {
+			continue
+		}
 		if oo.MemberType == "PRIMARY SPEAKER" {
 			return "Speaker"
 		}
