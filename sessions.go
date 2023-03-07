@@ -1,9 +1,19 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"time"
+)
 
 type Session struct {
 	StartYear, EndYear int // inclusive
+}
+
+func (s Session) StartDate() time.Time {
+	return time.Date(s.StartYear, time.January, 1, 0, 0, 0, 0, time.UTC)
+}
+func (s Session) EndDate() time.Time {
+	return time.Date(s.EndYear+1, time.January, 1, 0, 0, 0, 0, time.UTC).Add(-1 * time.Minute)
 }
 
 func (s Session) String() string { return fmt.Sprintf("%d-%d", s.StartYear, s.EndYear) }

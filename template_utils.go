@@ -22,7 +22,7 @@ func cssClass(s string) string {
 	return nonASCII.ReplaceAllString(strings.ToLower(s), "-")
 }
 
-func newTemplate(fs fs.FS, n string) *template.Template {
+func newTemplate(fs fs.FS, n string, funcs ...template.FuncMap) *template.Template {
 	funcMap := template.FuncMap{
 		"ToLower":    strings.ToLower,
 		"Comma":      commaInt,
@@ -31,6 +31,13 @@ func newTemplate(fs fs.FS, n string) *template.Template {
 		"CSSClass":   cssClass,
 		"Slugify":    slug.Make,
 		"TrimPrefix": strings.TrimPrefix,
+	}
+	if len(funcs) > 0 {
+		for _, f := range funcs {
+			for k, v := range f {
+				funcMap[k] = v
+			}
+		}
 	}
 	t := template.New("empty").Funcs(funcMap)
 	return template.Must(t.ParseFS(fs, filepath.Join("templates", n), "templates/base.html"))

@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"html/template"
 	"log"
 	"net/http"
 	"sort"
@@ -39,11 +40,22 @@ func (a *App) Reports(w http.ResponseWriter, r *http.Request, ps httprouter.Para
 	}
 }
 
+type CommitteeSponsorship struct {
+	BodyName         string
+	Sponsors         int
+	CommitteeMembers int
+}
+
+func (c CommitteeSponsorship) String() string {
+	return fmt.Sprintf("%d of %d", c.Sponsors, c.CommitteeMembers)
+}
+func (c CommitteeSponsorship) Majority() bool {
+	return c.Sponsors > (c.CommitteeMembers / 2)
+}
+
 // ReportMostSponsored returns the list of legislation changes /recent
 func (a *App) ReportMostSponsored(w http.ResponseWriter, r *http.Request) {
-	template := "report_most_sponsored.html"
-
-	t := newTemplate(a.templateFS, template)
+	templateName := "report_most_sponsored.html"
 
 	type Page struct {
 		Page        string
@@ -55,6 +67,7 @@ func (a *App) ReportMostSponsored(w http.ResponseWriter, r *http.Request) {
 	body := Page{
 		Page: "reports",
 		// Sessions: Sessions[:3],
+
 	}
 
 	err := a.getJSONFile(r.Context(), "build/last_sync.json", &body.LastSync)
@@ -63,6 +76,55 @@ func (a *App) ReportMostSponsored(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Internal Server Error", 500)
 		return
 	}
+
+	committeeMembers := make(map[string]map[int]bool)
+	var people []db.Person
+	err = a.getJSONFile(r.Context(), "build/people_all.json", &people)
+	if err != nil {
+		log.Print(err)
+		http.Error(w, "Internal Server Error", 500)
+	}
+	now := time.Now()
+	startDate := CurrentSession.StartDate()
+	for _, p := range people {
+		for _, or := range p.OfficeRecords {
+			if !strings.HasPrefix(or.BodyName, "Committee") {
+				continue
+			}
+			if or.Start.Before(startDate) || or.End.Before(now) {
+				continue
+			}
+			if _, ok := committeeMembers[or.BodyName]; !ok {
+				committeeMembers[or.BodyName] = make(map[int]bool)
+			}
+			committeeMembers[or.BodyName][p.ID] = true
+
+			// some committees are "committe on a, b"
+			if strings.Contains(or.BodyName, ",") {
+				shortName := strings.Split(or.BodyName, ",")[0]
+				if _, ok := committeeMembers[shortName]; !ok {
+					committeeMembers[shortName] = make(map[int]bool)
+				}
+				committeeMembers[shortName][p.ID] = true
+			}
+		}
+	}
+
+	t := newTemplate(a.templateFS, templateName, template.FuncMap{
+		"CommitteeSponsors": func(l Legislation) CommitteeSponsorship {
+			m := committeeMembers[l.BodyName]
+			c := CommitteeSponsorship{
+				BodyName:         l.BodyName,
+				CommitteeMembers: len(m),
+			}
+			for _, s := range l.Sponsors {
+				if m[s.ID] {
+					c.Sponsors++
+				}
+			}
+			return c
+		},
+	})
 
 	// get all the years for the legislative session
 	for year := CurrentSession.StartYear; year <= CurrentSession.EndYear && year <= time.Now().Year(); year++ {
@@ -95,7 +157,7 @@ func (a *App) ReportMostSponsored(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("content-type", "text/html")
 	cacheTTL := time.Minute * 15
 	a.addExpireHeaders(w, cacheTTL)
-	err = t.ExecuteTemplate(w, template, body)
+	err = t.ExecuteTemplate(w, templateName, body)
 	if err != nil {
 		log.Print(err)
 		http.Error(w, "Internal Server Error", 500)
