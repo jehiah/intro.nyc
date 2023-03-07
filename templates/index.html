@@ -304,7 +304,7 @@ function search(q, session) {
       document.querySelector("#search-results").appendChild(p)
       document.querySelector(".search-term").textContent = "\"" + q +"\""
 
-    resultArray.sort((a, b) => {return b.IntroDt - a.IntroDt})
+    resultArray.sort((a, b) => {console.log(a.File, b.File, a.File.localeCompare(b.File)); return a.File.localeCompare(b.File)})
     resultArray.forEach(d => addSearchResult(d))
   }
 }
