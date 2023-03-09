@@ -41,16 +41,24 @@ func (a *App) Reports(w http.ResponseWriter, r *http.Request, ps httprouter.Para
 }
 
 type CommitteeSponsorship struct {
-	BodyName         string
-	Sponsors         int
-	CommitteeMembers int
+	BodyName              string
+	Sponsors              int
+	CouncilmemberSponsors int
+	CommitteeSponsors     int
+	CommitteeMembers      int
 }
 
-func (c CommitteeSponsorship) String() string {
-	return fmt.Sprintf("%d of %d", c.Sponsors, c.CommitteeMembers)
-}
 func (c CommitteeSponsorship) Majority() bool {
-	return c.Sponsors > (c.CommitteeMembers / 2)
+	return c.CouncilmemberSponsors >= 26
+}
+func (c CommitteeSponsorship) SuperMajority() bool {
+	return c.CouncilmemberSponsors >= 34
+}
+func (c CommitteeSponsorship) CommitteeMajority() bool {
+	return c.CommitteeSponsors > (c.CommitteeMembers / 2)
+}
+func (c CommitteeSponsorship) CommitteeString() string {
+	return fmt.Sprintf("%d of %d", c.CommitteeSponsors, c.CommitteeMembers)
 }
 
 // ReportMostSponsored returns the list of legislation changes /recent
@@ -116,10 +124,15 @@ func (a *App) ReportMostSponsored(w http.ResponseWriter, r *http.Request) {
 			c := CommitteeSponsorship{
 				BodyName:         l.BodyName,
 				CommitteeMembers: len(m),
+				Sponsors:         len(l.Sponsors),
 			}
 			for _, s := range l.Sponsors {
+				if s.ID == 0 {
+					continue // i.e. BP, PA
+				}
+				c.CouncilmemberSponsors++
 				if m[s.ID] {
-					c.Sponsors++
+					c.CommitteeSponsors++
 				}
 			}
 			return c
