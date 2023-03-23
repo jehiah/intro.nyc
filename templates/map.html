@@ -1,0 +1,104 @@
+{{template "base" .}}
+{{define "title"}}{{.Title}}{{end}}
+{{define "head"}}
+
+<link href='https://api.mapbox.com/mapbox-gl-js/v2.13.0/mapbox-gl.css' rel='stylesheet' />
+
+<style>
+
+#map {
+    min-width: 300px;
+    min-height: 300px;
+}
+</style>
+{{end}}
+
+
+{{define "middle"}}
+
+<div class="row">
+<div class="col-sm-12 col-md-6">
+
+<div id="map-loading">
+<div class="spinner-border text-primary" role="status" ></div>
+Loading...
+</div>
+
+<div id="map"></div>
+
+</div>
+</div>
+
+{{end}}
+
+{{define "javascript"}}
+<script src='https://api.mapbox.com/mapbox-gl-js/v2.13.0/mapbox-gl.js'></script>
+
+<script type="text/javascript">
+mapboxgl.accessToken = 'pk.eyJ1IjoiamVoaWFoIiwiYSI6IlRXOEpQV1kifQ.oUrBuVkkuZHmi0QUBvIBhg';
+const map = new mapboxgl.Map({
+container: 'map', // container ID
+// style: 'mapbox://styles/mapbox/streets-v12', // style URL
+style: 'mapbox://styles/jehiah/clfkhedeg000f01oj4nz5c06x',
+center: [-74.5, 40], // starting position [lng, lat]
+zoom: 9, // starting zoom
+});
+
+map.on('load', () => {
+    document.getElementById("map-loading").style.display = 'none';
+
+    map.addSource('city-council', {
+        type: 'geojson',
+        data: '/static/nyc_city_council_2021.geojson'
+    });
+
+    //     // Add a symbol layer
+    // map.addLayer({
+    // 'id': 'points',
+    // 'type': 'symbol',
+    // 'source': 'points',
+    // 'layout': {
+    // 'icon-image': 'custom-marker',
+    // // get the title name from the source's "title" property
+    // 'text-field': ['get', 'title'],
+    // 'text-font': [
+    // 'Open Sans Semibold',
+    // 'Arial Unicode MS Bold'
+    // ],
+    // 'text-offset': [0, 1.25],
+    // 'text-anchor': 'top'
+    // }
+    // });
+
+})
+
+
+
+/* 
+Add an event listener that runs
+  when a user clicks on the map element.
+*/
+// map.on('click', (event) => {
+//   // If the user clicked on one of your markers, get its information.
+//   const features = map.queryRenderedFeatures(event.point, {
+//     layers: ['jehiah.6u6fijj6'] // replace with your layer name
+//   });
+//   if (!features.length) {
+//     return;
+//   }
+//   const feature = features[0];
+
+//   // Code from the next step will go here.
+// });
+
+// const popup = new mapboxgl.Popup({ offset: [0, -15] })
+//   .setLngLat(feature.geometry.coordinates)
+//   .setHTML(
+//     `<h3>${feature.properties.title}</h3><p>${feature.properties.description}</p>`
+//   )
+//   .addTo(map);
+
+
+</script>
+{{end}}
+
