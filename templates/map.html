@@ -7,8 +7,8 @@
 <style>
 
 #map {
-    min-width: 300px;
-    min-height: 300px;
+    min-width: 400px;
+    min-height: 600px;
 }
 </style>
 {{end}}
@@ -17,7 +17,7 @@
 {{define "middle"}}
 
 <div class="row">
-<div class="col-sm-12 col-md-6">
+<div class="col-sm-12">
 
 <div id="map-loading">
 <div class="spinner-border text-primary" role="status" ></div>
@@ -35,22 +35,104 @@ Loading...
 <script src='https://api.mapbox.com/mapbox-gl-js/v2.13.0/mapbox-gl.js'></script>
 
 <script type="text/javascript">
+var bounds = [
+    [-74.3, 40.4], // Southwest coordinates
+    [-73.5, 41.0]  // Northeast coordinates
+];
+
 mapboxgl.accessToken = 'pk.eyJ1IjoiamVoaWFoIiwiYSI6IlRXOEpQV1kifQ.oUrBuVkkuZHmi0QUBvIBhg';
 const map = new mapboxgl.Map({
 container: 'map', // container ID
 // style: 'mapbox://styles/mapbox/streets-v12', // style URL
 style: 'mapbox://styles/jehiah/clfkhedeg000f01oj4nz5c06x',
-center: [-74.5, 40], // starting position [lng, lat]
-zoom: 9, // starting zoom
+center: [-73.9772, 40.7749], // NYC coordinates
+zoom: 10, // starting zoom
+maxBounds: bounds // Set the maximum bounds for the map
 });
+map.addControl(new mapboxgl.NavigationControl());
 
 map.on('load', () => {
     document.getElementById("map-loading").style.display = 'none';
 
-    map.addSource('city-council', {
+    map.addSource('city-council-districts', {
         type: 'geojson',
         data: '/static/nyc_city_council_2021.geojson'
     });
+
+    map.addLayer({
+        id: 'city-council-districts',
+        type: 'fill',
+        source: 'city-council-districts',
+        paint: {
+            'fill-color': '#B6DCEB', // District fill color
+            'fill-opacity': 0.5, // District fill opacity
+            'fill-outline-color': '#19486A' // Dark blue stroke color
+        }
+    });
+
+    map.addLayer({
+        id: 'district-numbers',
+        type: 'symbol',
+        source: 'city-council-districts',
+        layout: {
+            'text-field': '{dist}',
+            'text-font': ['Open Sans Bold'],
+            'text-size': 12,
+            // 'symbol-placement': 'point', // Only display one label per point
+            'text-allow-overlap': true // Allow labels to overlap with each other
+         },
+        paint: {
+            'text-color': '#19486A' // Dark blue text color
+        }
+    });
+
+    // Add a popup to show district information when a district is clicked
+    map.on('click', 'city-council-districts', function (e) {
+    var properties = e.features[0].properties;
+    var councilMember = properties.council_member;
+    var website = "https://council.nyc.gov/district-" + properties.dist;
+    var districtName = "District " + properties.dist;
+
+    new mapboxgl.Popup()
+        .setLngLat(e.lngLat)
+        .setHTML('<h3>' + districtName + '</h3>' + '<p>Council Member: <br><strong>' + councilMember + '</strong></p>' + '<p><a href="' + website + '">Website</a></p>')
+        .addTo(map);
+    });
+
+    // Change the cursor to a pointer when the mouse is over a district
+    map.on('mouseenter', 'city-council-districts', function () {
+        map.getCanvas().style.cursor = 'pointer';
+    });
+
+    // Change it back to a default cursor when it leaves
+    map.on('mouseleave', 'city-council-districts', function () {
+        map.getCanvas().style.cursor = '';
+    });
+
+    // var popup = new mapboxgl.Popup({
+    //     closeButton: false,
+    //     closeOnClick: false
+    // });
+
+    // // Show the popover when the mouse enters a district
+    // map.on('mouseenter', 'city-council-districts', function (e) {
+    //     var properties = e.features[0].properties;
+    //     var councilMember = properties.council_member;
+    //     var website = "https://council.nyc.gov/district-" + properties.dist;
+    //     var districtName = "District " + properties.dist;
+
+    //     map.getCanvas().style.cursor = 'pointer';
+
+    //     popup.setLngLat(e.lngLat)
+    //         .setHTML('<h3>' + districtName + '</h3>' + '<p>Council Member: ' + councilMember + '</p>' + '<p><a href="' + website + '">Website</a></p>')
+    //         .addTo(map);
+    // });
+
+    // // Hide the popover when the mouse leaves a district
+    // map.on('mouseleave', 'city-council-districts', function () {
+    //     map.getCanvas().style.cursor = '';
+    //     popup.remove();
+    // });
 
     //     // Add a symbol layer
     // map.addLayer({
