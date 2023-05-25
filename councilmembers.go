@@ -57,6 +57,7 @@ func (p Person) Borough() string {
 type PersonMetadata struct {
 	ID                           int
 	District                     int
+	Slug string
 	Twitter, TwitterPersonal     string
 	Facebook, FacebookPersonal   string
 	Instagram, InstagramPersonal string

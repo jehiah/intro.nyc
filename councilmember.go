@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 	"time"
+	"strconv"
 
 	"cloud.google.com/go/storage"
 	"github.com/jehiah/legislator/db"
@@ -90,14 +91,36 @@ func (s Status) CSSClass() string {
 }
 
 // Councilmember returns the list of councilmembers at /councilmembers/$name
+//
+// Redirects from /councilmembers/$district -> /councilmembers/$name
 func (a *App) Councilmember(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	councilmember := ps.ByName("year")
 	// log.Printf("Councilmember %q", councilmember)
+
+
+	if i, _ := strconv.Atoi(councilmember); i > 0 && i <= 51 {
+		var metadata []PersonMetadata
+		err := a.getJSONFile(r.Context(), "build/people_metadata.json", &metadata)
+		if err != nil {
+			log.Print(err)
+			http.Error(w, "Internal Server Error", 500)
+			return
+		}
+		for _, m := range metadata {
+			if m.District == i {
+				a.addExpireHeaders(w, time.Hour*24*7)
+				http.Redirect(w, r, "/councilmembers/" + m.Slug, 301)
+				return
+			}
+		}
+	}
+
 	if matched, err := regexp.MatchString("^[a-z-]+$", councilmember); err != nil {
 		log.Print(err)
 		http.Error(w, "Internal Server Error", 500)
 		return
 	} else if !matched {
+
 		log.Printf("council member %q not found", councilmember)
 		http.Error(w, "Not Found", 404)
 		return
@@ -123,7 +146,7 @@ func (a *App) Councilmember(w http.ResponseWriter, r *http.Request, ps httproute
 			break
 		}
 	}
-	if person.Slug == "" {
+	if person.Person.Slug == "" {
 		log.Printf("council member %q not found", councilmember)
 		a.addExpireHeaders(w, time.Minute*5)
 		http.Error(w, "Not Found", 404)
@@ -166,7 +189,7 @@ func (a *App) Councilmember(w http.ResponseWriter, r *http.Request, ps httproute
 	if person.IsActive {
 
 		// TODO: some files may be cached from previous sessions
-		err = a.getJSONFile(r.Context(), fmt.Sprintf("build/legislation_%s.json", person.Slug), &body.Legislation)
+		err = a.getJSONFile(r.Context(), fmt.Sprintf("build/legislation_%s.json", person.Person.Slug), &body.Legislation)
 		if err != nil {
 			// not found is ok; it means they are likely not active in current session (yet?)
 			if err != storage.ErrObjectNotExist {
