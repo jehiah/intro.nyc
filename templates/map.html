@@ -95,7 +95,7 @@ map.on('load', () => {
 
     new mapboxgl.Popup()
         .setLngLat(e.lngLat)
-        .setHTML('<h3>' + districtName + '</h3>' + '<p>Council Member: <br><strong>' + councilMember + '</strong></p>' + '<p><a href="' + website + '">Website</a></p>')
+        .setHTML('<h3>' + districtName + '</h3>' + '<p>Council Member: <br><strong><a href="/councilmembers/' + properties.dist + '">' + councilMember + '</a></strong></p>' + '<p><a href="' + website + '">Website</a></p>')
         .addTo(map);
     });
 

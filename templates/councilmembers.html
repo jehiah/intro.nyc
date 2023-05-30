@@ -47,7 +47,7 @@
 <tbody>
 {{range .People}}
 <tr>
-  <td><span class="full-name"><a href="/councilmembers/{{.Slug}}">{{.FullName}}</a></span> <span class="party">{{.Party}}</span><br>
+  <td><span class="full-name"><a href="/councilmembers/{{.Person.Slug}}">{{.FullName}}</a></span> <span class="party">{{.Party}}</span><br>
     <span class="class">{{.Start.Format "Jan 2006"}} - {{.End.Format "Jan 2006"}}</span>
     {{if .District}}
       <br><span class="district">District {{.District}}</span> <span class="borough">({{.Borough}})</span>
