@@ -186,7 +186,7 @@ func (a *App) L1(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 		a.Reports(w, r, ps)
 		return
 	case "map":
-		a.Map(w,r,ps)
+		a.Map(w, r, ps)
 		return
 	}
 	if IsValidFileNumber(file) {

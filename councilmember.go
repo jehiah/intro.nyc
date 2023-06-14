@@ -6,9 +6,9 @@ import (
 	"net/http"
 	"regexp"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
-	"strconv"
 
 	"cloud.google.com/go/storage"
 	"github.com/jehiah/legislator/db"
@@ -97,7 +97,6 @@ func (a *App) Councilmember(w http.ResponseWriter, r *http.Request, ps httproute
 	councilmember := ps.ByName("year")
 	// log.Printf("Councilmember %q", councilmember)
 
-
 	if i, _ := strconv.Atoi(councilmember); i > 0 && i <= 51 {
 		var metadata []PersonMetadata
 		err := a.getJSONFile(r.Context(), "build/people_metadata.json", &metadata)
@@ -109,7 +108,7 @@ func (a *App) Councilmember(w http.ResponseWriter, r *http.Request, ps httproute
 		for _, m := range metadata {
 			if m.District == i {
 				a.addExpireHeaders(w, time.Hour*24*7)
-				http.Redirect(w, r, "/councilmembers/" + m.Slug, 301)
+				http.Redirect(w, r, "/councilmembers/"+m.Slug, 301)
 				return
 			}
 		}

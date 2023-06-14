@@ -1,5 +1,5 @@
 {{template "base" .}}
-{{define "title"}}Report: Most Sponsored Legislation{{end}}
+{{define "title"}}Report: Similarity{{end}}
 {{define "head"}}
 
 <style>
@@ -13,11 +13,14 @@
 .form-check {
   display: inline-block;
 }
-.select-committee {
+.select-session {
   display: inline-block;
   margin-right: 2em;
 }
-
+.select-councilmember {
+  display: inline-block;
+  margin-right: 2em;
+}
 @media (min-width: 576px) { 
   .form-select {
     max-width: 450px;
@@ -54,14 +57,66 @@
   <div class="select-session">
   <select name="session" id="session" class="form-select">
     {{range .Sessions }}
-    <option value="{{.}}">{{.}} Legislative Session</option>
+    <option value="{{.}}" {{if eq . $.Session}} selected {{end}}>{{.}} Legislative Session</option>
     {{end}}
   </select>
   </div>
+
+  <div class="select-councilmember">
+    Council Member: 
+    <select name="councilmember" id="councilmember" class="form-select">
+      {{range .People }}
+      <option value="{{.Slug}}" {{if eq .Slug $.Person.Slug}} selected {{end}}>{{.FullName}}</option>
+      {{end}}
+    </select>
+  </div>
 </fieldset>
 
+
+
 <div id="chart"></div>
-<div class="my-5"><p>Simiarity of Council Members is based on frequency of co-sponsorship</p></div>
+
+{{with $row := index $.Matrix $.Person.ID }}
+<div class="my-5">
+  <p>
+    {{if $.Session.IsCurrent }}
+    <a href="/councilmembers/{{$.Person.Slug}}"><strong>{{$.Person.FullName}}</strong></a> 
+    {{ else }}
+      <strong>{{$.Person.FullName}}</strong> 
+    {{ end }}
+  has <mark>{{$row.ExpectedVotes}} qualifying votes</mark>
+  and <mark>{{$row.ExpectedSponsors}} bill sponsorships</mark>
+  </p>
+  <p>Qualifying votes are a bills full council vote or committe vote. For bills with multiple votes the last vote is counted. A voting similarity is calculated out of possible votes which excludes excused absenses or unrelated committee votes.</p>
+</div>
+{{end}}
+
+<table class="table table-condenced" id="data-table">
+  <thead>
+    <tr>
+      <th>Council Member</th>
+      <th>Sponsorship Similarity</th>
+      <th>Voting Similarity</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{range .People}}
+    {{if eq .Slug $.Person.Slug}}{{continue}}{{end}}
+    {{with $row := index $.Matrix .ID}}
+    <tr>
+      {{if $.Session.IsCurrent }}
+      <th><a href="/councilmembers/{{.Slug}}">{{.FullName}}</a></th>
+      {{ else }}
+      <th>{{.FullName}}</th>
+      {{end}}
+      <td>{{printf "%0.1f%%" $row.SponsorPercent }}</td>
+      <td>{{printf "%0.1f%%" $row.VotePercent }} &nbsp; <small>{{$row.Votes}} of {{$row.ExpectedVotes}}</small></td>
+    </tr>
+    {{end}}
+    {{end}}
+  </tbody>
+</table>
+
 
 {{end}}
 
@@ -70,70 +125,30 @@
 {{end}}
 
 {{define "javascript"}}
-<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
-<script src="https://cdn.jsdelivr.net/npm/@observablehq/plot@0.5"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.1/jquery.min.js" integrity="sha512-aVKKRRi/Q/YV+4mjoKBsE4x3H+BkegoM/em46NNlCqNTmUYADjBbeNefNxYV7giUp0VxICtqdrbqU7iVaeZNXA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.tablesorter/2.31.3/js/jquery.tablesorter.min.js" integrity="sha512-qzgd5cYSZcosqpzpn7zF2ZId8f/8CHmFKZ8j7mU4OUXTNRd5g+ZHBPsgKEwoqxCtdQvExE5LprwwPAgoicguNg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery.tablesorter/2.31.3/css/theme.bootstrap_4.min.css" integrity="sha512-2C6AmJKgt4B+bQc08/TwUeFKkq8CsBNlTaNcNgUmsDJSU1Fg+R6azDbho+ZzuxEkJnCjLZQMozSq3y97ZmgwjA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 <script type="text/javascript">
-// bootstrap current selection from URL
-const urlSearchParams = new URLSearchParams(window.location.search)
-const defaultSession = urlSearchParams.get("session") ? urlSearchParams.get("session") : "{{.Session}}";
-const sessionElement = document.getElementById("session");
-Array.from(sessionElement.options).forEach(e => {e.selected = (e.value == defaultSession)})
-sessionElement.addEventListener("change", _ => {
-  if (sessionElement.selectedIndex == 0 ) {
-    location.href = location.pathname;
-    return
-  }
-  var qs = new URLSearchParams()
-  qs.set("session", sessionElement.value)
+document.getElementById("session").addEventListener("change", _ => {
+  var qs = new URLSearchParams(window.location.search)
+  let s = document.getElementById("session");
+  qs.delete("councilmember")
+  qs.set("session", s.value)
   location.href = location.pathname + "?" + qs.toString();
 })
 
-let data = {{.Data}};
 
-let target = document.getElementById("chart")
+document.getElementById("councilmember").addEventListener("change", _ => {
+  const s = document.getElementById("councilmember")
+  const c = s.options[s.selectedIndex].value;
+  var qs = new URLSearchParams(window.location.search)
+  qs.set("councilmember", c)
+  location.href = location.pathname + "?" + qs.toString();
+})
 
-target.append(
-  Plot.plot({
-    width:target.getBoundingClientRect().width,
-    height: 800,
-    marginBottom: 90,
-    marginLeft: 90,
-    color: {
-      // type: "ordinal",
-      scheme: "blues",
-      // legend: true, //"ramp",
-      label: null
-    },
-    style: {
-      fontSize:"9px"
-    },
-    y: {label:null, tickRotate: -45},
-    x: {label:null, tickRotate: -45},
-    marks: [
-    Plot.cell(data, {
-        x:"A", 
-        y:"B", 
-        fill:"Count", 
-        // z: "Status",
-        // sort: "Date",
-        // curve: "step-after",
-        // fillOpacity: 1
-      }),
-    // Plot.ruleY([0])
-
-    Plot.text(data, {
-      filter: d => d.Last,
-      x: "A",
-      y: "B",
-      text: "Count", // d => {return d.Status + ": " + d.Count},
-      // fill:"Status",
-      // dx: 4,
-      // textAnchor: "start"
-    })
-
-   ]
-
-}));
+$(function() {
+  $("#data-table").tablesorter({sortList:[[1,1]],  theme : "bootstrap"});
+});
 
 </script>
 {{end}}

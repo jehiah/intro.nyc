@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"net/url"
 	"sort"
 	"strings"
 	"time"
@@ -312,9 +313,16 @@ func (a *App) ReportSimilarity(w http.ResponseWriter, r *http.Request) {
 	t := newTemplate(a.templateFS, template)
 
 	type Row struct {
-		A, B  string
-		Count int
+		db.Person
+
+		ExpectedSponsors int
+		Sponsors         int
+		SponsorPercent   float64
+		ExpectedVotes    int
+		Votes            int
+		VotePercent      float64
 	}
+	data := make(map[int]*Row)
 
 	type Page struct {
 		Page     string
@@ -323,7 +331,9 @@ func (a *App) ReportSimilarity(w http.ResponseWriter, r *http.Request) {
 		Data     []Row
 		Session  Session
 		Sessions []Session
-		Matrix   [][]int
+		People   []db.Person
+		Person   db.Person
+		Matrix   map[int]*Row
 		Names    []string
 	}
 	body := Page{
@@ -331,6 +341,7 @@ func (a *App) ReportSimilarity(w http.ResponseWriter, r *http.Request) {
 		SubPage:  "by_status",
 		Session:  CurrentSession,
 		Sessions: Sessions,
+		Matrix:   data,
 	}
 	for _, s := range Sessions {
 		if s.String() == r.Form.Get("session") {
@@ -338,30 +349,51 @@ func (a *App) ReportSimilarity(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	err := a.getJSONFile(r.Context(), "build/last_sync.json", &body.LastSync)
+	var people []db.Person
+	err := a.getJSONFile(r.Context(), "build/people_all.json", &people)
 	if err != nil {
 		log.Print(err)
 		http.Error(w, "Internal Server Error", 500)
+	}
+	for _, p := range people {
+		include := false
+		for _, or := range p.OfficeRecords {
+			if !body.Session.Overlaps(or.Start, or.End) {
+				continue
+			}
+			include = true
+			break
+		}
+		if include {
+			body.People = append(body.People, p)
+			data[p.ID] = &Row{Person: p}
+		}
+	}
+
+	for _, p := range body.People {
+		if p.Slug == r.Form.Get("councilmember") {
+			body.Person = p
+			break
+		}
+	}
+
+	if body.Person.Slug == "" {
+		if r.Form.Get("councilmember") != "" {
+			http.Error(w, "Not Found", 404)
+			return
+		}
+		params := &url.Values{
+			"councilmember": []string{body.People[0].Slug},
+			"session":       []string{body.Session.String()},
+		}
+		http.Redirect(w, r, "/reports/similarity?"+params.Encode(), 302)
 		return
 	}
-
-	cmLookup := make(map[string]int)
-	cm := func(p string) int {
-		p = strings.TrimSpace(p)
-		if n, ok := cmLookup[p]; ok {
-			return n
-		}
-		n := len(cmLookup)
-		cmLookup[p] = n
-		return n
-	}
-
-	var sponsors [][]db.PersonReference
 
 	// get all the years for the legislative session
 	for year := body.Session.StartYear; year <= body.Session.EndYear && year <= time.Now().Year(); year++ {
 		var l []Legislation
-		err := a.getJSONFile(r.Context(), fmt.Sprintf("build/%d.json", year), &l)
+		err := a.getJSONFile(r.Context(), fmt.Sprintf("build/%d_votes.json", year), &l)
 		if err != nil {
 			if err == storage.ErrObjectNotExist {
 				continue
@@ -371,47 +403,83 @@ func (a *App) ReportSimilarity(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		for _, ll := range l {
-			sponsors = append(sponsors, ll.Sponsors)
+			// count sponsorship
+			countSponsorship := false
 			for _, s := range ll.Sponsors {
-				cm(s.FullName)
+				if s.ID == body.Person.ID {
+					countSponsorship = true
+					break
+				}
 			}
-		}
-	}
-
-	matrix := make([][]int, len(cmLookup))
-	for i := range matrix {
-		matrix[i] = make([]int, len(cmLookup))
-	}
-	lookup := make([]string, len(cmLookup))
-	for fullName, i := range cmLookup {
-		lookup[i] = fullName
-	}
-
-	for _, s := range sponsors {
-		for _, a := range s {
-			if strings.TrimSpace(a.FullName) == "" {
-				continue
+			if countSponsorship {
+				for _, s := range ll.Sponsors {
+					r, ok := data[s.ID]
+					if !ok {
+						continue // skip sponsorships by BP's
+					}
+					r.Sponsors++
+				}
 			}
-			for _, b := range s {
-				if strings.TrimSpace(b.FullName) == "" {
+
+			// walk votes backwards; use the first one
+			for i := len(ll.History) - 1; i >= 0; i-- {
+				h := ll.History[i]
+				// find desired vote
+				var desired = 0
+
+				for _, v := range h.Votes {
+					if v.ID == body.Person.ID {
+						desired = v.VoteID
+					}
+				}
+				switch desired {
+				case 12, 15:
+					// Negative, Affirmative
+				default:
 					continue
 				}
-				i, j := cm(a.FullName), cm(b.FullName)
-				matrix[i][j] += 1
-				if i != j {
-					matrix[j][i] += 1
+
+				// score everyone
+				for _, v := range h.Votes {
+					switch v.VoteID {
+					case 11:
+						// Abstain
+					case 16:
+						// Absent
+						continue
+					case 22, 44, 45, 46, 65, 43, 23, 9, 4:
+						// Maternity, Paternity, Jury Duty, Medical, Bereavement, Conflict, Suspended, 	Non-voting, Excused
+						continue
+					}
+					data[v.ID].ExpectedVotes++
+					if v.VoteID == desired {
+						data[v.ID].Votes++
+					}
 				}
 			}
 		}
 	}
-	for i, m := range matrix {
-		for j, v := range m {
-			body.Data = append(body.Data, Row{A: lookup[i], B: lookup[j], Count: v})
+	expectedSponsors := data[body.Person.ID].Sponsors
+	for _, r := range data {
+		r.ExpectedSponsors = expectedSponsors
+		if r.ExpectedSponsors > 0 {
+			r.SponsorPercent = (float64(r.Sponsors) / float64(r.ExpectedSponsors)) * 100
 		}
+		if r.ExpectedVotes > 0 {
+			r.VotePercent = (float64(r.Votes) / float64(r.ExpectedVotes)) * 100
+		}
+	}
+
+	err = a.getJSONFile(r.Context(), "build/last_sync.json", &body.LastSync)
+	if err != nil {
+		log.Print(err)
+		http.Error(w, "Internal Server Error", 500)
+		return
 	}
 
 	w.Header().Set("content-type", "text/html")
-	cacheTTL := time.Minute * 15
+	// cacheTTL := time.Minute * 15
+	cacheTTL := time.Second
 	a.addExpireHeaders(w, cacheTTL)
 	err = t.ExecuteTemplate(w, template, body)
 	if err != nil {
@@ -482,8 +550,7 @@ func (a *App) ReportCouncilmembers(w http.ResponseWriter, r *http.Request) {
 		}
 		for _, p := range people {
 			for _, or := range p.OfficeRecords {
-				if or.Start.Year() != body.Session.StartYear && or.End.Year() != body.Session.EndYear {
-					// TODO: rare but someone could be partial w/o overlap on start/stop
+				if !body.Session.Overlaps(or.Start, or.End) {
 					continue
 				}
 				shortCommittee := slug.Make(TrimCommittee(or.BodyName))

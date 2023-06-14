@@ -16,6 +16,23 @@ func (s Session) EndDate() time.Time {
 	return time.Date(s.EndYear+1, time.January, 1, 0, 0, 0, 0, time.UTC).Add(-1 * time.Minute)
 }
 
+func (s Session) IsCurrent() bool {
+	return s.StartYear == CurrentSession.StartYear
+}
+
+func (s Session) Overlaps(start, end time.Time) bool {
+	sy, ey := start.Year(), end.Year()
+	switch {
+	case sy >= s.StartYear && sy <= s.EndYear:
+		return true
+	case ey >= s.StartYear && ey <= s.EndYear:
+		return true
+	case sy < s.StartYear && ey > s.EndYear:
+		return true
+	}
+	return false
+}
+
 func (s Session) String() string { return fmt.Sprintf("%d-%d", s.StartYear, s.EndYear) }
 
 var Sessions = []Session{

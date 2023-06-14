@@ -4,10 +4,10 @@ go 1.19
 
 require (
 	cloud.google.com/go/storage v1.29.0
-	github.com/dustin/go-humanize v1.0.0
+	github.com/dustin/go-humanize v1.0.1
 	github.com/gorilla/handlers v1.5.1
 	github.com/gosimple/slug v1.13.1
-	github.com/jehiah/legislator v0.0.0-20220302024936-2f1e8a231b46
+	github.com/jehiah/legislator v0.0.0-20230612191036-ee2bd43eb652
 	github.com/julienschmidt/httprouter v1.3.0
 	golang.org/x/text v0.7.0
 )
@@ -29,7 +29,7 @@ require (
 	golang.org/x/net v0.7.0 // indirect
 	golang.org/x/oauth2 v0.5.0 // indirect
 	golang.org/x/sys v0.5.0 // indirect
-	golang.org/x/time v0.0.0-20210723032227-1f47c861a9ac // indirect
+	golang.org/x/time v0.3.0 // indirect
 	golang.org/x/xerrors v0.0.0-20220907171357-04be3eba64a2 // indirect
 	google.golang.org/api v0.110.0 // indirect
 	google.golang.org/appengine v1.6.7 // indirect
