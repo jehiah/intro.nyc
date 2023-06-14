@@ -109,8 +109,8 @@
       {{ else }}
       <th>{{.FullName}}</th>
       {{end}}
-      <td>{{printf "%0.1f%%" $row.SponsorPercent }}</td>
-      <td>{{printf "%0.1f%%" $row.VotePercent }} &nbsp; <small>{{$row.Votes}} of {{$row.ExpectedVotes}}</small></td>
+      <td data-percent="{{printf "%0.1f%%" $row.SponsorPercent }}" class="sponsor-percent">{{printf "%0.1f%%" $row.SponsorPercent }}</td>
+      <td data-percent="{{printf "%0.1f%%" $row.VotePercent }}" class="vote-percent">{{printf "%0.1f%%" $row.VotePercent }} &nbsp; <small>{{$row.Votes}} of {{$row.ExpectedVotes}}</small></td>
     </tr>
     {{end}}
     {{end}}
@@ -128,7 +128,9 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.1/jquery.min.js" integrity="sha512-aVKKRRi/Q/YV+4mjoKBsE4x3H+BkegoM/em46NNlCqNTmUYADjBbeNefNxYV7giUp0VxICtqdrbqU7iVaeZNXA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.tablesorter/2.31.3/js/jquery.tablesorter.min.js" integrity="sha512-qzgd5cYSZcosqpzpn7zF2ZId8f/8CHmFKZ8j7mU4OUXTNRd5g+ZHBPsgKEwoqxCtdQvExE5LprwwPAgoicguNg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery.tablesorter/2.31.3/css/theme.bootstrap_4.min.css" integrity="sha512-2C6AmJKgt4B+bQc08/TwUeFKkq8CsBNlTaNcNgUmsDJSU1Fg+R6azDbho+ZzuxEkJnCjLZQMozSq3y97ZmgwjA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-<script type="text/javascript">
+<script type="module">
+import {scaleLinear} from "https://cdn.skypack.dev/d3-scale@4";
+
 document.getElementById("session").addEventListener("change", _ => {
   var qs = new URLSearchParams(window.location.search)
   let s = document.getElementById("session");
@@ -149,6 +151,16 @@ document.getElementById("councilmember").addEventListener("change", _ => {
 $(function() {
   $("#data-table").tablesorter({sortList:[[1,1]],  theme : "bootstrap"});
 });
+
+const color1 = scaleLinear().domain([0,100]).range(["#f9f7fb", "#9996c6"]) // purple
+const color2 = scaleLinear().domain([0,100]).range(["#f2faf0", "#53b365"]) // green
+Array.from(document.getElementsByClassName("vote-percent")).forEach(e => {
+  e.style.backgroundColor = color1(parseFloat(e.dataset.percent))
+});
+Array.from(document.getElementsByClassName("sponsor-percent")).forEach(e => {
+  e.style.backgroundColor = color2(parseFloat(e.dataset.percent))
+});
+
 
 </script>
 {{end}}
