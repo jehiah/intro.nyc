@@ -478,8 +478,8 @@ func (a *App) ReportSimilarity(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("content-type", "text/html")
-	// cacheTTL := time.Minute * 15
-	cacheTTL := time.Second
+	cacheTTL := time.Minute * 5
+	// cacheTTL := time.Second
 	a.addExpireHeaders(w, cacheTTL)
 	err = t.ExecuteTemplate(w, template, body)
 	if err != nil {
