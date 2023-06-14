@@ -338,7 +338,7 @@ func (a *App) ReportSimilarity(w http.ResponseWriter, r *http.Request) {
 	}
 	body := Page{
 		Page:     "reports",
-		SubPage:  "by_status",
+		SubPage:  "similarity",
 		Session:  CurrentSession,
 		Sessions: Sessions,
 		Matrix:   data,
@@ -358,7 +358,12 @@ func (a *App) ReportSimilarity(w http.ResponseWriter, r *http.Request) {
 	for _, p := range people {
 		include := false
 		for _, or := range p.OfficeRecords {
-			if !body.Session.Overlaps(or.Start, or.End) {
+			switch {
+			case or.BodyName != "City Council":
+				continue
+			case or.MemberType == "PRIMARY PUBLIC ADVOCATE":
+				continue
+			case !body.Session.Overlaps(or.Start, or.End):
 				continue
 			}
 			include = true

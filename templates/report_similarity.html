@@ -53,7 +53,7 @@
 </ul>
 
 
-<fieldset class="my-5">
+<fieldset class="my-3">
   <div class="select-session">
   <select name="session" id="session" class="form-select">
     {{range .Sessions }}
@@ -73,28 +73,25 @@
 </fieldset>
 
 
-
-<div id="chart"></div>
-
 {{with $row := index $.Matrix $.Person.ID }}
-<div class="my-5">
-  <p>
+<div class="my-4">
+  <h3 class="mb-3">Similarity scores for {{$.Person.FullName}}</h3>
+  <p>Voting similarity for 
     {{if $.Session.IsCurrent }}
-    <a href="/councilmembers/{{$.Person.Slug}}"><strong>{{$.Person.FullName}}</strong></a> 
+      <a href="/councilmembers/{{$.Person.Slug}}"><strong>{{$.Person.FullName}}</strong></a> 
     {{ else }}
       <strong>{{$.Person.FullName}}</strong> 
-    {{ end }}
-  has <mark>{{$row.ExpectedVotes}} qualifying votes</mark>
-  and <mark>{{$row.ExpectedSponsors}} bill sponsorships</mark>
-  </p>
-  <p>Qualifying votes are a bills full council vote or committe vote. For bills with multiple votes the last vote is counted. A voting similarity is calculated out of possible votes which excludes excused absenses or unrelated committee votes.</p>
+    {{ end }} 
+    is calculated with <mark>{{$row.ExpectedVotes}} votes</mark>
+    and <mark>{{$row.ExpectedSponsors}} bill sponsorships</mark>.
+    </p>
 </div>
 {{end}}
 
 <table class="table table-condenced" id="data-table">
   <thead>
     <tr>
-      <th>Council Member</th>
+      <th data-sortInitialOrder="asc">Council Member</th>
       <th>Sponsorship Similarity</th>
       <th>Voting Similarity</th>
     </tr>
@@ -117,6 +114,13 @@
   </tbody>
 </table>
 
+<div class="my-3">
+  <p><strong>Methodology:</strong> 
+    The most recent committee or full council vote for each bill is used. 
+    Votes marked with an excused absense (Maternity, Paternity, Jury Duty, Medical, 
+    Bereavement, Conflict, Suspended, Non-voting, Excused) are excluded from calculations for that Council Member.
+ </p>
+</div>
 
 {{end}}
 
@@ -149,7 +153,7 @@ document.getElementById("councilmember").addEventListener("change", _ => {
 })
 
 $(function() {
-  $("#data-table").tablesorter({sortList:[[1,1]],  theme : "bootstrap"});
+  $("#data-table").tablesorter({sortList:[[1,1]],  theme : "bootstrap", sortInitialOrder:"desc", sortRestart: true});
 });
 
 const color1 = scaleLinear().domain([0,100]).range(["#f9f7fb", "#9996c6"]) // purple
