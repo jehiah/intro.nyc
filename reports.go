@@ -313,7 +313,7 @@ func (a *App) ReportSimilarity(w http.ResponseWriter, r *http.Request) {
 	t := newTemplate(a.templateFS, template)
 
 	type Row struct {
-		db.Person
+		Person
 
 		ExpectedSponsors int
 		Sponsors         int
@@ -349,6 +349,18 @@ func (a *App) ReportSimilarity(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	// var metadata []PersonMetadata
+	// err = a.getJSONFile(r.Context(), "build/people_metadata.json", &metadata)
+	// if err != nil {
+	// 	log.Print(err)
+	// 	http.Error(w, "Internal Server Error", 500)
+	// 	return
+	// }
+	// metadataLookup := make(map[int]PersonMetadata)
+	// for _, m := range metadata {
+	// 	metadataLookup[m.ID] = metadataLookup[]
+	// }
+
 	var people []db.Person
 	err := a.getJSONFile(r.Context(), "build/people_all.json", &people)
 	if err != nil {
@@ -371,7 +383,7 @@ func (a *App) ReportSimilarity(w http.ResponseWriter, r *http.Request) {
 		}
 		if include {
 			body.People = append(body.People, p)
-			data[p.ID] = &Row{Person: p}
+			data[p.ID] = &Row{Person: Person{Person: p}}
 		}
 	}
 

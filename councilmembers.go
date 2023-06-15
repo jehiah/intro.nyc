@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"net/http"
 	"net/url"
@@ -160,13 +161,24 @@ func (p Person) ActiveOfficeRecords() []db.OfficeRecord {
 
 	return final
 }
+
+// Party returns "(D)", "(R)"
 func (p Person) Party() string {
+	party := p.PartyShort()
+	if party != "" {
+		return fmt.Sprintf("(%s)", party)
+	}
+	return ""
+}
+
+// PartyShort returns "D", "R"
+func (p Person) PartyShort() string {
 	for _, oo := range p.OfficeRecords {
 		switch oo.BodyName {
 		case "Minority (Republican) Conference of the Council of the City of New York ":
-			return "(R)"
+			return "R"
 		case "Democratic Conference of the Council of the City of New York ":
-			return "(D)"
+			return "D"
 		}
 	}
 	return ""

@@ -15,15 +15,31 @@
 }
 .select-session {
   display: inline-block;
-  margin-right: 2em;
+  margin-right: 1em;
 }
 .select-councilmember {
   display: inline-block;
-  margin-right: 2em;
+  margin-right: 1em;
 }
+.party {
+  font-weight: 200;
+}
+.nav-tabs {
+  font-size: .7rem;
+}
+.nav-link {
+  padding: 0.75rem 0.25rem;
+}
+
 @media (min-width: 576px) { 
   .form-select {
     max-width: 450px;
+  }
+  .nav-link {
+    padding: 0.5rem 1rem;
+  }
+  .nav-tabs {
+    font-size: 1rem;
   }
 }
 
@@ -88,10 +104,11 @@
 </div>
 {{end}}
 
-<table class="table table-condenced" id="data-table">
+<table class="table table-sm" id="data-table">
   <thead>
     <tr>
       <th data-sortInitialOrder="asc">Council Member</th>
+      <th class="party">Party</th>
       <th>Sponsorship Similarity</th>
       <th>Voting Similarity</th>
     </tr>
@@ -102,10 +119,11 @@
     {{with $row := index $.Matrix .ID}}
     <tr>
       {{if $.Session.IsCurrent }}
-      <th><a href="/councilmembers/{{.Slug}}">{{.FullName}}</a></th>
+      <th><a href="/councilmembers/{{.Person.Person.Slug}}">{{.FullName}}</a></th>
       {{ else }}
       <th>{{.FullName}}</th>
       {{end}}
+      <td class="party">{{.PartyShort}}</td>
       <td data-percent="{{printf "%0.1f%%" $row.SponsorPercent }}" class="sponsor-percent">{{printf "%0.1f%%" $row.SponsorPercent }}</td>
       <td data-percent="{{printf "%0.1f%%" $row.VotePercent }}" class="vote-percent">{{printf "%0.1f%%" $row.VotePercent }} &nbsp; <small>{{$row.Votes}} of {{$row.ExpectedVotes}}</small></td>
     </tr>
@@ -153,7 +171,7 @@ document.getElementById("councilmember").addEventListener("change", _ => {
 })
 
 $(function() {
-  $("#data-table").tablesorter({sortList:[[1,1]],  theme : "bootstrap", sortInitialOrder:"desc", sortRestart: true});
+  $("#data-table").tablesorter({sortList:[[2,1]],  theme : "bootstrap", sortInitialOrder:"desc", sortRestart: true});
 });
 
 const color1 = scaleLinear().domain([0,100]).range(["#f9f7fb", "#9996c6"]) // purple
