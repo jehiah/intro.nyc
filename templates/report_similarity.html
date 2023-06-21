@@ -115,13 +115,12 @@
   </thead>
   <tbody>
     {{range .People}}
-    {{if eq .Slug $.Person.Slug}}{{continue}}{{end}}
     {{with $row := index $.Matrix .ID}}
     <tr>
-      {{if $.Session.IsCurrent }}
-      <th><a href="/councilmembers/{{.Person.Person.Slug}}">{{.FullName}}</a></th>
-      {{ else }}
+      {{if eq .Person.Person.Slug $.Person.Slug}}
       <th>{{.FullName}}</th>
+      {{ else }}
+      <th><a href="/reports/similarity?councilmember={{.Person.Person.Slug}}&session={{$.Session}}">{{.FullName}}</a></th>
       {{end}}
       <td class="party">{{.PartyShort}}</td>
       <td data-percent="{{printf "%0.1f%%" $row.SponsorPercent }}" class="sponsor-percent">{{printf "%0.1f%%" $row.SponsorPercent }}</td>
