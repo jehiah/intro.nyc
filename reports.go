@@ -25,11 +25,13 @@ func TrimCommittee(s string) string {
 func (a *App) Reports(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	switch ps.ByName("report") {
 	case "":
-		http.Redirect(w, r, "/reports/most_sponsored", 302)
+		http.Redirect(w, r, "/reports/session", 302)
 	case "most_sponsored":
 		a.ReportMostSponsored(w, r)
 	case "status":
-		a.ReportByStatus(w, r)
+		http.Redirect(w, r, "/reports/session", 301)
+	case "session":
+		a.ReportBySession(w, r)
 	case "similarity":
 		a.ReportSimilarity(w, r)
 	case "councilmembers":
@@ -179,10 +181,10 @@ func (a *App) ReportMostSponsored(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// ReportByStatus shows the change in bill status over time
-func (a *App) ReportByStatus(w http.ResponseWriter, r *http.Request) {
+// ReportBySession shows a sessions aggregate bill stats by status over time
+func (a *App) ReportBySession(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
-	template := "report_by_status.html"
+	template := "report_by_session.html"
 
 	t := newTemplate(a.templateFS, template)
 
