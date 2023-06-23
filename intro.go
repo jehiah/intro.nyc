@@ -132,7 +132,12 @@ func (a *App) IntroJSON(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 	}
 	l.History = nil
 	for _, mh := range history {
-		l.History = append(l.History, db.NewHistory(mh))
+		hh := db.NewHistory(mh)
+		if hh.PassedFlagName != "" {
+			votes, _ := a.legistar.EventVotes(ctx, hh.ID)
+			hh.Votes = db.NewVotes(votes)
+		}
+		l.History = append(l.History, hh)
 	}
 
 	attachments, err := a.legistar.MatterAttachments(ctx, l.ID)
