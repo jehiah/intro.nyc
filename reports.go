@@ -466,8 +466,8 @@ func (a *App) ReportSimilarity(w http.ResponseWriter, r *http.Request) {
 					case 16:
 						// Absent
 						continue
-					case 22, 44, 45, 46, 65, 43, 23, 9, 4:
-						// Maternity, Paternity, Jury Duty, Medical, Bereavement, Conflict, Suspended, 	Non-voting, Excused
+					case 22, 44, 45, 46, 65, 43, 23, 9, 4, 66:
+						// Maternity, Paternity, Jury Duty, Medical, Bereavement, Conflict, Suspended, 	Non-voting, Excused, Parental
 						continue
 					}
 					data[v.ID].ExpectedVotes++
