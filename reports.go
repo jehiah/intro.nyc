@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"html/template"
 	"log"
+	"math"
 	"net/http"
 	"net/url"
 	"sort"
@@ -14,7 +15,6 @@ import (
 	"github.com/gosimple/slug"
 	"github.com/jehiah/legislator/db"
 	"github.com/julienschmidt/httprouter"
-	// "gonum.org/v1/gonum/mat"
 )
 
 func TrimCommittee(s string) string {
@@ -38,6 +38,8 @@ func (a *App) Reports(w http.ResponseWriter, r *http.Request, ps httprouter.Para
 		a.ReportCouncilmembers(w, r)
 	case "committees":
 		a.ReportCommittees(w, r)
+	case "attendance":
+		a.ReportAttendance(w, r)
 	default:
 		http.Error(w, "Not Found", 404)
 	}
@@ -833,4 +835,202 @@ func (a *App) ReportCommittees(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Internal Server Error", 500)
 		return
 	}
+}
+
+// ReportAttendance shows summary of roll calls
+func (a *App) ReportAttendance(w http.ResponseWriter, r *http.Request) {
+	r.ParseForm()
+	template := "report_attendance.html"
+
+	t := newTemplate(a.templateFS, template)
+
+	type Row struct {
+		Person
+
+		ExpectedCouncilRollCall   int
+		CouncilRollCall           int
+		CouncilPercent            float64
+		ExpectedCommitteeRollCall int
+		CommitteeRollCall         int
+		CommitteePercent          float64
+	}
+	data := make(map[int]*Row)
+
+	type Page struct {
+		Page                string
+		SubPage             string
+		LastSync            LastSync
+		CountedEvents       int
+		FullCouncilEvents   int
+		Data                []Row
+		Session             Session
+		Sessions            []Session
+		People              []db.Person
+		Person              db.Person
+		Matrix              map[int]*Row
+		Names               []string
+		MinCouncilPercent   float64
+		MinCommitteePercent float64
+	}
+	body := Page{
+		Page:                "reports",
+		SubPage:             "attendance",
+		Session:             CurrentSession,
+		Sessions:            Sessions,
+		Matrix:              data,
+		MinCouncilPercent:   100,
+		MinCommitteePercent: 100,
+	}
+	for _, s := range Sessions {
+		if s.String() == r.Form.Get("session") {
+			body.Session = s
+		}
+	}
+
+	// var metadata []PersonMetadata
+	// err = a.getJSONFile(r.Context(), "build/people_metadata.json", &metadata)
+	// if err != nil {
+	// 	log.Print(err)
+	// 	http.Error(w, "Internal Server Error", 500)
+	// 	return
+	// }
+	// metadataLookup := make(map[int]PersonMetadata)
+	// for _, m := range metadata {
+	// 	metadataLookup[m.ID] = metadataLookup[]
+	// }
+
+	var people []db.Person
+	err := a.getJSONFile(r.Context(), "build/people_all.json", &people)
+	if err != nil {
+		log.Print(err)
+		http.Error(w, "Internal Server Error", 500)
+	}
+	for _, p := range people {
+		include := false
+		for _, or := range p.OfficeRecords {
+			switch {
+			case or.BodyName != "City Council":
+				continue
+			case or.MemberType == "PRIMARY PUBLIC ADVOCATE":
+				continue
+			case !body.Session.Overlaps(or.Start, or.End):
+				continue
+			}
+			include = true
+			break
+		}
+		if include {
+			body.People = append(body.People, p)
+			data[p.ID] = &Row{Person: Person{Person: p}}
+		}
+	}
+
+	// get all the years for the legislative session
+	for year := body.Session.StartYear; year <= body.Session.EndYear && year <= time.Now().Year(); year++ {
+		var events []db.Event
+		err := a.getJSONFile(r.Context(), fmt.Sprintf("build/events_attendance_%d.json", year), &events)
+		if err != nil {
+			if err == storage.ErrObjectNotExist {
+				continue
+			}
+			log.Print(err)
+			http.Error(w, "Internal Server Error", 500)
+			return
+		}
+
+		for _, e := range events {
+			switch {
+			case e.BodyID == 1: // City Council
+			case strings.Contains(e.BodyName, "Committee"):
+			case strings.Contains(e.BodyName, "Subcommittee"):
+			case strings.Contains(e.BodyName, "Commission"):
+			case strings.Contains(e.BodyName, "Task Force"):
+			case strings.Contains(e.BodyName, "Conference"):
+				continue
+			case strings.Contains(e.BodyName, "Delegation"):
+				continue
+			default:
+				log.Printf("skipping role call for %s", e.BodyName)
+				continue
+			}
+			hasRollCall := false
+			for _, i := range e.Items {
+				for _, rollcall := range i.RollCall {
+					hasRollCall = true
+					switch rollcall.ValueID {
+					case 13:
+						// Present
+					case 16:
+						// Absent
+					case 4, 22, 23, 43, 44, 45, 46, 65:
+						// 4: Excused
+						// 22: Maternity
+						// 23: Suspended
+						// 43: Conflict
+						// 44: Paternity
+						// 46: Medical
+						// 45: Jury Duty
+						// 65: Bereavement
+						continue
+					}
+					if _, ok := data[rollcall.ID]; !ok {
+						// expected for public advocate
+						// log.Printf("unknown ID %#v in roll call for event %#v", rollcall, e.ID)
+						continue
+					}
+					if e.BodyID == 1 {
+						data[rollcall.ID].ExpectedCouncilRollCall++
+						if rollcall.ValueID == 13 {
+							data[rollcall.ID].CouncilRollCall++
+						}
+					} else {
+						data[rollcall.ID].ExpectedCommitteeRollCall++
+						if rollcall.ValueID == 13 {
+							data[rollcall.ID].CommitteeRollCall++
+						}
+					}
+
+				}
+			}
+			if hasRollCall {
+				body.CountedEvents++
+				if e.BodyID == 1 {
+					body.FullCouncilEvents++
+				}
+			}
+		}
+	}
+
+	for _, r := range data {
+		if r.ExpectedCouncilRollCall > 0 {
+			r.CouncilPercent = (float64(r.CouncilRollCall) / float64(r.ExpectedCouncilRollCall)) * 100
+			if r.CouncilPercent < body.MinCouncilPercent {
+				body.MinCouncilPercent = math.Floor(r.CouncilPercent)
+			}
+		}
+		if r.ExpectedCommitteeRollCall > 0 {
+			r.CommitteePercent = (float64(r.CommitteeRollCall) / float64(r.ExpectedCommitteeRollCall)) * 100
+			if r.CommitteePercent < body.MinCommitteePercent {
+				body.MinCommitteePercent = math.Floor(r.CommitteePercent)
+			}
+		}
+	}
+
+	err = a.getJSONFile(r.Context(), "build/last_sync.json", &body.LastSync)
+	if err != nil {
+		log.Print(err)
+		http.Error(w, "Internal Server Error", 500)
+		return
+	}
+
+	w.Header().Set("content-type", "text/html")
+	cacheTTL := time.Minute * 5
+	a.addExpireHeaders(w, cacheTTL)
+	err = t.ExecuteTemplate(w, template, body)
+	if err != nil {
+		log.Print(err)
+		http.Error(w, "Internal Server Error", 500)
+		return
+	}
+
 }

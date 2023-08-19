@@ -7,7 +7,7 @@ require (
 	github.com/dustin/go-humanize v1.0.1
 	github.com/gorilla/handlers v1.5.1
 	github.com/gosimple/slug v1.13.1
-	github.com/jehiah/legislator v0.0.0-20230612191036-ee2bd43eb652
+	github.com/jehiah/legislator v0.0.0-20230815152339-fa2f8ef7e6c6
 	github.com/julienschmidt/httprouter v1.3.0
 	golang.org/x/text v0.7.0
 )

@@ -68,6 +68,8 @@ github.com/gosimple/unidecode v1.0.1 h1:hZzFTMMqSswvf0LBJZCZgThIZrpDHFXux9KeGmn6
 github.com/gosimple/unidecode v1.0.1/go.mod h1:CP0Cr1Y1kogOtx0bJblKzsVWrqYaqfNOnHzpgWw4Awc=
 github.com/jehiah/legislator v0.0.0-20230612191036-ee2bd43eb652 h1:XbkA7Yv1nv8MISaDrLpx4G1VRagirHRD/8hOh90ZK1o=
 github.com/jehiah/legislator v0.0.0-20230612191036-ee2bd43eb652/go.mod h1:pi93D1wpcq7E1HS6PcSMarJXucK+tBI1pwRLBPLnu2k=
+github.com/jehiah/legislator v0.0.0-20230815152339-fa2f8ef7e6c6 h1:FfUoAOf8w6Xx4aSCa0ee7V7OS4Qc+Ol1vS3Ce5WqAh0=
+github.com/jehiah/legislator v0.0.0-20230815152339-fa2f8ef7e6c6/go.mod h1:pi93D1wpcq7E1HS6PcSMarJXucK+tBI1pwRLBPLnu2k=
 github.com/julienschmidt/httprouter v1.3.0 h1:U0609e9tgbseu3rBINet9P48AI/D3oJs4dN7jwJOQ1U=
 github.com/julienschmidt/httprouter v1.3.0/go.mod h1:JR6WtHb+2LUe8TCKY3cZOxFyyO8IZAc4RVcycCCAKdM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=

@@ -1,0 +1,157 @@
+{{template "base" .}}
+{{define "title"}}Report: Similarity{{end}}
+{{define "head"}}
+
+<style>
+
+
+.form-select {
+  width:inherit;
+  display: inline-block;
+  max-width: 350px;
+}
+.form-check {
+  display: inline-block;
+}
+.select-session {
+  display: inline-block;
+  margin-right: 1em;
+}
+.select-councilmember {
+  display: inline-block;
+  margin-right: 1em;
+}
+.party {
+  font-weight: 200;
+}
+.nav-tabs {
+  font-size: .7rem;
+}
+.nav-link {
+  padding: 0.75rem 0.25rem;
+}
+
+@media (min-width: 576px) { 
+  .form-select {
+    max-width: 450px;
+  }
+  .nav-link {
+    padding: 0.5rem 1rem;
+  }
+  .nav-tabs {
+    font-size: 1rem;
+  }
+}
+
+</style>
+{{end}}
+
+
+{{define "middle"}}
+
+
+<ul class="nav nav-tabs my-3">
+  <li class="nav-item">
+    <a class="nav-link active" aria-current="page" href="/reports/attendance">Attendance</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" href="/reports/most_sponsored">Sponsors</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" href="/reports/session">Session</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" href="/reports/similarity">Similarity</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" href="/reports/councilmembers">Council Members</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link" href="/reports/committees">Committees</a>
+  </li>
+</ul>
+
+
+<fieldset class="my-3">
+  <div class="select-session">
+  <select name="session" id="session" class="form-select">
+    {{range .Sessions }}
+    <option value="{{.}}" {{if eq . $.Session}} selected {{end}}>{{.}} Legislative Session</option>
+    {{end}}
+  </select>
+  </div>
+
+<div class="my-4">
+  <h3 class="mb-3">Attendance</h3>
+  <p>Attendance is measured across {{$.CountedEvents}} events on the <a href="https://legistar.council.nyc.gov/Calendar.aspx">NYC Council Calendar</a> with recorded roll calls. {{$.FullCouncilEvents}} events were scheduled for the full council.</p>
+</div>
+
+<table class="table table-sm" id="data-table">
+  <thead>
+    <tr>
+      <th data-sortInitialOrder="asc">Council Member</th>
+      <th class="party">Party</th>
+      <th>Council Attendance</th>
+      <th>Committee Attendance</th>
+    </tr>
+  </thead>
+  <tbody>
+    {{range .People}}
+    {{with $row := index $.Matrix .ID}}
+    <tr>
+      <th>{{.FullName}}</th>
+      <td class="party">{{.PartyShort}}</td>
+      <td data-text="{{printf "%0.1f%" $row.CouncilPercent }}"   class="council-percent">{{printf "%0.1f%%" $row.CouncilPercent }} &nbsp; <small>{{$row.CouncilRollCall}} of {{$row.ExpectedCouncilRollCall}}</small></td>
+      <td data-text="{{printf "%0.1f%" $row.CommitteePercent }}" class="committee-percent">{{printf "%0.1f%%" $row.CommitteePercent }} &nbsp; <small>{{$row.CommitteeRollCall}} of {{$row.ExpectedCommitteeRollCall}}</small></td>
+    </tr>
+    {{end}}
+    {{end}}
+  </tbody>
+</table>
+
+<div class="my-3">
+  <p><strong>Methodology:</strong> 
+    Roll call marked with an excused absense (Maternity, Paternity, Parental, Jury Duty, Medical, 
+    Bereavement, Conflict, Suspended, Excused) are excluded from calculations for that Council Member. <br>
+    Committee counts include Subcommittee, Commission and Task Force meetings.</p>
+</div>
+
+{{end}}
+
+{{ define "last-updated"}}
+<p>Data Last Updated <span class="last-updated" title="{{.LastSync.LastRun}}">{{.LastSync.LastRun | Time}}</span></p>
+{{end}}
+
+{{define "javascript"}}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.1/jquery.min.js" integrity="sha512-aVKKRRi/Q/YV+4mjoKBsE4x3H+BkegoM/em46NNlCqNTmUYADjBbeNefNxYV7giUp0VxICtqdrbqU7iVaeZNXA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery.tablesorter/2.31.3/css/theme.bootstrap_4.min.css" integrity="sha512-2C6AmJKgt4B+bQc08/TwUeFKkq8CsBNlTaNcNgUmsDJSU1Fg+R6azDbho+ZzuxEkJnCjLZQMozSq3y97ZmgwjA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+<script type="module">
+import {scaleLinear} from "https://cdn.skypack.dev/d3-scale@4";
+
+document.getElementById("session").addEventListener("change", _ => {
+  var qs = new URLSearchParams(window.location.search)
+  let s = document.getElementById("session");
+  qs.set("session", s.value)
+  location.href = location.pathname + "?" + qs.toString();
+})
+
+const color1 = scaleLinear().domain([{{.MinCouncilPercent}},100]).range(["#ecdcc3", "#ff9800"]) // orange
+const color2 = scaleLinear().domain([{{.MinCommitteePercent}},100]).range(["#e7f2fb", "#2196f3"]) // blue
+Array.from(document.getElementsByClassName("council-percent")).forEach(e => {
+  e.style.backgroundColor = color1(parseFloat(e.dataset.text))
+});
+Array.from(document.getElementsByClassName("committee-percent")).forEach(e => {
+  e.style.backgroundColor = color2(parseFloat(e.dataset.text))
+});
+</script>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery.tablesorter/2.31.3/js/jquery.tablesorter.min.js" integrity="sha512-qzgd5cYSZcosqpzpn7zF2ZId8f/8CHmFKZ8j7mU4OUXTNRd5g+ZHBPsgKEwoqxCtdQvExE5LprwwPAgoicguNg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script>
+$(function() {
+  $("#data-table").tablesorter({sortList:[[2,1],[3,1],[0,2]],  theme : "bootstrap", sortInitialOrder:"desc", sortRestart: true});
+});
+
+</script>
+
+{{end}}
+

@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"sync"
 	"time"
@@ -32,9 +33,10 @@ var static embed.FS
 var americaNewYork, _ = time.LoadLocation("America/New_York")
 
 type App struct {
-	legistar *legistar.Client
-	devMode  bool
-	gsclient *storage.Client
+	legistar    *legistar.Client
+	devMode     bool
+	gsclient    *storage.Client
+	devFilePath string
 
 	cachedRedirects map[string]string
 	staticHandler   http.Handler
@@ -77,15 +79,32 @@ func (a *App) getFile(ctx context.Context, filename string) (io.Reader, error) {
 		return bytes.NewBuffer(c.Body), nil
 	}
 	a.cacheMutex.RUnlock()
-	log.Printf("get gs://intronyc/%s", filename)
-	r, err := a.gsclient.Bucket("intronyc").Object(filename).NewReader(ctx)
-	if err != nil {
-		return nil, err
+
+	var body []byte
+	if a.devMode && a.devFilePath != "" {
+		fp := filepath.Join(a.devFilePath, filename)
+		log.Printf("opening %s", fp)
+		f, err := os.Open(fp)
+		if err != nil {
+			return nil, err
+		}
+		defer f.Close()
+		body, err = io.ReadAll(f)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		log.Printf("get gs://intronyc/%s", filename)
+		r, err := a.gsclient.Bucket("intronyc").Object(filename).NewReader(ctx)
+		if err != nil {
+			return nil, err
+		}
+		body, err = io.ReadAll(r)
+		if err != nil {
+			return nil, err
+		}
 	}
-	body, err := io.ReadAll(r)
-	if err != nil {
-		return nil, err
-	}
+
 	a.cacheMutex.Lock()
 	defer a.cacheMutex.Unlock()
 	a.fileCache[filename] = CachedFile{Body: body, Date: time.Now()}
@@ -202,6 +221,7 @@ func (a *App) L1(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 func main() {
 	logRequests := flag.Bool("log-requests", false, "log requests")
 	devMode := flag.Bool("dev-mode", false, "development mode")
+	devFilePath := flag.String("file-path", "", "path to files normally retrieved from gs://intronyc/")
 	flag.Parse()
 
 	log.Print("starting server...")
@@ -216,6 +236,7 @@ func main() {
 		legistar:        legistar.NewClient("nyc", os.Getenv("NYC_LEGISLATOR_TOKEN")),
 		gsclient:        client,
 		devMode:         *devMode,
+		devFilePath:     *devFilePath,
 		cachedRedirects: make(map[string]string),
 		staticHandler:   http.FileServer(http.FS(static)),
 		templateFS:      content,
