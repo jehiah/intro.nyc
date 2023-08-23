@@ -1,10 +1,8 @@
 {{template "base" .}}
-{{define "title"}}Report: Similarity{{end}}
+{{define "title"}}NYC Council Member Attendance {{$.Session}} {{end}}
 {{define "head"}}
 
 <style>
-
-
 .form-select {
   width:inherit;
   display: inline-block;
@@ -42,8 +40,10 @@
     font-size: 1rem;
   }
 }
-
 </style>
+<meta property="og:title" content="NYC Council Member Attendance {{$.Session}}" />
+<meta property="og:image" content="https://storage.googleapis.com/intronyc-public/static/intro_nyc_reports_attendance_20230823.png" />
+
 {{end}}
 
 
@@ -83,7 +83,7 @@
 
 <div class="my-4">
   <h3 class="mb-3">Attendance</h3>
-  <p>Attendance is measured across {{$.CountedEvents}} events on the <a href="https://legistar.council.nyc.gov/Calendar.aspx">NYC Council Calendar</a> with recorded roll calls. {{$.FullCouncilEvents}} events were scheduled for the full council.</p>
+  <p>Attendance is measured across <mark>{{$.CountedEvents}} events</mark> on the <a href="https://legistar.council.nyc.gov/Calendar.aspx">NYC Council Calendar</a> with recorded roll calls. <mark>{{$.FullCouncilEvents}} events</mark> were scheduled for the full council.</p>
 </div>
 
 <table class="table table-sm" id="data-table">
@@ -101,8 +101,8 @@
     <tr>
       <th>{{.FullName}}</th>
       <td class="party">{{.PartyShort}}</td>
-      <td data-text="{{printf "%0.1f%" $row.CouncilPercent }}"   class="council-percent">{{printf "%0.1f%%" $row.CouncilPercent }} &nbsp; <small>{{$row.CouncilRollCall}} of {{$row.ExpectedCouncilRollCall}}</small></td>
-      <td data-text="{{printf "%0.1f%" $row.CommitteePercent }}" class="committee-percent">{{printf "%0.1f%%" $row.CommitteePercent }} &nbsp; <small>{{$row.CommitteeRollCall}} of {{$row.ExpectedCommitteeRollCall}}</small></td>
+      <td data-text="{{printf "%0.1f" $row.CouncilPercent }}"   class="council-percent">{{printf "%0.1f%%" $row.CouncilPercent }} &nbsp; <small>{{$row.CouncilRollCall}} of {{$row.ExpectedCouncilRollCall}}</small></td>
+      <td data-text="{{printf "%0.1f" $row.CommitteePercent }}" class="committee-percent">{{printf "%0.1f%%" $row.CommitteePercent }} &nbsp; <small>{{$row.CommitteeRollCall}} of {{$row.ExpectedCommitteeRollCall}}</small></td>
     </tr>
     {{end}}
     {{end}}
