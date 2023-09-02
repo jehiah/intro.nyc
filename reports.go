@@ -711,6 +711,7 @@ func (a *App) ReportCommittees(w http.ResponseWriter, r *http.Request) {
 		BillCommitteeVote int
 		BillPassedCouncil int
 		BillEnacted       int
+		Hearings          int
 
 		HearingDates      map[string]bool
 		OversightHearings int
@@ -812,6 +813,32 @@ func (a *App) ReportCommittees(w http.ResponseWriter, r *http.Request) {
 			}
 
 		}
+
+		// Count hearings: any event for this committee w/ a roll call
+		var events []db.Event
+		err = a.getJSONFile(r.Context(), fmt.Sprintf("build/events_attendance_%d.json", year), &events)
+		if err != nil {
+			if err == storage.ErrObjectNotExist {
+				continue
+			}
+			log.Print(err)
+			http.Error(w, "Internal Server Error", 500)
+			return
+		}
+
+		for _, e := range events {
+			hasRollCall := false
+			for _, i := range e.Items {
+				if len(i.RollCall) > 0 {
+					hasRollCall = true
+					break
+				}
+			}
+			if d, ok := data[e.BodyName]; ok && hasRollCall {
+				d.Hearings++
+			}
+		}
+
 	}
 
 	for _, r := range data {

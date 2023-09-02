@@ -92,7 +92,7 @@ td.flex > div > div.progress {
         <th class="number-col" data-sortInitialOrder="desc">Bills</th>
         <th class="number-col" data-sortInitialOrder="desc">Bills w/ Hearing</th>
         <th class="number-col" data-sortInitialOrder="desc">Bills Voted On</th>
-        <!-- <th class="number-col" data-sortInitialOrder="desc">Enacted</th> -->
+        <th class="number-col" data-sortInitialOrder="desc">Hearings</th>
       </tr>
     </thead>
     <tbody id="data-body">
@@ -116,7 +116,14 @@ td.flex > div > div.progress {
             <span class="number"></span>
             </div>
           </td>
-          <!-- <td class="bill-enacted number"></td> -->
+          <td class="hearings flex">
+            <div>
+              <div class="progress">
+              <div class="progress-bar" role="progressbar" style="width: 25%;" aria-valuenow="25" aria-valuemin="0" aria-valuemax="100"></div>
+            </div>
+            <span class="number"></span>
+            </div>
+          </td>
         </tr>
       </template>
     </tbody>
@@ -159,6 +166,8 @@ let pct = new Intl.NumberFormat(undefined, {
 let template = document.getElementById("data-row")
 let target = document.getElementById("data-body")
 
+const maxHearings = Math.max.apply(null, data.map(d=>d.Hearings))
+
 data.forEach(d => {
   var clone = template.content.cloneNode(true);
   clone.querySelectorAll(".committee")[0].textContent = d.Committee;
@@ -177,6 +186,12 @@ data.forEach(d => {
   td.querySelectorAll("div.progress-bar")[0].textContent = pct.format(n);
   // TODO: set aria-valuenow
   td.querySelectorAll("span")[0].textContent = nf.format(d.BillCommitteeVote);
+
+  n = d.Hearings * 1.0 / maxHearings
+  td = clone.querySelectorAll(".hearings")[0];
+  td.querySelectorAll("div.progress-bar")[0].style.width = pct.format(n);
+  // td.querySelectorAll("div.progress-bar")[0].textContent = pct.format(n);
+  td.querySelectorAll("span")[0].textContent = nf.format(d.Hearings);
 
   // clone.querySelectorAll(".bill-hearing")[0].textContent = pct.format(d.BillHearing * 1.0 / d.BillTotal) + " " + nf.format(d.BillHearing);
   // clone.querySelectorAll(".bill-passed")[0].textContent = nf.format(d.BillCommitteeVote);
