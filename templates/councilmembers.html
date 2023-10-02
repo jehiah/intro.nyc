@@ -20,10 +20,16 @@
 }
 .social {
   font-size: .9rem;
+  @media (max-width: 768px) {
+    font-size: .6rem;
+    line-height: 1.1rem;
+  }
 }
 .external-links {
   font-size: .9rem;
 }
+
+
 </style>
 {{end}}
 
@@ -35,19 +41,18 @@
 
 <h3>Council Members</h3>
 
-<table class="table">
-<thead>
-  <tr>
-    <th>Council Member</th>
-    <th>Committee / Caucus</th>
-    <th>Social</th>
-    <th>Links</th>
-  </tr>
-</thead>
-<tbody>
+<div class=" d-none d-md-block">
+<div class="row text-center" id="row-headder">
+    <div class="col-3">Council Member</div>
+    <div class="col-3">Committee / Caucus</div>
+    <div class="col-3">Social</div>
+    <div class="col-3 d-none d-md-block">Links</div>
+</div>
+</div>
+
 {{range .People}}
-<tr>
-  <td><span class="full-name"><a href="/councilmembers/{{.Person.Slug}}">{{.FullName}}</a></span> <span class="party">{{.Party}}</span><br>
+<div class="row my-2">
+  <div class="col-sm-4 col-md-3"><span class="full-name"><a href="/councilmembers/{{.Person.Slug}}">{{.FullName}}</a></span> <span class="party">{{.Party}}</span><br>
     <span class="class">{{.Start.Format "Jan 2006"}} - {{.End.Format "Jan 2006"}}</span>
     {{if .District}}
       <br><span class="district">District {{.District}}</span> <span class="borough">({{.Borough}})</span>
@@ -55,26 +60,25 @@
     {{if ne .CouncilTitle "Council Member"}}
       <br><span class="badge bg-info text-dark">{{.CouncilTitle}}</span>
     {{end}}
-  </td>
-  <td class="committees">{{range .ActiveOfficeRecords }}
+  </div>
+  <div class="col-sm-4 col-md-3 committees">{{range .ActiveOfficeRecords }}
   <span class="committee">{{.BodyName}}</span>
   {{ if or (eq .MemberType "CHAIR") (eq .Title "CHAIRPERSON") }}<span class="member-type"> {{ if eq .Title "CHAIRPERSON" }}(chair){{else}}({{.Title | ToLower}}){{end}}</span>{{end}}
   <br>
-  {{end }}</td>
-  <td class="social">{{ range .SocialAccounts }}
+  {{end }}</div>
+  <div class="col-sm-4 col-md-3 social">{{ range .SocialAccounts }}
   <a href="{{.Link}}" class="{{.CSSClass}}">{{.Username}}</a><br>
   {{end}}
-  </td>
-  <td class="external-links">
+  </div>
+  <div class="col-md-3 d-none d-md-block external-links">
     {{ if .WWW }}
     <a href="{{.WWW}}">Official Website</a>
     {{ end }}
-  </td>
-</tr>
+  </div>
+</div>
 {{end}}
 
-</tbody>
-</table>
+
 
 </div>
 </div>
