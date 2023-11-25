@@ -611,7 +611,7 @@ func (a *App) ReportCouncilmembers(w http.ResponseWriter, r *http.Request) {
 			c[ll.BodyName] = true
 
 			if selectedCommittee != "" {
-				shortCommittee := slug.Make(strings.TrimPrefix(ll.BodyName, "Committee on "))
+				shortCommittee := slug.Make(TrimCommittee(ll.BodyName))
 				if shortCommittee != selectedCommittee {
 					continue
 				}
@@ -682,7 +682,7 @@ func (a *App) ReportCouncilmembers(w http.ResponseWriter, r *http.Request) {
 		return body.Data[i].IntroIntro > body.Data[j].IntroIntro
 	})
 	for b, _ := range c {
-		body.Committees = append(body.Committees, strings.TrimPrefix(b, "Committee on "))
+		body.Committees = append(body.Committees, TrimCommittee(b))
 	}
 	sort.Strings(body.Committees)
 
@@ -849,7 +849,7 @@ func (a *App) ReportCommittees(w http.ResponseWriter, r *http.Request) {
 	})
 
 	// for b, _ := range c {
-	// 	body.Committees = append(body.Committees, strings.TrimPrefix(b, "Committee on "))
+	// 	body.Committees = append(body.Committees, TrimCommitte(b)
 	// }
 	// sort.Strings(body.Committees)
 

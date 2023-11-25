@@ -220,7 +220,14 @@ func (a *App) Councilmembers(w http.ResponseWriter, r *http.Request, ps httprout
 	for _, m := range metadata {
 		metadataLookup[m.ID] = m
 	}
+	now := time.Now()
 	for _, p := range people {
+		if p.Start.After(now) {
+			continue
+		}
+		if p.End.Before(now) {
+			continue
+		}
 		body.People = append(body.People, Person{Person: p, PersonMetadata: metadataLookup[p.ID]})
 	}
 
