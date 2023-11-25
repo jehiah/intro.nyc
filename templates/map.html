@@ -19,6 +19,7 @@
 <div class="row">
 <div class="col-sm-12">
 
+<p class="alert alert-warning">Map shows 2024 Council Boundaries</p>
 <div id="map-loading">
 <div class="spinner-border text-primary" role="status" ></div>
 Loading...
@@ -32,9 +33,12 @@ Loading...
 {{end}}
 
 {{define "javascript"}}
+<script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
 <script src='https://api.mapbox.com/mapbox-gl-js/v2.13.0/mapbox-gl.js'></script>
+<script type="module">
+import polylabel from "https://cdn.skypack.dev/polylabel@1.1.0";
+// import polylabel from "https://cdnjs.cloudflare.com/ajax/libs/polylabel/1.1.0/polylabel.min.js";
 
-<script type="text/javascript">
 var bounds = [
     [-74.3, 40.4], // Southwest coordinates
     [-73.5, 41.0]  // Northeast coordinates
@@ -50,64 +54,123 @@ zoom: 10, // starting zoom
 maxBounds: bounds // Set the maximum bounds for the map
 });
 map.addControl(new mapboxgl.NavigationControl());
+let sourceObject = null;
+
+const councilMembers = {}
+
+fetch("/data/people_metadata.json").then((response) => response.json()).then(d => {
+    d.forEach(p => {
+        // there are multiples - use the last one for now
+        councilMembers[p.District] = p.FullName
+    })
+})
+
+let councilMapPromise = 
+        fetch("/static/nyc_city_council_2024.geojson")
+          .then((response) => response.json())
+
+// from https://github.com/mapbox/polylabel/issues/54#issuecomment-638917580
+function findPolylabel(feature){
+  let output = [];
+  if (feature.geometry.type === "Polygon"){
+    output = polylabel(feature.geometry.coordinates);
+  }
+  else {
+    let maxArea = 0, maxPolygon = [];
+    for (let i = 0, l = feature.geometry.coordinates.length; i < l; i++){
+      const p = feature.geometry.coordinates[i];
+    //   const area = geoArea({type: "Polygon", coordinates: p})
+      const area = turf.area({type: "Polygon", coordinates: p})
+      if (area > maxArea){
+        maxPolygon = p;
+        maxArea = area;
+      }
+    }
+    output = polylabel(maxPolygon);
+  }
+  return output;
+}
 
 map.on('load', () => {
     document.getElementById("map-loading").style.display = 'none';
 
-    map.addSource('city-council-districts', {
-        type: 'geojson',
-        data: '/static/nyc_city_council_2021.geojson'
-    });
+    councilMapPromise.then(councilMap => {
+        // councilMap.features.map(d=>{console.log(d.properties.namecol, findPolylabel(d)))
+        map.addSource('city-council-districts', {
+            type: 'geojson',
+            data: councilMap
+        });
 
-    map.addLayer({
-        id: 'city-council-districts',
-        type: 'fill',
-        source: 'city-council-districts',
-        paint: {
-            'fill-color': '#B6DCEB', // District fill color
-            'fill-opacity': 0.5, // District fill opacity
-            'fill-outline-color': '#19486A' // Dark blue stroke color
-        }
-    });
+        map.addSource('city-council-labels', {
+            type: 'geojson',
+            data: {
+            type: "FeatureCollection",
+            features: councilMap.features.map(d=>{
+                return {
+                    type: "Feature",
+                    properties: d.properties,
+                    geometry: {
+                        type: "Point",
+                        coordinates: findPolylabel(d)
+                    }
+                }
+            })
+            }
+        });
 
-    map.addLayer({
-        id: 'district-numbers',
-        type: 'symbol',
-        source: 'city-council-districts',
-        layout: {
-            'text-field': '{dist}',
-            'text-font': ['Open Sans Bold'],
-            'text-size': 12,
-            // 'symbol-placement': 'point', // Only display one label per point
-            'text-allow-overlap': true // Allow labels to overlap with each other
-         },
-        paint: {
-            'text-color': '#19486A' // Dark blue text color
-        }
-    });
 
-    // Add a popup to show district information when a district is clicked
-    map.on('click', 'city-council-districts', function (e) {
-    var properties = e.features[0].properties;
-    var councilMember = properties.council_member;
-    var website = "https://council.nyc.gov/district-" + properties.dist;
-    var districtName = "District " + properties.dist;
+        map.addLayer({
+            id: 'city-council-districts',
+            type: 'fill',
+            source: 'city-council-districts',
+            paint: {
+                'fill-color': '#B6DCEB', // District fill color
+                'fill-opacity': 0.5, // District fill opacity
+                'fill-outline-color': '#19486A' // Dark blue stroke color
+            }
+        });
 
-    new mapboxgl.Popup()
-        .setLngLat(e.lngLat)
-        .setHTML('<h3>' + districtName + '</h3>' + '<p>Council Member: <br><strong><a href="/councilmembers/' + properties.dist + '">' + councilMember + '</a></strong></p>' + '<p><a href="' + website + '">Website</a></p>')
-        .addTo(map);
-    });
+        map.addLayer({
+            id: 'district-numbers',
+            type: 'symbol',
+            source: 'city-council-labels',
+            layout: {
+                'text-field': '{namecol}',
+                'text-font': ['Open Sans Bold'],
+                'text-size': 12,
+                // 'symbol-placement': 'point', // Only display one label per point
+                'text-allow-overlap': true, // Allow labels to overlap with each other
+                // 'text-anchor': 'left'
+            },
+            paint: {
+                'text-color': '#19486A' // Dark blue text color
+            }
+        });
 
-    // Change the cursor to a pointer when the mouse is over a district
-    map.on('mouseenter', 'city-council-districts', function () {
-        map.getCanvas().style.cursor = 'pointer';
-    });
+        // Add a popup to show district information when a district is clicked
+        map.on('click', 'city-council-districts', function (e) {
+        var properties = e.features[0].properties;
+        properties.dist = parseInt(properties.namecol, 10)
+        var councilMember = councilMembers[properties.dist];
+        var website = "https://council.nyc.gov/district-" + properties.dist;
+        var districtName = "District " + properties.dist;
 
-    // Change it back to a default cursor when it leaves
-    map.on('mouseleave', 'city-council-districts', function () {
-        map.getCanvas().style.cursor = '';
-    });
+        new mapboxgl.Popup()
+            .setLngLat(e.lngLat)
+            .setHTML('<h3>' + districtName + '</h3>' + '<p>Council Member: <br><strong><a href="/councilmembers/' + properties.dist + '">' + councilMember + '</a></strong></p>' + '<p><a href="' + website + '">Website</a></p>')
+            .addTo(map);
+        });
+
+        // Change the cursor to a pointer when the mouse is over a district
+        map.on('mouseenter', 'city-council-districts', function () {
+            map.getCanvas().style.cursor = 'pointer';
+        });
+
+        // Change it back to a default cursor when it leaves
+        map.on('mouseleave', 'city-council-districts', function () {
+            map.getCanvas().style.cursor = '';
+        });
+    })
 
     // var popup = new mapboxgl.Popup({
     //     closeButton: false,
