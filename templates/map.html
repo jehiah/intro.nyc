@@ -2,7 +2,7 @@
 {{define "title"}}{{.Title}}{{end}}
 {{define "head"}}
 
-<link href='https://api.mapbox.com/mapbox-gl-js/v2.13.0/mapbox-gl.css' rel='stylesheet' />
+<link href='https://api.mapbox.com/mapbox-gl-js/v2.14.0/mapbox-gl.css' rel='stylesheet' />
 
 <style>
 
@@ -34,7 +34,7 @@ Loading...
 
 {{define "javascript"}}
 <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
-<script src='https://api.mapbox.com/mapbox-gl-js/v2.13.0/mapbox-gl.js'></script>
+<script src='https://api.mapbox.com/mapbox-gl-js/v2.14.0/mapbox-gl.js'></script>
 <script type="module">
 import polylabel from "https://cdn.skypack.dev/polylabel@1.1.0";
 // import polylabel from "https://cdnjs.cloudflare.com/ajax/libs/polylabel/1.1.0/polylabel.min.js";
@@ -126,7 +126,8 @@ map.on('load', () => {
             paint: {
                 'fill-color': '#B6DCEB', // District fill color
                 'fill-opacity': 0.5, // District fill opacity
-                'fill-outline-color': '#19486A' // Dark blue stroke color
+                // 'fill-outline-color': '#19486A' // Dark blue stroke color
+                'fill-outline-color': '#155d8d', // Dark blue stroke color
             }
         });
 
@@ -143,7 +144,11 @@ map.on('load', () => {
                 // 'text-anchor': 'left'
             },
             paint: {
-                'text-color': '#19486A' // Dark blue text color
+                'text-color': '#19486A', // Dark blue text color
+                // https://docs.mapbox.com/style-spec/reference/layers/
+                'text-halo-color':'#fff',
+                'text-halo-width':2,
+                'text-halo-blur': 1
             }
         });
 
