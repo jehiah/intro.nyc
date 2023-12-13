@@ -137,6 +137,7 @@ func (a *App) Councilmember(w http.ResponseWriter, r *http.Request, ps httproute
 		}
 		log.Print(err)
 		http.Error(w, "Internal Server Error", 500)
+		return
 	}
 	var person Person
 	for _, p := range people {

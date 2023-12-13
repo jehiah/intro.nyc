@@ -25,5 +25,6 @@ func (a *App) Map(w http.ResponseWriter, r *http.Request, ps httprouter.Params) 
 	if err != nil {
 		log.Print(err)
 		http.Error(w, "Internal Server Error", 500)
+		return
 	}
 }

@@ -142,7 +142,7 @@ td.flex > div > div.progress {
 <script type="text/javascript">
 // bootstrap current selection from URL
 const urlSearchParams = new URLSearchParams(window.location.search)
-const defaultSession = urlSearchParams.get("session") ? urlSearchParams.get("session") : "{{.Session}}";
+const defaultSession = urlSearchParams.get("session") ? urlSearchParams.get("session") : {{.Session}};
 const sessionElement = document.getElementById("session");
 
 Array.from(sessionElement.options).forEach(e => {e.selected = (e.value == defaultSession)})

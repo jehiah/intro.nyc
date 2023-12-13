@@ -207,6 +207,9 @@ func (a *App) L1(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	case "map":
 		a.Map(w, r, ps)
 		return
+	case "events", "calendar":
+		a.Events(w, r, ps)
+		return
 	}
 	if IsValidFileNumber(file) {
 		a.IntroRedirect(w, r, ps)

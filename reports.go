@@ -96,6 +96,7 @@ func (a *App) ReportMostSponsored(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Print(err)
 		http.Error(w, "Internal Server Error", 500)
+		return
 	}
 	now := time.Now()
 	startDate := CurrentSession.StartDate()
@@ -370,6 +371,7 @@ func (a *App) ReportSimilarity(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Print(err)
 		http.Error(w, "Internal Server Error", 500)
+		return
 	}
 	for _, p := range people {
 		include := false
@@ -567,6 +569,7 @@ func (a *App) ReportCouncilmembers(w http.ResponseWriter, r *http.Request) {
 		if err != nil {
 			log.Print(err)
 			http.Error(w, "Internal Server Error", 500)
+			return
 		}
 		for _, p := range people {
 			for _, or := range p.OfficeRecords {
@@ -931,6 +934,7 @@ func (a *App) ReportAttendance(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		log.Print(err)
 		http.Error(w, "Internal Server Error", 500)
+		return
 	}
 	for _, p := range people {
 		include := false

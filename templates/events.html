@@ -1,0 +1,81 @@
+{{template "base" .}}
+{{define "title"}}{{.Title}}{{end}}
+{{define "head"}}
+
+<style>
+.local-law {
+  margin-bottom: 1em;
+}
+.title {
+  font-weight: 200;
+  font-size: .9rem;
+}
+.callout {
+  border-radius: 1em;
+  padding: 1em;
+}
+
+</style>
+{{end}}
+
+
+{{define "middle"}}
+
+<div class="row">
+
+<div class="col-sm-12 col-lg-6 col-md-9">
+
+  <fieldset class="my-5">
+    <div class="select-committee">
+    Committee: 
+    <select name="committee" id="committee" class="form-select">
+      <option value="" selected>All</option>
+      {{range .Committees }}
+      <option value="{{. | Slugify}}">{{.}}</option>
+      {{end}}
+    </select>
+    </div>
+  </fieldset>
+
+<h3>Upcoming Events</h3>
+{{range .Events}}
+<div>
+  <h2>{{.Date}}</h2>
+  <p>{{.BodyName}} - {{.AgendaStatusName}}</p>
+
+</div>
+{{end}}
+
+
+
+</div>
+</div>
+
+{{end}}
+
+{{ define "last-updated"}}
+<p>Data Last Updated <span class="last-updated" title="{{.LastSync.LastRun}}">{{.LastSync.LastRun | Time}}</span></p>
+{{end}}
+
+{{define "javascript"}}
+<script type="text/javascript">
+const urlSearchParams = new URLSearchParams(window.location.search)
+document.getElementById("committee").value = urlSearchParams.get("committee") === null? "" : urlSearchParams.get("committee")
+
+document.getElementById("committee").addEventListener("change", () => {
+  const s = document.getElementById("committee")
+  const c = s.options[s.selectedIndex].value;
+
+  var qs = new URLSearchParams(window.location.search)
+  if(c.length >= 1) {
+    qs.set("committee", c)
+  } else {
+    qs.delete("committee")
+  }
+
+  const l = qs.toString();
+  const url = l.length == 0 ? window.location.pathname : window.location.pathname + "?" + l;
+  document.location.href = url;
+})
+</script>
+{{end}}

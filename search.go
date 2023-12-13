@@ -28,5 +28,6 @@ func (a *App) Search(w http.ResponseWriter, r *http.Request, ps httprouter.Param
 	if err != nil {
 		log.Print(err)
 		http.Error(w, "Internal Server Error", 500)
+		return
 	}
 }
