@@ -288,12 +288,16 @@ func (a *App) ReportBySession(w http.ResponseWriter, r *http.Request) {
 
 		if body.Session == CurrentSession {
 			// add current values as 'tomorrow'. This ensures todays values have a step to tomorrow
-			last := data[len(data)-1]
-			// show tomorrow
-			tomorrow := today.AddDate(0, 0, 1)
-			data = append(data, Row{Time: tomorrow, Date: tomorrow.Format(time.RFC3339), Count: last.Count, Status: last.Status})
+			if len(data) > 0 {
+				last := data[len(data)-1]
+				// show tomorrow
+				tomorrow := today.AddDate(0, 0, 1)
+				data = append(data, Row{Time: tomorrow, Date: tomorrow.Format(time.RFC3339), Count: last.Count, Status: last.Status})
+			}
 		}
-		data[len(data)-1].Last = true
+		if len(data) > 0 {
+			data[len(data)-1].Last = true
+		}
 
 		body.Data = append(body.Data, data...)
 

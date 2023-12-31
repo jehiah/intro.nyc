@@ -36,6 +36,7 @@ func (s Session) Overlaps(start, end time.Time) bool {
 func (s Session) String() string { return fmt.Sprintf("%d-%d", s.StartYear, s.EndYear) }
 
 var Sessions = []Session{
+	{2024, 2025},
 	{2022, 2023},
 	{2018, 2021},
 	{2014, 2017},

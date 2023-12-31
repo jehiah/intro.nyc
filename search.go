@@ -22,7 +22,7 @@ func (a *App) Search(w http.ResponseWriter, r *http.Request, ps httprouter.Param
 	body := Page{
 		Page:     "search",
 		Title:    T.Sprintf("NYC Council Legislation Search"),
-		Sessions: Sessions[:3],
+		Sessions: Sessions[:4],
 	}
 	err := t.ExecuteTemplate(w, "index.html", body)
 	if err != nil {

@@ -60,7 +60,7 @@ func (a *App) Events(w http.ResponseWriter, r *http.Request, ps httprouter.Param
 		}
 	}
 
-	now := time.Now().Add(time.Hour * 24 * 14 * -1)
+	now := time.Now().In(americaNewYork).Truncate(time.Hour * 24)
 	for year := body.Session.StartYear; year <= body.Session.EndYear && year <= time.Now().Year(); year++ {
 
 		var events []db.Event
@@ -74,11 +74,11 @@ func (a *App) Events(w http.ResponseWriter, r *http.Request, ps httprouter.Param
 			return
 		}
 		for _, e := range events {
-			if e.Date.Before(now) {
-				continue
-			}
 			eventCount[TrimCommittee(e.BodyName)]++
 			if slug.Make(TrimCommittee(e.BodyName)) != selectedCommittee && selectedCommittee != "" {
+				continue
+			}
+			if e.Date.Before(now) {
 				continue
 			}
 			body.Events = append(body.Events, e)
