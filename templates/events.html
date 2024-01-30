@@ -14,7 +14,49 @@
   border-radius: 1em;
   padding: 1em;
 }
-
+.status-deferred {
+  text-decoration: line-through;
+  color:#666;
+}
+.metadata {
+  font-size:12px;
+  font-family: Arial, Helvetica, sans-serif;
+}
+.metadata .date, 
+.metadata .time {
+  display:block;
+}
+.metadata .date {
+  margin-top:4px;
+}
+.location {
+  font-size:.8rem;
+  color:#333;
+}
+.events {
+  /* grid-auto-rows: minmax(100px, auto); */
+  display: grid;
+  grid-template-columns: 6rem 1fr;
+  gap:20px;
+}
+.metadata {
+  grid-column: 1;
+  border-top:1px solid #f0f0f0;
+}
+.event {
+  grid-column: 2;
+  border-top:1px solid #f0f0f0;
+}
+.agenda-status {
+  font-weight: 500;
+}
+.item-title {
+  font-family: Verdana, Geneva, Tahoma, sans-serif
+}
+.id {
+  font-size:12px;
+  font-family: monospace;
+}
 </style>
 {{end}}
 
@@ -38,14 +80,52 @@
   </fieldset>
 
 <h3>Upcoming Events</h3>
+<div class="events">
 {{range .Events}}
-<div>
-  <h2>{{.Date}}</h2>
-  <p>{{.BodyName}} - {{.AgendaStatusName}}</p>
+<div class="metadata status-{{.AgendaStatusName | Slugify}}">
+  <span class="date">{{.Date.Format "2006-01-02"}}</span>
+  <span class="time">{{.Date.Format "3:00 pm"}}</span>
+  {{if ne .AgendaStatusName "Final"}}
+  <span class="agenda-status">Status: {{.AgendaStatusName}}</span>
+  {{end}}
+  <code class="id"><a href="{{.InSiteURL}}">{{.ID}}</a></code>
+</div>
+<div class="event status-{{.AgendaStatusName | Slugify}}">
+  <div class="body">{{.BodyName}}</div>
+  {{if .Location}}
+  <div class="location">{{.Location}}</div>
+  {{end}}
+  {{if .AgendaFile}}
+  <div class="agenda"><a href="{{.AgendaFile}}"><i class="bi bi-file-earmark-pdf"></i>
+     Agenda</a></div>
+  {{end}}
 
+  {{range .Items}}
+  <div>
+    {{if eq .AgendaNote "Preconsidered"}}
+    <span class="badge text-bg-primary float-start me-1">preconsidered</span>
+    {{end}}
+    {{if eq .MatterType "Oversight"}}
+    <p class="item-title matter-type-{{.MatterType | Slugify}}">{{.Title}}</p>
+    {{end}}
+    {{if eq .MatterType "Introduction"}}
+    <p><span class="badge text-bg-secondary">{{.MatterType}}</span>{{.MatterName}}</p>
+    {{end}}
+    {{if eq .MatterType "Resolution"}}
+    <p>{{.MatterName}}</p>
+    {{end}}
+    {{if eq .MatterType "Land Use Application"}}
+    <p>{{.MatterName}}</p>
+    {{end}}
+  </div>
+
+  <!-- <pre>
+    {{. | toJSON}}
+  </pre> -->
+  {{end }}
 </div>
 {{end}}
-
+</div>
 
 
 </div>

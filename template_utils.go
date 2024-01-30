@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"html/template"
 	"io/fs"
 	"path/filepath"
@@ -22,6 +23,11 @@ func cssClass(s string) string {
 	return nonASCII.ReplaceAllString(strings.ToLower(s), "-")
 }
 
+func toJSON(v interface{}) string {
+	b, _ := json.Marshal(v)
+	return string(b)
+}
+
 func newTemplate(fs fs.FS, n string, funcs ...template.FuncMap) *template.Template {
 	funcMap := template.FuncMap{
 		"ToLower":    strings.ToLower,
@@ -31,6 +37,7 @@ func newTemplate(fs fs.FS, n string, funcs ...template.FuncMap) *template.Templa
 		"CSSClass":   cssClass,
 		"Slugify":    slug.Make,
 		"TrimPrefix": strings.TrimPrefix,
+		"toJSON":     toJSON,
 	}
 	if len(funcs) > 0 {
 		for _, f := range funcs {
