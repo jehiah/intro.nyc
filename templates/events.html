@@ -117,6 +117,9 @@
     {{if eq .MatterType "Land Use Application"}}
     <p>{{.MatterName}}</p>
     {{end}}
+    {{if eq .MatterType "N/A"}}
+    <p>{{.MatterName}}</p>
+    {{end}}
   </div>
 
   <!-- <pre>
