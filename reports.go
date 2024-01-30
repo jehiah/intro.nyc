@@ -7,6 +7,7 @@ import (
 	"math"
 	"net/http"
 	"net/url"
+	"os"
 	"sort"
 	"strings"
 	"time"
@@ -150,7 +151,7 @@ func (a *App) ReportMostSponsored(w http.ResponseWriter, r *http.Request) {
 		var l []Legislation
 		err := a.getJSONFile(r.Context(), fmt.Sprintf("build/%d.json", year), &l)
 		if err != nil {
-			if err == storage.ErrObjectNotExist {
+			if err == storage.ErrObjectNotExist || os.IsNotExist(err) {
 				continue
 			}
 			log.Print(err)
@@ -232,7 +233,7 @@ func (a *App) ReportBySession(w http.ResponseWriter, r *http.Request) {
 		var l []Legislation
 		err := a.getJSONFile(r.Context(), fmt.Sprintf("build/%d.json", year), &l)
 		if err != nil {
-			if err == storage.ErrObjectNotExist {
+			if err == storage.ErrObjectNotExist || os.IsNotExist(err) {
 				continue
 			}
 			log.Print(err)
@@ -422,7 +423,7 @@ func (a *App) ReportSimilarity(w http.ResponseWriter, r *http.Request) {
 		var l []Legislation
 		err := a.getJSONFile(r.Context(), fmt.Sprintf("build/%d_votes.json", year), &l)
 		if err != nil {
-			if err == storage.ErrObjectNotExist {
+			if err == storage.ErrObjectNotExist || os.IsNotExist(err) {
 				continue
 			}
 			log.Print(err)
@@ -604,7 +605,7 @@ func (a *App) ReportCouncilmembers(w http.ResponseWriter, r *http.Request) {
 		var l []Legislation
 		err := a.getJSONFile(r.Context(), fmt.Sprintf("build/%d.json", year), &l)
 		if err != nil {
-			if err == storage.ErrObjectNotExist {
+			if err == storage.ErrObjectNotExist || os.IsNotExist(err) {
 				continue
 			}
 			log.Print(err)
@@ -766,7 +767,7 @@ func (a *App) ReportCommittees(w http.ResponseWriter, r *http.Request) {
 		var l []Legislation
 		err := a.getJSONFile(r.Context(), fmt.Sprintf("build/%d.json", year), &l)
 		if err != nil {
-			if err == storage.ErrObjectNotExist {
+			if err == storage.ErrObjectNotExist || os.IsNotExist(err) {
 				continue
 			}
 			log.Print(err)
@@ -825,7 +826,7 @@ func (a *App) ReportCommittees(w http.ResponseWriter, r *http.Request) {
 		var events []db.Event
 		err = a.getJSONFile(r.Context(), fmt.Sprintf("build/events_attendance_%d.json", year), &events)
 		if err != nil {
-			if err == storage.ErrObjectNotExist {
+			if err == storage.ErrObjectNotExist || os.IsNotExist(err) {
 				continue
 			}
 			log.Print(err)
@@ -965,7 +966,7 @@ func (a *App) ReportAttendance(w http.ResponseWriter, r *http.Request) {
 		var events []db.Event
 		err := a.getJSONFile(r.Context(), fmt.Sprintf("build/events_attendance_%d.json", year), &events)
 		if err != nil {
-			if err == storage.ErrObjectNotExist {
+			if err == storage.ErrObjectNotExist || os.IsNotExist(err) {
 				continue
 			}
 			log.Print(err)

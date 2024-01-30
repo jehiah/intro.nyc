@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"sort"
 	"time"
 
@@ -66,7 +67,7 @@ func (a *App) Events(w http.ResponseWriter, r *http.Request, ps httprouter.Param
 		var events []db.Event
 		err = a.getJSONFile(r.Context(), fmt.Sprintf("build/events_%d.json", year), &events)
 		if err != nil {
-			if err == storage.ErrObjectNotExist {
+			if err == storage.ErrObjectNotExist || os.IsNotExist(err) {
 				continue
 			}
 			log.Print(err)

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"regexp"
 	"sort"
 	"strconv"
@@ -130,7 +131,7 @@ func (a *App) Councilmember(w http.ResponseWriter, r *http.Request, ps httproute
 	var people []db.Person
 	err := a.getJSONFile(r.Context(), "build/people_all.json", &people)
 	if err != nil {
-		if err == storage.ErrObjectNotExist {
+		if err == storage.ErrObjectNotExist || os.IsNotExist(err) {
 			a.addExpireHeaders(w, time.Minute*5)
 			http.Error(w, "Not Found", 404)
 			return

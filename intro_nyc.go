@@ -162,7 +162,7 @@ func (a *App) ProxyJSON(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 
 	rc, err := a.getFile(r.Context(), fmt.Sprintf("build/%s", path))
 	if err != nil {
-		if err == storage.ErrObjectNotExist {
+		if err == storage.ErrObjectNotExist || os.IsNotExist(err) {
 			a.addExpireHeaders(w, time.Minute*10)
 			http.Error(w, "Not Found", 404)
 			return

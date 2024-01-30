@@ -5,6 +5,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -103,7 +104,7 @@ func (a *App) RecentLegislation(w http.ResponseWriter, r *http.Request, ps httpr
 		var l []Legislation
 		err := a.getJSONFile(r.Context(), fmt.Sprintf("build/%d.json", year), &l)
 		if err != nil {
-			if err == storage.ErrObjectNotExist {
+			if err == storage.ErrObjectNotExist || os.IsNotExist(err) {
 				continue
 			}
 			log.Print(err)
