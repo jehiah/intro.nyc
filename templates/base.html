@@ -135,7 +135,7 @@ footer a:link, footer a:visited {
 footer p {
   margin-bottom: .5rem;
 }
-.twitter::before, .facebook::before, .instagram::before {
+.twitter::before, .facebook::before, .instagram::before, .threads::before {
   background-size: 1em 1em;
   content: ' ';
   vertical-align: middle;
@@ -152,6 +152,9 @@ footer p {
 }
 .instagram::before {
   background-image: url("/static/instagram.svg");
+}
+.threads::before {
+  background-image: url("/static/threads.svg");
 }
 </style>
 {{block "head" .}}{{end}}

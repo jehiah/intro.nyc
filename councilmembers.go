@@ -62,11 +62,19 @@ type PersonMetadata struct {
 	Twitter, TwitterPersonal     string
 	Facebook, FacebookPersonal   string
 	Instagram, InstagramPersonal string
+	SocialAccounts               []SocialAccount
 }
+
 type SocialAccount struct {
 	Username string
 	Link     string
-	CSSClass string
+	Official bool
+	Personal bool
+	Platform string // twitter | instagram | facebook | threads
+}
+
+func (s SocialAccount) CSSClass() string {
+	return s.Platform
 }
 
 func twitterUsername(s string) string {
@@ -103,14 +111,17 @@ func instagramUsername(s string) string {
 	return strings.Trim(u.Path, "/")
 }
 
-func (t PersonMetadata) SocialAccounts() []SocialAccount {
+func (t PersonMetadata) GetSocialAccounts() []SocialAccount {
+	if len(t.SocialAccounts) > 0 {
+		return t.SocialAccounts
+	}
 	accounts := []SocialAccount{
-		{twitterUsername(t.Twitter), t.Twitter, "twitter"},
-		{twitterUsername(t.TwitterPersonal), t.TwitterPersonal, "twitter"},
-		{facebookUsername(t.Facebook), t.Facebook, "facebook"},
-		{facebookUsername(t.FacebookPersonal), t.FacebookPersonal, "facebook"},
-		{instagramUsername(t.Instagram), t.Instagram, "instagram"},
-		{instagramUsername(t.InstagramPersonal), t.InstagramPersonal, "instagram"},
+		{Username: twitterUsername(t.Twitter), Link: t.Twitter, Platform: "twitter"},
+		{Username: twitterUsername(t.TwitterPersonal), Link: t.TwitterPersonal, Platform: "twitter"},
+		{Username: facebookUsername(t.Facebook), Link: t.Facebook, Platform: "facebook"},
+		{Username: facebookUsername(t.FacebookPersonal), Link: t.FacebookPersonal, Platform: "facebook"},
+		{Username: instagramUsername(t.Instagram), Link: t.Instagram, Platform: "instagram"},
+		{Username: instagramUsername(t.InstagramPersonal), Link: t.InstagramPersonal, Platform: "instagram"},
 	}
 	var o []SocialAccount
 	for _, a := range accounts {
