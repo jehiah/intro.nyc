@@ -41,6 +41,13 @@ func (a *App) Events(w http.ResponseWriter, r *http.Request, ps httprouter.Param
 		IsCurrentSession: true,
 	}
 
+	err = a.getJSONFile(r.Context(), "build/last_sync.json", &body.LastSync)
+	if err != nil {
+		log.Print(err)
+		http.Error(w, "Internal Server Error", 500)
+		return
+	}
+
 	selectedCommittee := r.Form.Get("committee")
 
 	committees := make(map[string]bool)

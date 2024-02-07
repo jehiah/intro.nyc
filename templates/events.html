@@ -21,10 +21,23 @@
 .metadata {
   font-size:12px;
   font-family: Arial, Helvetica, sans-serif;
+  min-height:7rem;
 }
-.metadata .date, 
-.metadata .time {
+
+.metadata .time, .event .body {
   display:block;
+  font: 14px/20px Arial,Sans-serif;
+  font-weight: 700;
+  background-color: #efefef;
+  line-height: 1.5;
+  padding:3px 0;
+  margin-bottom:3px;
+}
+.metadata .time {
+  padding-left:5px;
+}
+.time >a > img {
+  vertical-align: baseline;
 }
 .metadata .date {
   margin-top:4px;
@@ -37,15 +50,19 @@
   /* grid-auto-rows: minmax(100px, auto); */
   display: grid;
   grid-template-columns: 6rem 1fr;
-  gap:20px;
+  /* gap:20px; */
 }
 .metadata {
   grid-column: 1;
-  border-top:1px solid #f0f0f0;
+  border-top:1px solid #d0d0d0;
 }
 .event {
   grid-column: 2;
-  border-top:1px solid #f0f0f0;
+  border-top:1px solid #d0d0d0;
+}
+h2.date {
+  grid-column: 1/3;
+  font-size: calc(1rem + .5vw);
 }
 .agenda-status {
   font-weight: 500;
@@ -57,6 +74,29 @@
   font-size:12px;
   font-family: monospace;
 }
+.id > a, .id > a:visited {
+  color: inherit;
+}
+.select-committee {
+  display: inline-block;
+  margin-right: 2em;
+}
+
+.form-select {
+  width:inherit;
+  display: inline-block;
+  max-width: 350px;
+}
+@media (min-width: 576px) { 
+  .form-select {
+    max-width: 450px;
+  }
+}
+
+.agenda-item {
+  border-left:2px solid #e0e0e0;
+}
+
 </style>
 {{end}}
 
@@ -65,7 +105,7 @@
 
 <div class="row">
 
-<div class="col-sm-12 col-lg-6 col-md-9">
+<div class="col-sm-12 col-md-9 col-lg-7">
 
   <fieldset class="my-5">
     <div class="select-committee">
@@ -79,29 +119,30 @@
     </div>
   </fieldset>
 
-<h3>Upcoming Events</h3>
 <div class="events">
 {{range .Events}}
+<h2 class="date" data-date="{{.Date.Format "2006-01-02"}}">{{.Date.Format "January 2"}}</h2>
+
 <div class="metadata status-{{.AgendaStatusName | Slugify}}">
-  <span class="date">{{.Date.Format "2006-01-02"}}</span>
-  <span class="time">{{.Date.Format "3:00 pm"}}</span>
+  <!-- <span class="date">{{.Date.Format "2006-01-02"}}</span> -->
+  <span class="time"><a href="{{.InSiteURL}}"><img src="/static/calendar-date.svg" width="14" height="14"> {{.Date.Format "3:00 pm"}}</a></span>
   {{if ne .AgendaStatusName "Final"}}
   <span class="agenda-status">Status: {{.AgendaStatusName}}</span>
   {{end}}
-  <code class="id"><a href="{{.InSiteURL}}">{{.ID}}</a></code>
+  {{if .AgendaFile}}
+  <div class="agenda"><a href="{{.AgendaFile}}"><i class="bi bi-file-earmark-pdf"></i>
+     Agenda</a></div>
+  {{end}}
+  <!-- <span class="id"><a href="{{.InSiteURL}}"># {{.ID}}</a></span> -->
 </div>
 <div class="event status-{{.AgendaStatusName | Slugify}}">
   <div class="body">{{.BodyName}}</div>
   {{if .Location}}
   <div class="location">{{.Location}}</div>
   {{end}}
-  {{if .AgendaFile}}
-  <div class="agenda"><a href="{{.AgendaFile}}"><i class="bi bi-file-earmark-pdf"></i>
-     Agenda</a></div>
-  {{end}}
 
   {{range .Items}}
-  <div>
+  <div class="agenda-item ps-2 my-1">
     {{if eq .AgendaNote "Preconsidered"}}
     <span class="badge text-bg-primary float-start me-1">preconsidered</span>
     {{end}}
@@ -109,7 +150,7 @@
     <p class="item-title matter-type-{{.MatterType | Slugify}}">{{.Title}}</p>
     {{end}}
     {{if eq .MatterType "Introduction"}}
-    <p><span class="badge text-bg-secondary">{{.MatterType}}</span>{{.MatterName}}</p>
+    <p><span class="badge text-bg-secondary float-start me-1">{{.MatterType}}</span>{{.MatterName}}</p>
     {{end}}
     {{if eq .MatterType "Resolution"}}
     <p>{{.MatterName}}</p>
@@ -121,10 +162,6 @@
     <p>{{.MatterName}}</p>
     {{end}}
   </div>
-
-  <!-- <pre>
-    {{. | toJSON}}
-  </pre> -->
   {{end }}
 </div>
 {{end}}
@@ -160,5 +197,16 @@ document.getElementById("committee").addEventListener("change", () => {
   const url = l.length == 0 ? window.location.pathname : window.location.pathname + "?" + l;
   document.location.href = url;
 })
+
+const df = new Intl.DateTimeFormat([], {dateStyle:"full", timeZone:"UTC"});
+let seen = new Set()
+Array.from(document.getElementsByClassName("date")).forEach(el => {
+  if (seen.has(el.dataset.date)) {
+    el.parentNode.removeChild(el)
+    return
+  }
+  seen.add(el.dataset.date)
+  el.innerText = df.format(new Date(el.dataset.date))
+});
 </script>
 {{end}}
