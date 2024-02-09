@@ -175,16 +175,16 @@ footer p {
   <div>
     <a class="nav-link {{if eq .Page "search"}}active{{end}}" href="/"><span class="d-inline d-md-none"><img src="/static/search.svg" height="16" width="16"></span>
       <span class="d-none d-md-inline">Search</span></a>
-    <a class="nav-link {{if eq .Page "recent"}}active{{end}}" href="/recent">Recent</a>
-    <a class="nav-link {{if eq .Page "councilmembers"}}active{{end}}" href="/councilmembers">Council Members</a>
-    <a class="nav-link {{if eq .Page "local-laws"}}active{{end}}" href="/local-laws">Local Laws</a>
-    <a class="nav-link {{if eq .Page "reports"}}active{{end}}" href="/reports">Reports</a>
     <a class="nav-link {{if eq .Page "map"}}active{{end}}" href="/map">
       <span class="d-inline d-md-none"><img src="static/map.svg" height="16" width="16"></span>
       <span class="d-none d-md-inline">Map</span></a>
     <a class="nav-link {{if eq .Page "events"}}active{{end}}" href="/events">
       <span class="d-inline d-md-none"><img src="/static/calendar-date.svg" height="16" width="16"></span>
       <span class="d-none d-md-inline">Events</span></a>
+    <a class="nav-link {{if eq .Page "recent"}}active{{end}}" href="/recent">Recent</a>
+    <a class="nav-link {{if eq .Page "councilmembers"}}active{{end}}" href="/councilmembers">Council Members</a>
+    <a class="nav-link {{if eq .Page "local-laws"}}active{{end}}" href="/local-laws"><span class="d-none d-md-inline">Local </span>Laws</a>
+    <a class="nav-link {{if eq .Page "reports"}}active{{end}}" href="/reports">Reports</a>
   </div>
 </nav>
 
