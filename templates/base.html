@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" integrity="sha512-b2QcS5SsA8tZodcDtGRELiGv5SaKSk1vDHDaQRda0htPYWZ6046lr3kJ5bAAQdpV2mmA/4v0wQF9MyU6/pDIAg==" crossorigin="anonymous" referrerpolicy="no-referrer" />    <link rel="shortcut icon" type="image/png" href="/static/intro_nyc_logo.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" integrity="sha512-dPXYcDub/aeb08c63jRq/k6GaKccl256JQy/AnOq7CAnEZ9FzSL9wSbcZkMp4R26vBsMLFYH4kQ67/bbV8XaCQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
 <style>
 @import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@200;400&display=swap');
 
@@ -167,19 +168,19 @@ footer p {
     <a class="navbar-brand" href="https://intro.nyc/">
     <img src="/static/intro_nyc_logo.png" alt="" width="55" height="55" class="d-inline-block align-text-middle" style="margin:-10px;">Intro.nyc</a>
     <span class="h1">New York City Council Legislation</span>
-    <a href="https://legistar.council.nyc.gov/Legislation.aspx" class="navbar-right"><svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-external-link"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg> legistar.council.nyc.gov</a> 
+    <a href="https://legistar.council.nyc.gov/Legislation.aspx" class="navbar-right"><i class="bi bi-box-arrow-up-right"></i> legistar.council.nyc.gov</a> 
   </div>
 </nav>
 
 <nav class="subnav">
   <div>
-    <a class="nav-link {{if eq .Page "search"}}active{{end}}" href="/"><span class="d-inline d-md-none"><img src="/static/search.svg" height="16" width="16"></span>
+    <a class="nav-link {{if eq .Page "search"}}active{{end}}" href="/"><span class="d-inline d-md-none"><i class="bi bi-search"></i></span>
       <span class="d-none d-md-inline">Search</span></a>
     <a class="nav-link {{if eq .Page "map"}}active{{end}}" href="/map">
-      <span class="d-inline d-md-none"><img src="static/map.svg" height="16" width="16"></span>
+      <span class="d-inline d-md-none"><i class="bi bi-map"></i></span>
       <span class="d-none d-md-inline">Map</span></a>
     <a class="nav-link {{if eq .Page "events"}}active{{end}}" href="/events">
-      <span class="d-inline d-md-none"><img src="/static/calendar-date.svg" height="16" width="16"></span>
+      <span class="d-inline d-md-none"><i class="bi bi-calendar-date"></i></span>
       <span class="d-none d-md-inline">Events</span></a>
     <a class="nav-link {{if eq .Page "recent"}}active{{end}}" href="/recent">Recent</a>
     <a class="nav-link {{if eq .Page "councilmembers"}}active{{end}}" href="/councilmembers">Council Members</a>

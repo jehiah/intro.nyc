@@ -30,14 +30,15 @@ func toJSON(v interface{}) string {
 
 func newTemplate(fs fs.FS, n string, funcs ...template.FuncMap) *template.Template {
 	funcMap := template.FuncMap{
-		"ToLower":    strings.ToLower,
-		"Comma":      commaInt,
-		"Time":       humanize.Time,
-		"RFC3339":    func(t time.Time) string { return t.Format(time.RFC3339) },
-		"CSSClass":   cssClass,
-		"Slugify":    slug.Make,
-		"TrimPrefix": strings.TrimPrefix,
-		"toJSON":     toJSON,
+		"ToLower":       strings.ToLower,
+		"Comma":         commaInt,
+		"Time":          humanize.Time,
+		"RFC3339":       func(t time.Time) string { return t.Format(time.RFC3339) },
+		"CSSClass":      cssClass,
+		"Slugify":       slug.Make,
+		"TrimPrefix":    strings.TrimPrefix,
+		"toJSON":        toJSON,
+		"TrimCommittee": TrimCommittee,
 	}
 	if len(funcs) > 0 {
 		for _, f := range funcs {

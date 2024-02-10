@@ -19,7 +19,13 @@ import (
 )
 
 func TrimCommittee(s string) string {
-	return strings.TrimPrefix(s, "Committee on ")
+	s = strings.TrimPrefix(s, "Subcommittee on ")
+	s = strings.TrimPrefix(s, "Committee on ")
+	s = strings.TrimSuffix(s, " of the New York City Council")
+	if strings.HasPrefix(s, "Caucus - ") && strings.HasSuffix(s, " Caucus") {
+		s = strings.TrimPrefix(s, "Caucus - ")
+	}
+	return s
 }
 
 // Reports handles /reports/...
