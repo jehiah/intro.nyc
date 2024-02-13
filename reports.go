@@ -47,6 +47,8 @@ func (a *App) Reports(w http.ResponseWriter, r *http.Request, ps httprouter.Para
 		a.ReportCommittees(w, r)
 	case "attendance":
 		a.ReportAttendance(w, r)
+	case "resubmit":
+		a.ReportResubmit(w, r)
 	default:
 		http.Error(w, "Not Found", 404)
 	}
@@ -79,13 +81,15 @@ func (a *App) ReportMostSponsored(w http.ResponseWriter, r *http.Request) {
 
 	type Page struct {
 		Page        string
+		SubPage     string
 		LastSync    LastSync
 		Legislation LegislationList
 		Committees  []string
 		// Sessions    []Session
 	}
 	body := Page{
-		Page: "reports",
+		Page:    "reports",
+		SubPage: "most_sponsored",
 		// Sessions: Sessions[:3],
 
 	}
@@ -215,7 +219,7 @@ func (a *App) ReportBySession(w http.ResponseWriter, r *http.Request) {
 	}
 	body := Page{
 		Page:     "reports",
-		SubPage:  "by_status",
+		SubPage:  "by_session",
 		Session:  CurrentSession,
 		Sessions: Sessions,
 	}
@@ -743,7 +747,7 @@ func (a *App) ReportCommittees(w http.ResponseWriter, r *http.Request) {
 	}
 	body := Page{
 		Page:             "reports",
-		SubPage:          "by_committee",
+		SubPage:          "committees",
 		Session:          CurrentSession,
 		Sessions:         Sessions,
 		IsCurrentSession: true,
@@ -967,8 +971,9 @@ func (a *App) ReportAttendance(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	currentYear := time.Now().Year()
 	// get all the years for the legislative session
-	for year := body.Session.StartYear; year <= body.Session.EndYear && year <= time.Now().Year(); year++ {
+	for year := body.Session.StartYear; year <= body.Session.EndYear && year <= currentYear; year++ {
 		var events []db.Event
 		err := a.getJSONFile(r.Context(), fmt.Sprintf("build/events_attendance_%d.json", year), &events)
 		if err != nil {

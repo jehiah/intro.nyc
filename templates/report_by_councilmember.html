@@ -50,30 +50,9 @@ tr > th.number-col {
 
 {{define "middle"}}
 
+{{template "report_nav" .SubPage}}
 
-<ul class="nav nav-tabs my-3">
-  <li class="nav-item">
-    <a class="nav-link" href="/reports/attendance">Attendance</a>
-  </li>
-  <li class="nav-item">
-    <a class="nav-link" href="/reports/most_sponsored">Sponsors</a>
-  </li>
-  <li class="nav-item">
-    <a class="nav-link" href="/reports/session">Session</a>
-  </li>
-  <li class="nav-item">
-    <a class="nav-link" href="/reports/similarity">Similarity</a>
-  </li>
-  <li class="nav-item">
-    <a class="nav-link active" aria-current="page"  href="/reports/councilmembers">Council Members</a>
-  </li>
-  <li class="nav-item">
-    <a class="nav-link" href="/reports/committees">Committees</a>
-  </li>
-</ul>
-
-
-<fieldset class="my-5">
+<fieldset class="my-4">
   <div class="select-session">
   <select name="session" id="session" class="form-select">
     {{range .Sessions }}

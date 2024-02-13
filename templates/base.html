@@ -209,3 +209,31 @@ footer p {
   </body>
 </html>
 {{end}}
+
+
+{{define "report_nav"}}
+<ul class="nav nav-tabs my-3">
+  <li class="nav-item">
+    <a class="nav-link {{if eq . "attendance"}}active{{end}}" href="/reports/attendance">Attendance</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {{if eq . "most_sponsored"}}active{{end}}" href="/reports/most_sponsored">Sponsors</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {{if eq . "by_session"}}active{{end}}" href="/reports/session">Session</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {{if eq . "similarity"}}active{{end}}" aria-current="page" href="/reports/similarity">Similarity</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {{if eq . "by_councilmember"}}active{{end}}" href="/reports/councilmembers">Council Members</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {{if eq . "committees"}}active{{end}}" href="/reports/committees">Committees</a>
+  </li>
+  <li class="nav-item">
+    <a class="nav-link {{if eq . "resubmit"}}active{{end}}" href="/reports/resubmit">Re-Submissions</a>
+  </li>
+</ul>
+
+{{end}}

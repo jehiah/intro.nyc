@@ -1,0 +1,201 @@
+{{template "base" .}}
+{{define "title"}}NYC Council {{.PreviousSession}} Resubmitted Legislation{{end}}
+{{define "head"}}
+
+<style>
+.attribution, .body {
+  font-weight: 200;
+  font-size: .8rem;
+}
+.status-withdrawn > .name {
+  text-decoration: line-through;
+}
+.scheduled {
+  margin: 0 .25rem;
+  font-size: .8rem;
+  background-color: #fff0c6;
+  padding: .1rem .2rem;
+}
+.form-check {
+  display: inline-block;
+}
+.select-councilmember {
+  display: inline-block;
+}
+.select-session {
+  display: inline-block;
+}
+.form-select {
+  display: inline;
+  width: 300px;
+}
+.select-councilmember > .form-select {
+  width: 225px;
+}
+.form-check {
+  display: inline-block;
+}
+.re-sponsored {
+  color:rgb(95, 177, 80);
+}
+table {
+  border-collapse: separate;
+ border-spacing: 4px 8px;
+}
+td {
+  vertical-align: top;
+}
+@media (min-width: 576px) { 
+  .form-select {
+    max-width: 450px;
+  }
+}
+</style>
+{{end}}
+
+
+{{define "middle"}}
+
+{{template "report_nav" .SubPage}}
+
+<fieldset class="my-4">
+  <div class="select-session me-2">
+  <select name="session" id="session" class="form-select">
+    {{range .Sessions -}}
+    <option value="{{.}}">{{.}} Legislative Session</option>
+    {{end}}
+  </select>
+  </div>
+
+  <div class="select-councilmember me-2">
+    Council Member: 
+    <select name="councilmember" id="councilmember" class="form-select">
+      <option value="" selected>Any</option>
+      {{range .People -}}
+      <option value="{{.Slug}}" {{if eq .Slug $.Person.Slug}} selected {{end}}>{{.FullName}}</option>
+      {{end}}
+    </select>
+  </div>
+
+  <div class="form-check">
+    <input class="form-check-input" type="checkbox" value="only" id="resubmitted">
+    <label class="form-check-label" for="resubmitted">
+      Resubmitted only
+    </label>
+  </div>
+
+</fieldset>
+
+<div class="row">
+
+<div class="col">
+
+  
+<p><mark>{{.Resubmitted}}</mark> of <mark>{{.BillCount}}</mark> Bills
+  {{if .Person.Slug }} sponsored by <mark>{{.Person.FullName}}</mark> and {{end}} filed at end of
+  <mark>{{.PreviousSession}} Legislative Session</mark> {{if .IsCurrentSession }} have been {{else}} were {{end}} re-submitted in the <mark>{{.Session}} Legislative Session</mark>.</p>
+
+<table>
+{{range .Data}}
+<tr>
+    <td>
+        {{ with .Legislation }}
+            <a href="{{.IntroLink}}" class="file-link"><span class="badge file">{{.IntroLinkText}}</span></a><br>
+            <span class="attribution">by {{.PrimarySponsor.FullName}}</span>
+        {{end}}
+    </td>
+    <td>
+        {{ if .NewLegislation }}
+        {{ with .NewLegislation }}
+        <a href="{{.IntroLink}}" class="file-link"><span class="badge file">{{.IntroLinkText}}</span></a><br>
+        <span class="attribution">by 
+          {{ if $.IsCurrentSession}}
+          <a href="/councilmembers/{{.PrimarySponsor.Slug}}" class="sponsor">{{.PrimarySponsor.FullName}}</a> 
+          {{ else }}
+            {{.PrimarySponsor.FullName}}
+          {{end}}
+          {{ if $.Person.Slug}} 
+            {{if .SponsoredBy $.Person.ID}}
+            <br><span class="re-sponsored"><i class="bi bi-check2-circle"></i> Re-Sponsored</span>
+            {{end}}
+          {{end}}
+        </span>
+        {{end}}
+        {{end}}
+    </td>
+    <td>
+        <span class="name">{{.Legislation.Name}}</span><br>
+        <span class="body">{{.BodyName}}</span>
+    </td>
+</tr>
+{{end}}
+</table>
+
+</div>
+</div>
+
+<div class="my-3">
+  <p><strong>Methodology:</strong> 
+    Bills that were filed at the end of the session are considered for re-submission.</p>
+</div>
+
+{{end}}
+
+{{ define "last-updated"}}
+<p>Data Last Updated <span class="last-updated" title="{{.LastSync.LastRun}}">{{.LastSync.LastRun | Time}}</span></p>
+{{end}}
+
+
+{{define "javascript"}}
+<script type="text/javascript">
+const urlSearchParams = new URLSearchParams(window.location.search)
+const defaultSession = urlSearchParams.get("session") ? urlSearchParams.get("session") : {{.Session}};
+const sessionElement = document.getElementById("session");
+Array.from(sessionElement.options).forEach(e => {e.selected = (e.value == defaultSession)})
+
+const councilmemberElement = document.getElementById("councilmember");
+Array.from(councilmemberElement.options).forEach(e => {e.selected = (e.value == {{.Person.Slug}} )})
+
+const resubmittedElement =document.getElementById("resubmitted")
+resubmittedElement.checked = {{.ResubmittedOnly}}
+
+sessionElement.addEventListener("change", _ => {
+  updateURL()
+})
+
+councilmemberElement.addEventListener("change", _ => {
+  updateURL()
+})
+resubmittedElement.addEventListener("change", _ => {
+  updateURL()
+})
+
+function updateURL() {
+  const ss = document.getElementById("session");
+  const cc = document.getElementById("councilmember")
+  const s = ss.options[ss.selectedIndex].value;
+  const c = cc.options[cc.selectedIndex].value;
+  const r = document.getElementById("resubmitted")
+
+  var qs = new URLSearchParams()
+  if (ss.selectedIndex == 0 ) {
+    qs.delete("session")
+  } else {
+    qs.set("session", s)
+  }
+  if (c == "") {
+    qs.delete("councilmember")
+  } else {
+    qs.set("councilmember", c)
+  }
+  if (r.checked) {
+    qs.set("resubmitted", r.value)
+  } else {
+    qs.delete("resubmitted")
+  }
+  let q = qs.toString()
+  location.href = location.pathname + (q.length > 0 ? ("?" + qs.toString()) : "");
+}
+
+</script>
+{{end}}

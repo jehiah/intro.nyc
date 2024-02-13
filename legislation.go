@@ -32,6 +32,14 @@ func (ll Legislation) NumberSponsors() int {
 func (ll Legislation) PrimarySponsor() db.PersonReference {
 	return ll.Sponsors[0]
 }
+func (ll Legislation) SponsoredBy(id int) bool {
+	for _, s := range ll.Sponsors {
+		if s.ID == id {
+			return true
+		}
+	}
+	return false
+}
 func (ll Legislation) Hearings() []db.History {
 	var o []db.History
 	for _, h := range ll.History {
