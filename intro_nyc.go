@@ -156,7 +156,7 @@ func (a *App) ProxyJSON(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 
 	cacheTTL := time.Minute * 15
 	switch path {
-	case "search_index_2018-2021.json":
+	case "search_index_2022-2023.json", "search_index_2018-2021.json":
 		cacheTTL = time.Hour * 24
 	}
 

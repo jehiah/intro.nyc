@@ -189,7 +189,7 @@ func (a *App) ReportResubmit(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("content-type", "text/html")
-	cacheTTL := time.Minute * 5
+	cacheTTL := time.Minute * 15
 	a.addExpireHeaders(w, cacheTTL)
 	err = t.ExecuteTemplate(w, template, body)
 	if err != nil {
