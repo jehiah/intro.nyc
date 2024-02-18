@@ -1,18 +1,35 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
 	"sort"
+	"strings"
 	"time"
 
 	"cloud.google.com/go/storage"
+	ics "github.com/arran4/golang-ical"
 	"github.com/gosimple/slug"
 	"github.com/jehiah/legislator/db"
 	"github.com/julienschmidt/httprouter"
 )
+
+type EventPage struct {
+	Page     string
+	Title    string
+	SubPage  string
+	LastSync LastSync
+
+	Session          Session
+	IsCurrentSession bool
+	Committees       []string
+
+	Events []db.Event
+}
 
 func (a *App) Events(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	r.ParseForm()
@@ -21,20 +38,7 @@ func (a *App) Events(w http.ResponseWriter, r *http.Request, ps httprouter.Param
 
 	t := newTemplate(a.templateFS, templateName)
 
-	type Page struct {
-		Page     string
-		Title    string
-		SubPage  string
-		LastSync LastSync
-
-		Session          Session
-		IsCurrentSession bool
-		Committees       []string
-
-		Events []db.Event
-	}
-
-	body := Page{
+	body := EventPage{
 		Page:             "events",
 		Title:            "NYC Council Events",
 		Session:          CurrentSession,
@@ -101,6 +105,11 @@ func (a *App) Events(w http.ResponseWriter, r *http.Request, ps httprouter.Param
 	}
 	sort.Strings(body.Committees)
 
+	if r.Form.Get("format") == "ics" {
+		a.CalendarFile(w, body)
+		return
+	}
+
 	w.Header().Set("content-type", "text/html")
 	cacheTTL := time.Minute * 15
 	a.addExpireHeaders(w, cacheTTL)
@@ -110,5 +119,42 @@ func (a *App) Events(w http.ResponseWriter, r *http.Request, ps httprouter.Param
 		http.Error(w, "Internal Server Error", 500)
 		return
 	}
+}
 
+func (a *App) CalendarFile(w http.ResponseWriter, body EventPage) {
+	cal := ics.NewCalendar()
+	cal.SetMethod(ics.MethodPublish)
+	// cal.AddTimezone("America/New_York")
+	// timezone requires additional information
+	for _, e := range body.Events {
+		event := cal.AddEvent(fmt.Sprintf("%d@intro.nyc", e.ID))
+		event.SetCreatedTime(e.AgendaLastPublished)
+		event.SetDtStampTime(e.AgendaLastPublished)
+		event.SetModifiedAt(e.LastModified)
+		event.SetStartAt(e.Date)
+		event.SetEndAt(e.Date.Add(time.Hour))
+		event.SetSummary(e.BodyName)
+		if e.Location != "" {
+			event.SetLocation(e.Location)
+		}
+		// event.SetDescription("Description")
+		desc := &bytes.Buffer{}
+		if e.AgendaStatusName != "Final" {
+			fmt.Fprintf(desc, "Status: %s\n", e.AgendaStatusName)
+		}
+		event.SetDescription(strings.TrimSpace(desc.String()))
+		if e.InSiteURL != "" {
+			event.SetURL(e.InSiteURL)
+		}
+		// event.SetOrganizer("sender@domain", ics.WithCN("This Machine"))
+		// event.AddAttendee("reciever or participant", ics.CalendarUserTypeIndividual, ics.ParticipationStatusNeedsAction, ics.ParticipationRoleReqParticipant, ics.WithRSVP(true))
+	}
+
+	// w.Header().Set("Content-type", "text/plain") // TODO: text/calendar
+	if a.devMode {
+		w.Header().Set("Content-type", "text/plain")
+	} else {
+		w.Header().Set("Content-type", "text/calendar")
+	}
+	io.WriteString(w, cal.Serialize())
 }
