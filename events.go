@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"net/url"
 	"os"
 	"sort"
 	"strings"
@@ -24,9 +25,10 @@ type EventPage struct {
 	SubPage  string
 	LastSync LastSync
 
-	Session          Session
-	IsCurrentSession bool
-	Committees       []string
+	Session           Session
+	IsCurrentSession  bool
+	Committees        []string
+	SelectedCommittee string
 
 	Events []db.Event
 }
@@ -87,8 +89,12 @@ func (a *App) Events(w http.ResponseWriter, r *http.Request, ps httprouter.Param
 		}
 		for _, e := range events {
 			eventCount[TrimCommittee(e.BodyName)]++
-			if slug.Make(TrimCommittee(e.BodyName)) != selectedCommittee && selectedCommittee != "" {
+			eventCommittee := slug.Make(TrimCommittee(e.BodyName))
+			if eventCommittee != selectedCommittee && selectedCommittee != "" {
 				continue
+			}
+			if selectedCommittee != "" && eventCommittee == selectedCommittee {
+				body.SelectedCommittee = e.BodyName
 			}
 			if e.Date.Before(now) {
 				continue
@@ -105,7 +111,7 @@ func (a *App) Events(w http.ResponseWriter, r *http.Request, ps httprouter.Param
 	}
 	sort.Strings(body.Committees)
 
-	if r.Form.Get("format") == "ics" {
+	if strings.HasSuffix(r.URL.Path, ".ics") {
 		a.CalendarFile(w, body)
 		return
 	}
@@ -124,6 +130,25 @@ func (a *App) Events(w http.ResponseWriter, r *http.Request, ps httprouter.Param
 func (a *App) CalendarFile(w http.ResponseWriter, body EventPage) {
 	cal := ics.NewCalendar()
 	cal.SetMethod(ics.MethodPublish)
+	if body.SelectedCommittee != "" {
+		cal.SetName(body.SelectedCommittee)
+		cal.SetDescription(fmt.Sprintf("NYC Council Calendar for %s", TrimCommittee(body.SelectedCommittee)))
+	} else {
+		cal.SetName("New York City Council Calendar")
+	}
+	cal.SetRefreshInterval("P1D") // 1 day
+	v := &url.Values{}
+	if body.SelectedCommittee != "" {
+		v.Set("committee", slug.Make(TrimCommittee(body.SelectedCommittee)))
+	}
+	u := url.URL{
+		Scheme:   "https",
+		Host:     "intro.nyc",
+		Path:     "/events.ics",
+		RawQuery: v.Encode(),
+	}
+	cal.SetUrl(u.String())
+
 	// cal.AddTimezone("America/New_York")
 	// timezone requires additional information
 	for _, e := range body.Events {
