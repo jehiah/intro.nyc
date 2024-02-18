@@ -130,13 +130,28 @@ func (a *App) Events(w http.ResponseWriter, r *http.Request, ps httprouter.Param
 func (a *App) CalendarFile(w http.ResponseWriter, body EventPage) {
 	cal := ics.NewCalendar()
 	cal.SetMethod(ics.MethodPublish)
+
+	newYork, _ := time.LoadLocation("America/New_York")
+
+	var tz ics.VTimezone
+	var std ics.Standard
+	tz.ComponentBase.AddProperty(ics.ComponentProperty(ics.PropertyTzid), newYork.String())
+	std.ComponentBase.AddProperty(ics.ComponentProperty(ics.PropertyTzoffsetfrom), "+0500") // TODO: detect
+	std.ComponentBase.AddProperty(ics.ComponentProperty(ics.PropertyTzoffsetto), "+0500")
+	std.ComponentBase.AddProperty(ics.ComponentProperty(ics.PropertyTzname), "EST")
+	std.ComponentBase.AddProperty(ics.ComponentProperty(ics.PropertyDtstart), "19700101T000000")
+	tz.Components = append(tz.Components, &std)
+	cal.Components = append(cal.Components, &tz)
+
+	tzProp := &ics.KeyValues{Key: string(ics.PropertyTzid), Value: []string{newYork.String()}}
+
 	if body.SelectedCommittee != "" {
 		cal.SetName(body.SelectedCommittee)
 		cal.SetDescription(fmt.Sprintf("NYC Council Calendar for %s", TrimCommittee(body.SelectedCommittee)))
 	} else {
 		cal.SetName("New York City Council Calendar")
 	}
-	cal.SetRefreshInterval("P1D") // 1 day
+	cal.SetRefreshInterval("P1H") // 1 hour?
 	v := &url.Values{}
 	if body.SelectedCommittee != "" {
 		v.Set("committee", slug.Make(TrimCommittee(body.SelectedCommittee)))
@@ -156,9 +171,9 @@ func (a *App) CalendarFile(w http.ResponseWriter, body EventPage) {
 		event.SetCreatedTime(e.AgendaLastPublished)
 		event.SetDtStampTime(e.AgendaLastPublished)
 		event.SetModifiedAt(e.LastModified)
-		event.SetStartAt(e.Date)
-		event.SetEndAt(e.Date.Add(time.Hour))
-		event.SetSummary(e.BodyName)
+		event.SetStartAt(e.Date, tzProp)
+		event.SetEndAt(e.Date.Add(time.Hour), tzProp)
+		event.SetSummary(TrimCommittee(e.BodyName))
 		if e.Location != "" {
 			event.SetLocation(e.Location)
 		}
