@@ -131,20 +131,6 @@ func (a *App) CalendarFile(w http.ResponseWriter, body EventPage) {
 	cal := ics.NewCalendar()
 	cal.SetMethod(ics.MethodPublish)
 
-	newYork, _ := time.LoadLocation("America/New_York")
-
-	var tz ics.VTimezone
-	var std ics.Standard
-	tz.ComponentBase.AddProperty(ics.ComponentProperty(ics.PropertyTzid), newYork.String())
-	std.ComponentBase.AddProperty(ics.ComponentProperty(ics.PropertyTzoffsetfrom), "+0500") // TODO: detect
-	std.ComponentBase.AddProperty(ics.ComponentProperty(ics.PropertyTzoffsetto), "+0500")
-	std.ComponentBase.AddProperty(ics.ComponentProperty(ics.PropertyTzname), "EST")
-	std.ComponentBase.AddProperty(ics.ComponentProperty(ics.PropertyDtstart), "19700101T000000")
-	tz.Components = append(tz.Components, &std)
-	cal.Components = append(cal.Components, &tz)
-
-	tzProp := &ics.KeyValues{Key: string(ics.PropertyTzid), Value: []string{newYork.String()}}
-
 	if body.SelectedCommittee != "" {
 		cal.SetName(body.SelectedCommittee)
 		cal.SetDescription(fmt.Sprintf("NYC Council Calendar for %s", TrimCommittee(body.SelectedCommittee)))
@@ -171,8 +157,8 @@ func (a *App) CalendarFile(w http.ResponseWriter, body EventPage) {
 		event.SetCreatedTime(e.AgendaLastPublished)
 		event.SetDtStampTime(e.AgendaLastPublished)
 		event.SetModifiedAt(e.LastModified)
-		event.SetStartAt(e.Date, tzProp)
-		event.SetEndAt(e.Date.Add(time.Hour), tzProp)
+		event.SetStartAt(e.Date)
+		event.SetEndAt(e.Date.Add(time.Hour))
 		event.SetSummary(TrimCommittee(e.BodyName))
 		if e.Location != "" {
 			event.SetLocation(e.Location)
@@ -182,15 +168,31 @@ func (a *App) CalendarFile(w http.ResponseWriter, body EventPage) {
 		if e.AgendaStatusName != "Final" {
 			fmt.Fprintf(desc, "Status: %s\n", e.AgendaStatusName)
 		}
-		event.SetDescription(strings.TrimSpace(desc.String()))
+		for _, i := range e.Items {
+			switch i.MatterType {
+			case "Oversight":
+				fmt.Fprintf(desc, "\n%s\n\n", i.Title)
+			case "Introduction":
+				if !strings.HasPrefix(i.MatterFile, "T") {
+					fmt.Fprintf(desc, "https://intro.nyc/%s ", strings.TrimPrefix(i.MatterFile, "Intro "))
+				}
+				fmt.Fprintf(desc, "%s %s\n", i.MatterType, i.MatterName)
+			case "N/A":
+				fmt.Fprintf(desc, "%s\n", i.MatterName)
+			default:
+				fmt.Fprintf(desc, "%s %s\n", i.MatterType, i.MatterName)
+			}
+		}
 		if e.InSiteURL != "" {
 			event.SetURL(e.InSiteURL)
+			// TODO: event redirect?
+			fmt.Fprintf(desc, "\n%s\n", e.InSiteURL)
 		}
+		event.SetDescription(strings.TrimSpace(desc.String()))
 		// event.SetOrganizer("sender@domain", ics.WithCN("This Machine"))
 		// event.AddAttendee("reciever or participant", ics.CalendarUserTypeIndividual, ics.ParticipationStatusNeedsAction, ics.ParticipationRoleReqParticipant, ics.WithRSVP(true))
 	}
 
-	// w.Header().Set("Content-type", "text/plain") // TODO: text/calendar
 	if a.devMode {
 		w.Header().Set("Content-type", "text/plain")
 	} else {
