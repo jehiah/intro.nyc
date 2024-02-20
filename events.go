@@ -150,9 +150,10 @@ func (a *App) CalendarFile(w http.ResponseWriter, body EventPage) {
 	}
 	cal.SetUrl(u.String())
 
-	// cal.AddTimezone("America/New_York")
-	// timezone requires additional information
 	for _, e := range body.Events {
+		if e.AgendaStatusName == "Deferred" {
+			continue
+		}
 		event := cal.AddEvent(fmt.Sprintf("%d@intro.nyc", e.ID))
 		event.SetCreatedTime(e.AgendaLastPublished)
 		event.SetDtStampTime(e.AgendaLastPublished)
@@ -163,7 +164,7 @@ func (a *App) CalendarFile(w http.ResponseWriter, body EventPage) {
 		if e.Location != "" {
 			event.SetLocation(e.Location)
 		}
-		// event.SetDescription("Description")
+
 		desc := &bytes.Buffer{}
 		if e.AgendaStatusName != "Final" {
 			fmt.Fprintf(desc, "Status: %s\n", e.AgendaStatusName)
