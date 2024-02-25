@@ -40,8 +40,10 @@ func (a *App) ReportResubmit(w http.ResponseWriter, r *http.Request) {
 		IsCurrentSession bool
 		ResubmittedOnly  bool
 
-		BillCount   int
-		Resubmitted int
+		BillCount      int
+		Resubmitted    int
+		Responsored    int
+		ResponsoredPct float64
 	}
 	body := Page{
 		Page:    "reports",
@@ -168,6 +170,9 @@ func (a *App) ReportResubmit(w http.ResponseWriter, r *http.Request) {
 			}
 			if new != nil {
 				body.Resubmitted++
+				if body.Person.ID > 0 && new.SponsoredBy(body.Person.ID) {
+					body.Responsored++
+				}
 			}
 			body.BillCount++
 			if body.ResubmittedOnly && new == nil {
@@ -179,6 +184,9 @@ func (a *App) ReportResubmit(w http.ResponseWriter, r *http.Request) {
 				NewLegislation: new,
 			})
 		}
+	}
+	if body.Responsored > 0 {
+		body.ResponsoredPct = (float64(body.Responsored) / float64(body.Resubmitted)) * 100
 	}
 
 	err = a.getJSONFile(r.Context(), "build/last_sync.json", &body.LastSync)

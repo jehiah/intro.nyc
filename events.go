@@ -157,7 +157,7 @@ func (a *App) CalendarFile(w http.ResponseWriter, body EventPage) {
 		event := cal.AddEvent(fmt.Sprintf("%d@intro.nyc", e.ID))
 		event.SetCreatedTime(e.AgendaLastPublished)
 		event.SetDtStampTime(e.AgendaLastPublished)
-		event.SetModifiedAt(e.LastModified)
+		event.SetModifiedAt(e.LastModified.Add(time.Second))
 		event.SetStartAt(e.Date)
 		event.SetEndAt(e.Date.Add(time.Hour))
 		event.SetSummary(TrimCommittee(e.BodyName))
