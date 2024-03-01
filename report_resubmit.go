@@ -11,6 +11,10 @@ import (
 	"github.com/jehiah/legislator/db"
 )
 
+type ResubmitFile struct {
+	Resubmitted []db.ResubmitLegislation
+}
+
 // ReportResubmit shows bills to be re-submitted
 func (a *App) ReportResubmit(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
@@ -83,6 +87,7 @@ func (a *App) ReportResubmit(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Internal Server Error", 500)
 		return
 	}
+
 	for _, p := range people {
 		var current, previous bool
 		for _, or := range p.OfficeRecords {
@@ -108,10 +113,29 @@ func (a *App) ReportResubmit(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	resubmitName := make(map[string]*Legislation, len(body.Data))
-	resubmitTitle := make(map[string]*Legislation, len(body.Data))
-
+	resubmittedFrom := make(map[string]db.ResubmitLegislation)
+	resubmittedTo := make(map[string]db.ResubmitLegislation)
+	var resubmitted []db.ResubmitLegislation
 	currentYear := time.Now().Year()
+	for year := body.Session.StartYear; year <= body.Session.EndYear && year <= currentYear; year++ {
+		var resubmitFile ResubmitFile
+		err := a.getJSONFile(r.Context(), fmt.Sprintf("build/resubmit_%d.json", year), &resubmitFile)
+		if err != nil {
+			if err == storage.ErrObjectNotExist || os.IsNotExist(err) {
+				continue
+			}
+			log.Print(err)
+			http.Error(w, "Internal Server Error", 500)
+			return
+		}
+		resubmitted = append(resubmitted, resubmitFile.Resubmitted...)
+		for _, r := range resubmitFile.Resubmitted {
+			resubmittedFrom[r.FromFile] = r
+			resubmittedTo[r.ToFile] = r
+		}
+	}
+
+	lookup := make(map[string]*Legislation)
 	for year := body.Session.StartYear; year <= body.Session.EndYear && year <= currentYear; year++ {
 		var l []Legislation
 		err := a.getJSONFile(r.Context(), fmt.Sprintf("build/%d.json", year), &l)
@@ -125,16 +149,11 @@ func (a *App) ReportResubmit(w http.ResponseWriter, r *http.Request) {
 		}
 		for _, ll := range l {
 			ll := ll
-			switch ll.StatusName {
-			case "Withdrawn":
-				// "Enacted (Charter Referendum)",
-				// "Enacted (Mayor's Desk for Signature)",
-				// "Enacted",
-				// "City Charter Rule Adopted":
+			_, ok := resubmittedTo[ll.File]
+			if !ok {
 				continue
 			}
-			resubmitName[ll.Title] = &ll
-			resubmitTitle[ll.Title] = &ll
+			lookup[ll.File] = &ll
 		}
 	}
 
@@ -163,20 +182,20 @@ func (a *App) ReportResubmit(w http.ResponseWriter, r *http.Request) {
 			if body.Person.ID > 0 && !ll.SponsoredBy(body.Person.ID) {
 				continue
 			}
+			body.BillCount++
 
-			new := resubmitName[ll.Name]
-			if new == nil {
-				new = resubmitTitle[ll.Title]
+			r, ok := resubmittedFrom[ll.File]
+			if body.ResubmittedOnly && !ok {
+				continue
 			}
-			if new != nil {
+			if ok {
 				body.Resubmitted++
+			}
+			new := lookup[r.ToFile]
+			if new != nil {
 				if body.Person.ID > 0 && new.SponsoredBy(body.Person.ID) {
 					body.Responsored++
 				}
-			}
-			body.BillCount++
-			if body.ResubmittedOnly && new == nil {
-				continue
 			}
 
 			body.Data = append(body.Data, &Row{
