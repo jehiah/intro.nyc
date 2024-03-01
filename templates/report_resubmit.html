@@ -68,8 +68,8 @@ td {
   </div>
 
   <div class="select-councilmember me-2">
-    Council Member: 
-    <select name="councilmember" id="councilmember" class="form-select">
+    Sponsoring Council Member: 
+    <select name="sponsor" id="sponsor" class="form-select">
       <option value="" selected>Any</option>
       {{range .People -}}
       <option value="{{.Slug}}" {{if eq .Slug $.Person.Slug}} selected {{end}}>{{.FullName}}</option>
@@ -161,7 +161,7 @@ const defaultSession = urlSearchParams.get("session") ? urlSearchParams.get("ses
 const sessionElement = document.getElementById("session");
 Array.from(sessionElement.options).forEach(e => {e.selected = (e.value == defaultSession)})
 
-const councilmemberElement = document.getElementById("councilmember");
+const councilmemberElement = document.getElementById("sponsor");
 Array.from(councilmemberElement.options).forEach(e => {e.selected = (e.value == {{.Person.Slug}} )})
 
 const resubmittedElement =document.getElementById("resubmitted")
@@ -180,7 +180,7 @@ resubmittedElement.addEventListener("change", _ => {
 
 function updateURL() {
   const ss = document.getElementById("session");
-  const cc = document.getElementById("councilmember")
+  const cc = document.getElementById("sponsor")
   const s = ss.options[ss.selectedIndex].value;
   const c = cc.options[cc.selectedIndex].value;
   const r = document.getElementById("resubmitted")
@@ -192,9 +192,9 @@ function updateURL() {
     qs.set("session", s)
   }
   if (c == "") {
-    qs.delete("councilmember")
+    qs.delete("sponsor")
   } else {
-    qs.set("councilmember", c)
+    qs.set("sponsor", c)
   }
   if (r.checked) {
     qs.set("resubmitted", r.value)

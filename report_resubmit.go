@@ -106,7 +106,7 @@ func (a *App) ReportResubmit(w http.ResponseWriter, r *http.Request) {
 		}
 		if current && previous {
 			body.People = append(body.People, p)
-			if p.Slug == r.Form.Get("councilmember") {
+			if p.Slug == r.Form.Get("sponsor") {
 				body.Person = p
 			}
 			// data[p.ID] = &Row{Person: Person{Person: p}}
