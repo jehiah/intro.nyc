@@ -5,6 +5,8 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"sort"
+	"strings"
 	"time"
 
 	"cloud.google.com/go/storage"
@@ -46,6 +48,7 @@ func (a *App) ReportResubmit(w http.ResponseWriter, r *http.Request) {
 
 		BillCount      int
 		Resubmitted    int
+		ResubmittPct   float64
 		Responsored    int
 		ResponsoredPct float64
 	}
@@ -206,6 +209,14 @@ func (a *App) ReportResubmit(w http.ResponseWriter, r *http.Request) {
 	}
 	if body.Responsored > 0 {
 		body.ResponsoredPct = (float64(body.Responsored) / float64(body.Resubmitted)) * 100
+	}
+	if body.Resubmitted > 0 {
+		body.ResubmittPct = (float64(body.Resubmitted) / float64(body.BillCount)) * 100
+	}
+	if body.Person.ID > 0 && body.ResubmittedOnly {
+		sort.Slice(body.Data, func(i, j int) bool {
+			return strings.Compare(body.Data[i].NewLegislation.File, body.Data[j].NewLegislation.File) == -1
+		})
 	}
 
 	err = a.getJSONFile(r.Context(), "build/last_sync.json", &body.LastSync)

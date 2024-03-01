@@ -50,6 +50,9 @@ td {
     max-width: 450px;
   }
 }
+strong {
+  font-weight:500;
+}
 </style>
 {{end}}
 
@@ -93,11 +96,14 @@ td {
   
 <p><mark>{{.Resubmitted}}</mark> of <mark>{{.BillCount}}</mark> Bills
   {{if .Person.Slug }} sponsored by <mark>{{.Person.FullName}}</mark> and {{end}} filed at end of
-  <mark>{{.PreviousSession}} Legislative Session</mark> 
+  <strong>{{.PreviousSession}} Legislative Session</strong> 
   {{if .IsCurrentSession }} have been {{else}} were {{end}} 
-  re-submitted in the <mark>{{.Session}} Legislative Session</mark>.</p>
+  re-submitted in the <strong>{{.Session}} Legislative Session</strong>.</p>
+
   {{if .Person.Slug }}
-  <p><mark>{{.Person.FullName}}</mark> has re-sponsored <mark>{{.Responsored}}</mark> of <mark>{{.Resubmitted}}</mark> re-submitted bills (<mark>{{printf "%0.1f%%" .ResponsoredPct}}</mark>)</p>
+  <p><mark>{{.Person.FullName}}</mark> has re-sponsored 
+      <mark>{{.Responsored}}</mark> of <mark>{{.Resubmitted}}</mark> (<mark>{{printf "%0.1f%%" .ResponsoredPct}}</mark>) 
+      of those re-submitted bills.</p>
   {{end}}
 
 <table>
