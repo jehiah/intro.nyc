@@ -27,6 +27,11 @@ i.e. https://intro.nyc/local-laws/2021-055
 
 `https://intro.nyc/councilmembers` and `https://intro.nyc/councilmembers/$name` i.e. https://intro.nyc/councilmembers/tiffany-caban
 
+### API
+
+* `https://intro.nyc/${intro_number}-${intro_year}.json`
+* `https://intro.nyc/data/resubmit_${intro_year}.json`
+
 ### Questions? Suggestions?
 
 Open an Issue

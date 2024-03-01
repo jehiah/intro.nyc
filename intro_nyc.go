@@ -13,6 +13,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"sync"
@@ -262,7 +263,11 @@ func main() {
 	// Determine port for HTTP service.
 	port := os.Getenv("PORT")
 	if port == "" {
-		port = "8080"
+		if *devMode {
+			port = "443"
+		} else {
+			port = "8080"
+		}
 	}
 
 	var h http.Handler = newI18nMiddleware(router)
@@ -270,9 +275,28 @@ func main() {
 		h = handlers.LoggingHandler(os.Stdout, h)
 	}
 
-	// Start HTTP server.
-	log.Printf("listening on port %s", port)
-	if err := http.ListenAndServe(":"+port, h); err != nil {
-		log.Fatal(err)
+	if *devMode {
+		// mkcert -key-file dev/key.pem -cert-file dev/cert.pem dev.intro.nyc
+		if _, err := os.Stat("dev/cert.pem"); os.IsNotExist(err) {
+			log.Printf("dev/cert.pem missing.")
+			os.Mkdir("dev", 0750)
+			cmd := exec.Command("mkcert", "-install", "-key-file=dev/key.pem", "-cert-file=dev/cert.pem", "dev.intro.nyc")
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+			log.Printf("%s %s", cmd.Path, strings.Join(cmd.Args[1:], " "))
+			err := cmd.Run()
+			if err != nil {
+				log.Fatal(err)
+			}
+		}
+		log.Printf("listening to HTTPS on port %s https://dev.intro.nyc", port)
+		if err := http.ListenAndServeTLS(":"+port, "dev/cert.pem", "dev/key.pem", h); err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		log.Printf("listening on port %s", port)
+		if err := http.ListenAndServe(":"+port, h); err != nil {
+			log.Fatal(err)
+		}
 	}
 }
