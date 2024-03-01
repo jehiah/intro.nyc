@@ -213,7 +213,7 @@ func (a *App) ReportResubmit(w http.ResponseWriter, r *http.Request) {
 	if body.Resubmitted > 0 {
 		body.ResubmittPct = (float64(body.Resubmitted) / float64(body.BillCount)) * 100
 	}
-	if body.Person.ID > 0 && body.ResubmittedOnly {
+	if body.ResubmittedOnly {
 		sort.Slice(body.Data, func(i, j int) bool {
 			return strings.Compare(body.Data[i].NewLegislation.File, body.Data[j].NewLegislation.File) == -1
 		})
