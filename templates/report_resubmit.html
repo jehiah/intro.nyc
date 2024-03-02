@@ -80,13 +80,6 @@ strong {
     </select>
   </div>
 
-  <div class="form-check">
-    <input class="form-check-input" type="checkbox" value="only" id="resubmitted">
-    <label class="form-check-label" for="resubmitted">
-      Resubmitted only
-    </label>
-  </div>
-
 </fieldset>
 
 <div class="row">
@@ -94,16 +87,18 @@ strong {
 <div class="col">
 
   
-<p><mark>{{.Resubmitted}}</mark> of <mark>{{.BillCount}}</mark> Bills
-  {{if .Person.Slug }} sponsored by <mark>{{.Person.FullName}}</mark> and {{end}} filed at end of
+<p><mark>{{.Resubmitted}}</mark> of <mark>{{.FiledBills}}</mark> Bills filed at end of
   <strong>{{.PreviousSession}} Legislative Session</strong> 
   {{if .IsCurrentSession }} have been {{else}} were {{end}} 
-  re-submitted in the <strong>{{.Session}} Legislative Session</strong>.</p>
+  re-submitted in the <strong>{{.Session}} Legislative Session</strong> (<mark>{{printf "%0.1f%%" .ResubmittPct}}</mark>).</p>
 
   {{if .Person.Slug }}
-  <p><mark>{{.Person.FullName}}</mark> has re-sponsored 
-      <mark>{{.Responsored}}</mark> of <mark>{{.Resubmitted}}</mark> (<mark>{{printf "%0.1f%%" .ResponsoredPct}}</mark>) 
-      of those re-submitted bills.</p>
+  <p>
+    Of <mark>{{.Resubmitted}}</mark> resubmitted bills <mark>{{.Person.FullName}}</mark> had sponsored <mark>{{.Sponsored}}</mark> 
+    in the <strong>{{.PreviousSession}} Legislative Session</strong> and has re-sponsored
+      <mark>{{.Responsored}}</mark> (<mark>{{printf "%0.1f%%" .ResponsoredPct}}</mark>) 
+      in the <strong>{{.Session}} Legislative Session</strong>.
+  </p>
   {{end}}
 
 <table>
@@ -170,8 +165,8 @@ Array.from(sessionElement.options).forEach(e => {e.selected = (e.value == defaul
 const councilmemberElement = document.getElementById("sponsor");
 Array.from(councilmemberElement.options).forEach(e => {e.selected = (e.value == {{.Person.Slug}} )})
 
-const resubmittedElement =document.getElementById("resubmitted")
-resubmittedElement.checked = {{.ResubmittedOnly}}
+// const resubmittedElement =document.getElementById("resubmitted")
+// resubmittedElement.checked = {{.ResubmittedOnly}}
 
 sessionElement.addEventListener("change", _ => {
   updateURL()
@@ -189,7 +184,7 @@ function updateURL() {
   const cc = document.getElementById("sponsor")
   const s = ss.options[ss.selectedIndex].value;
   const c = cc.options[cc.selectedIndex].value;
-  const r = document.getElementById("resubmitted")
+  // const r = document.getElementById("resubmitted")
 
   var qs = new URLSearchParams()
   if (ss.selectedIndex == 0 ) {
@@ -202,11 +197,11 @@ function updateURL() {
   } else {
     qs.set("sponsor", c)
   }
-  if (r.checked) {
-    qs.set("resubmitted", r.value)
-  } else {
-    qs.delete("resubmitted")
-  }
+  // if (r.checked) {
+  //   qs.set("resubmitted", r.value)
+  // } else {
+  //   qs.delete("resubmitted")
+  // }
   let q = qs.toString()
   location.href = location.pathname + (q.length > 0 ? ("?" + qs.toString()) : "");
 }

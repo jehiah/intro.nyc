@@ -46,9 +46,10 @@ func (a *App) ReportResubmit(w http.ResponseWriter, r *http.Request) {
 		IsCurrentSession bool
 		ResubmittedOnly  bool
 
-		BillCount      int
+		FiledBills     int
 		Resubmitted    int
 		ResubmittPct   float64
+		Sponsored      int
 		Responsored    int
 		ResponsoredPct float64
 	}
@@ -60,7 +61,7 @@ func (a *App) ReportResubmit(w http.ResponseWriter, r *http.Request) {
 		PreviousSession:  Sessions[1],
 		IsCurrentSession: true,
 		Sessions:         Sessions[:len(Sessions)-1], // skip the last one
-		ResubmittedOnly:  r.Form.Get("resubmitted") == "only",
+		ResubmittedOnly:  true,                       // r.Form.Get("resubmitted") == "only",
 	}
 
 	for i, s := range body.Sessions {
@@ -182,21 +183,24 @@ func (a *App) ReportResubmit(w http.ResponseWriter, r *http.Request) {
 				continue // no need for re-introduction
 			}
 
-			if body.Person.ID > 0 && !ll.SponsoredBy(body.Person.ID) {
-				continue
-			}
-			body.BillCount++
-
+			body.FiledBills++
 			r, ok := resubmittedFrom[ll.File]
-			if body.ResubmittedOnly && !ok {
-				continue
-			}
 			if ok {
 				body.Resubmitted++
 			}
+
+			if body.ResubmittedOnly && !ok {
+				continue
+			}
+
 			new := lookup[r.ToFile]
-			if new != nil {
-				if body.Person.ID > 0 && new.SponsoredBy(body.Person.ID) {
+			if body.Person.ID > 0 && !ll.SponsoredBy(body.Person.ID) {
+				continue
+			}
+
+			if ll.SponsoredBy(body.Person.ID) {
+				body.Sponsored++
+				if new != nil && new.SponsoredBy(body.Person.ID) {
 					body.Responsored++
 				}
 			}
@@ -207,11 +211,11 @@ func (a *App) ReportResubmit(w http.ResponseWriter, r *http.Request) {
 			})
 		}
 	}
-	if body.Responsored > 0 {
-		body.ResponsoredPct = (float64(body.Responsored) / float64(body.Resubmitted)) * 100
-	}
 	if body.Resubmitted > 0 {
-		body.ResubmittPct = (float64(body.Resubmitted) / float64(body.BillCount)) * 100
+		body.ResubmittPct = (float64(body.Resubmitted) / float64(body.FiledBills)) * 100
+	}
+	if body.Responsored > 0 {
+		body.ResponsoredPct = (float64(body.Responsored) / float64(body.Sponsored)) * 100
 	}
 	if body.ResubmittedOnly {
 		sort.Slice(body.Data, func(i, j int) bool {
