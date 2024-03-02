@@ -97,6 +97,17 @@ func (a *App) RecentLegislation(w http.ResponseWriter, r *http.Request, ps httpr
 
 	t := newTemplate(a.templateFS, "recent_legislation.html")
 
+	type Page struct {
+		Page           string
+		LastSync       LastSync
+		Dates          []DateGroup
+		ResubmitLookup map[string]*Legislation
+	}
+	body := Page{
+		Page:           "recent",
+		ResubmitLookup: make(map[string]*Legislation),
+	}
+
 	var legislation LegislationList
 
 	// get all the years for the legislative session
@@ -113,18 +124,26 @@ func (a *App) RecentLegislation(w http.ResponseWriter, r *http.Request, ps httpr
 		}
 		legislation = append(legislation, l...)
 	}
+	body.Dates = NewDateGroups(legislation.Recent(time.Hour * 24 * 30))
+
+	// build a lookup of re-submit bills
+	for year := CurrentSession.StartYear; year <= CurrentSession.EndYear && year <= time.Now().Year(); year++ {
+		var resubmitFile ResubmitFile
+		err := a.getJSONFile(r.Context(), fmt.Sprintf("build/resubmit_%d.json", year), &resubmitFile)
+		if err != nil {
+			if err == storage.ErrObjectNotExist || os.IsNotExist(err) {
+				continue
+			}
+			log.Print(err)
+			http.Error(w, "Internal Server Error", 500)
+			return
+		}
+		for _, r := range resubmitFile.Resubmitted {
+			body.ResubmitLookup[r.ToFile] = &Legislation{Legislation: db.Legislation{File: r.FromFile}}
+		}
+	}
 
 	cacheTTL := time.Minute * 30
-
-	type Page struct {
-		Page     string
-		LastSync LastSync
-		Dates    []DateGroup
-	}
-	body := Page{
-		Page:  "recent",
-		Dates: NewDateGroups(legislation.Recent(time.Hour * 24 * 30)),
-	}
 
 	err := a.getJSONFile(r.Context(), "build/last_sync.json", &body.LastSync)
 	if err != nil {
