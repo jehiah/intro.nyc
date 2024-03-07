@@ -29,6 +29,7 @@ type EventPage struct {
 	IsCurrentSession  bool
 	Committees        []string
 	SelectedCommittee string
+	CalendarFeed      string
 
 	Events []db.Event
 }
@@ -110,6 +111,17 @@ func (a *App) Events(w http.ResponseWriter, r *http.Request, ps httprouter.Param
 		body.Committees = append(body.Committees, TrimCommittee(b))
 	}
 	sort.Strings(body.Committees)
+
+	v := &url.Values{}
+	if body.SelectedCommittee != "" {
+		v.Set("committee", slug.Make(TrimCommittee(body.SelectedCommittee)))
+	}
+	body.CalendarFeed = (&url.URL{
+		Scheme:   "https",
+		Host:     "intro.nyc",
+		Path:     "/events.ics",
+		RawQuery: v.Encode(),
+	}).String()
 
 	if strings.HasSuffix(r.URL.Path, ".ics") {
 		a.CalendarFile(w, body)

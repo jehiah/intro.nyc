@@ -79,17 +79,18 @@ h2.date {
 }
 .select-committee {
   display: inline-block;
-  margin-right: 2em;
+  padding-right:1em;
+  /* margin-right: 2em; */
 }
 
 .form-select {
   width:inherit;
   display: inline-block;
-  max-width: 350px;
+  max-width: 325px;
 }
 @media (min-width: 576px) { 
   .form-select {
-    max-width: 450px;
+    max-width: 400px;
   }
 }
 
@@ -105,9 +106,9 @@ h2.date {
 
 <div class="row">
 
-<div class="col-sm-12 col-md-9 col-lg-7">
+<div class="col-12 col-lg-9 col-lg-7">
 
-  <fieldset class="mb-5">
+  <fieldset class="mb-3">
     <div class="select-committee">
     Committee: 
     <select name="committee" id="committee" class="form-select">
@@ -117,7 +118,11 @@ h2.date {
       {{end}}
     </select>
     </div>
+    <div class="mb-1 d-inline-block"><a href="{{.CalendarFeed}}"> <i class="bi bi-calendar-date-fill"></i>
+      <span class="d-none d-md-inline">iCalendar Feed</span></a></div>
+   
   </fieldset>
+
 
 <div class="events">
 {{range .Events}}
