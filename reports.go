@@ -48,7 +48,10 @@ func (a *App) Reports(w http.ResponseWriter, r *http.Request, ps httprouter.Para
 	case "attendance":
 		a.ReportAttendance(w, r)
 	case "resubmit":
-		a.ReportResubmit(w, r)
+		u := &url.URL{Path: "/reports/reintroductions", RawQuery: r.URL.RawQuery}
+		http.Redirect(w, r, u.String(), 301)
+	case "reintroductions":
+		a.ReportReintroductions(w, r)
 	default:
 		http.Error(w, "Not Found", 404)
 	}

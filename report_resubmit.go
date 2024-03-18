@@ -17,10 +17,10 @@ type ResubmitFile struct {
 	Resubmitted []db.ResubmitLegislation
 }
 
-// ReportResubmit shows bills to be re-submitted
-func (a *App) ReportResubmit(w http.ResponseWriter, r *http.Request) {
+// ReportReintroductions shows bills to be re-submitted
+func (a *App) ReportReintroductions(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
-	template := "report_resubmit.html"
+	template := "report_reintroductions.html"
 
 	t := newTemplate(a.templateFS, template)
 
@@ -55,7 +55,7 @@ func (a *App) ReportResubmit(w http.ResponseWriter, r *http.Request) {
 	}
 	body := Page{
 		Page:    "reports",
-		SubPage: "resubmit",
+		SubPage: "reintroduction",
 
 		Session:          CurrentSession,
 		PreviousSession:  Sessions[1],

@@ -1,5 +1,5 @@
 {{template "base" .}}
-{{define "title"}}NYC Council {{.PreviousSession}} Resubmitted Legislation{{end}}
+{{define "title"}}NYC Council {{.PreviousSession}} Re-introduced Legislation{{end}}
 {{define "head"}}
 
 <style>
@@ -90,11 +90,11 @@ strong {
 <p><mark>{{.Resubmitted}}</mark> of <mark>{{.FiledBills}}</mark> Bills filed at end of
   <strong>{{.PreviousSession}} Legislative Session</strong> 
   {{if .IsCurrentSession }} have been {{else}} were {{end}} 
-  re-submitted in the <strong>{{.Session}} Legislative Session</strong> (<mark>{{printf "%0.1f%%" .ResubmittPct}}</mark>).</p>
+  re-introduced in the <strong>{{.Session}} Legislative Session</strong> (<mark>{{printf "%0.1f%%" .ResubmittPct}}</mark>).</p>
 
   {{if .Person.Slug }}
   <p>
-    Of <mark>{{.Resubmitted}}</mark> resubmitted bills <mark>{{.Person.FullName}}</mark> had sponsored <mark>{{.Sponsored}}</mark> 
+    Of <mark>{{.Resubmitted}}</mark> re-introduced bills <mark>{{.Person.FullName}}</mark> had sponsored <mark>{{.Sponsored}}</mark> 
     in the <strong>{{.PreviousSession}} Legislative Session</strong> and has re-sponsored
       <mark>{{.Responsored}}</mark> (<mark>{{printf "%0.1f%%" .ResponsoredPct}}</mark>) 
       in the <strong>{{.Session}} Legislative Session</strong>.
@@ -142,9 +142,9 @@ strong {
 
 <div class="my-3">
   <p><strong>Methodology:</strong> 
-    Bills that were filed at the end of a session are checked for re-submission. 
-    The New York City Council does have a direct link between bills in different sessions. 
-    Bills are counted as re-submitted if the Title, Name or Summary of a bill matches exactly, 
+    Bills that were filed at the end of a session are checked for re-introduction. 
+    The New York City Council does not have a direct link between bills in different sessions. 
+    Bills are counted as re-introduced if the Title, Name or Summary of a bill matches exactly in two back to back sessions, 
     even if the bill text is different.
   </p>
 </div>
