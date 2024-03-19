@@ -57,7 +57,7 @@
     {{ if eq .Action "Introduced by Council"}}
       {{ with (index $.ResubmitLookup .File)}}
       {{ if . }}
-      <small>( Re-submission of  <a href="{{.IntroLink}}" class="file-link"><span class="badge file">{{.IntroLinkText}}</span></a> )</small>
+      <small>( Re-introduction of  <a href="{{.IntroLink}}" class="file-link"><span class="badge file">{{.IntroLinkText}}</span></a> )</small>
       {{end}}
       {{end}}
     {{ end }}
