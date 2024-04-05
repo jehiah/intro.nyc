@@ -130,8 +130,12 @@ strong {
         {{end}}
     </td>
     <td>
-        <span class="name">{{.Legislation.Name}}</span><br>
-        <span class="body">{{.BodyName}}</span>
+        <span class="name">{{.NewLegislation.Name}}</span>
+        {{ if eq .NewLegislation.StatusName "Enacted" }}
+        <span class="badge bg-success status">Enacted</span>
+        {{end}}
+        <br>
+        <span class="body">{{.NewLegislation.BodyName}}</span>
     </td>
 </tr>
 {{end}}
