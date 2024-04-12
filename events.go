@@ -63,6 +63,7 @@ func (a *App) Events(w http.ResponseWriter, r *http.Request, ps httprouter.Param
 	var err error
 
 	t := newTemplate(a.templateFS, templateName)
+	wantICS := strings.HasSuffix(r.URL.Path, ".ics")
 
 	body := EventPage{
 		Page:             "events",
@@ -99,6 +100,11 @@ func (a *App) Events(w http.ResponseWriter, r *http.Request, ps httprouter.Param
 	}
 
 	now := time.Now().In(americaNewYork).Truncate(time.Hour * 24)
+	if wantICS {
+		// show till start of previous month
+		_, _, d := now.Date()
+		now = now.AddDate(0, -1, -1*d)
+	}
 	for year := body.Session.StartYear; year <= body.Session.EndYear && year <= time.Now().Year(); year++ {
 
 		var events []Event
@@ -146,7 +152,7 @@ func (a *App) Events(w http.ResponseWriter, r *http.Request, ps httprouter.Param
 		RawQuery: v.Encode(),
 	}).String()
 
-	if strings.HasSuffix(r.URL.Path, ".ics") {
+	if wantICS {
 		a.CalendarFile(w, body)
 		return
 	}
