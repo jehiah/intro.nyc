@@ -123,8 +123,14 @@ h2.date {
    
   </fieldset>
 
+{{if not .Events }}
+  <div class="alert alert-info" role="alert">
+    No {{.SelectedCommittee}} events scheduled.
+  </div>
+{{end}}
 
 <div class="events">
+
 {{range .Events}}
 <h2 class="date" data-date="{{.Date.Format "2006-01-02"}}">{{.Date.Format "January 2"}}</h2>
 
