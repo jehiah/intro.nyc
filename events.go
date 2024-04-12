@@ -19,6 +19,29 @@ import (
 	"github.com/julienschmidt/httprouter"
 )
 
+type Event struct {
+	db.Event
+	Items []EventItem `json:",omitempty"`
+}
+type EventItem struct {
+	db.EventItem
+}
+
+func (e EventItem) IsDraft() bool {
+	if e.MatterFile == "" {
+		return false
+	}
+	return strings.HasPrefix(e.MatterFile, "T")
+}
+func (e EventItem) Legislation() Legislation {
+	return Legislation{
+		Legislation: db.Legislation{
+			File: e.MatterFile,
+			Name: e.MatterName,
+		},
+	}
+}
+
 type EventPage struct {
 	Page     string
 	Title    string
@@ -31,7 +54,7 @@ type EventPage struct {
 	SelectedCommittee string
 	CalendarFeed      string
 
-	Events []db.Event
+	Events []Event
 }
 
 func (a *App) Events(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
@@ -78,7 +101,7 @@ func (a *App) Events(w http.ResponseWriter, r *http.Request, ps httprouter.Param
 	now := time.Now().In(americaNewYork).Truncate(time.Hour * 24)
 	for year := body.Session.StartYear; year <= body.Session.EndYear && year <= time.Now().Year(); year++ {
 
-		var events []db.Event
+		var events []Event
 		err = a.getJSONFile(r.Context(), fmt.Sprintf("build/events_%d.json", year), &events)
 		if err != nil {
 			if err == storage.ErrObjectNotExist || os.IsNotExist(err) {
@@ -186,10 +209,19 @@ func (a *App) CalendarFile(w http.ResponseWriter, body EventPage) {
 			case "Oversight":
 				fmt.Fprintf(desc, "\n%s\n\n", i.Title)
 			case "Introduction":
-				if !strings.HasPrefix(i.MatterFile, "T") {
-					fmt.Fprintf(desc, "https://intro.nyc/%s ", strings.TrimPrefix(i.MatterFile, "Intro "))
+				if i.IsDraft() {
+					fmt.Fprintf(desc, "%s ", i.MatterType)
+				} else {
+					fmt.Fprintf(desc, "https://intro.nyc/%s ", i.Legislation().IntroLink())
 				}
-				fmt.Fprintf(desc, "%s %s\n", i.MatterType, i.MatterName)
+				fmt.Fprintf(desc, "%s\n", i.MatterName)
+			case "Resolution":
+				if i.IsDraft() {
+					fmt.Fprintf(desc, "%s ", i.MatterType)
+				} else {
+					fmt.Fprintf(desc, "%s ", i.MatterFile)
+				}
+				fmt.Fprintf(desc, "%s\n", i.MatterName)
 			case "N/A":
 				fmt.Fprintf(desc, "%s\n", i.MatterName)
 			default:

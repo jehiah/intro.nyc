@@ -155,10 +155,19 @@ h2.date {
     <p class="item-title matter-type-{{.MatterType | Slugify}}">{{.Title}}</p>
     {{end}}
     {{if eq .MatterType "Introduction"}}
-    <p><span class="badge text-bg-secondary float-start me-1">{{.MatterType}}</span>{{.MatterName}}</p>
+    <p>
+      {{if .IsDraft }}
+      <span class="badge text-bg-secondary float-start me-1">{{.MatterType}}</span>
+      {{else}}
+      <a href="{{.Legislation.IntroLink}}" class="file-link"><span class="badge file">{{.Legislation.IntroLinkText}}</span></a>
+      {{end}}
+    {{.MatterName}}</p>
     {{end}}
     {{if eq .MatterType "Resolution"}}
-    <p>{{.MatterName}}</p>
+    <p>
+      <span class="badge text-bg-secondary float-start me-1">{{if .IsDraft}}{{.MatterType}}{{else}}{{.MatterFile}}{{end}}</span>
+      {{.MatterName}}
+    </p>
     {{end}}
     {{if eq .MatterType "Land Use Application"}}
     <p>{{.MatterName}}</p>
