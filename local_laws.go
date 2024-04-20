@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/jehiah/legislator/legistar"
-	"github.com/julienschmidt/httprouter"
 )
 
 type LocalLaw struct {
@@ -82,8 +81,10 @@ func groupLaws(l []LocalLaw) []LocalLawYear {
 }
 
 // LocalLaws returns the list of local laws at /local-laws
-func (a *App) LocalLaws(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	path := ps.ByName("year")
+// and handles /local-laws/2024
+// and handles /local-laws/2024-102
+func (a *App) LocalLaws(w http.ResponseWriter, r *http.Request) {
+	path := r.PathValue("year")
 	ctx := r.Context()
 	if matched, _ := regexp.MatchString("^(19|20)[9012][0-9]-[0-9]{1,3}$", path); matched {
 		c := strings.Split(path, "-")
@@ -202,7 +203,8 @@ func (a *App) LocalLaws(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 // URL: /1234-2020/local-law
 //
 // file == 1234-2020
-func (a *App) LocalLaw(w http.ResponseWriter, r *http.Request, file string) {
+func (a *App) LocalLaw(w http.ResponseWriter, r *http.Request) {
+	file := r.PathValue("file")
 	ctx := r.Context()
 	if !IsValidFileNumber(file) {
 		http.Error(w, "Not Found", 404)

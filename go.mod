@@ -9,7 +9,6 @@ require (
 	github.com/gorilla/handlers v1.5.2
 	github.com/gosimple/slug v1.13.1
 	github.com/jehiah/legislator v0.0.0-20240301042206-71fa4af9b12a
-	github.com/julienschmidt/httprouter v1.3.0
 	golang.org/x/text v0.14.0
 )
 

@@ -22,7 +22,6 @@ import (
 	"cloud.google.com/go/storage"
 	"github.com/gorilla/handlers"
 	"github.com/jehiah/legislator/legistar"
-	"github.com/julienschmidt/httprouter"
 )
 
 //go:embed templates/*
@@ -53,7 +52,7 @@ type CachedFile struct {
 }
 
 // RobotsTXT renders /robots.txt
-func (a *App) RobotsTXT(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func (a *App) RobotsTXT(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("content-type", "text/plain")
 	a.addExpireHeaders(w, time.Hour*24*7)
 	io.WriteString(w, "# robots welcome\n# https://github.com/jehiah/intro.nyc\n")
@@ -120,37 +119,12 @@ func (a *App) addExpireHeaders(w http.ResponseWriter, duration time.Duration) {
 	w.Header().Add("Expires", time.Now().Add(duration).Format(http.TimeFormat))
 }
 
-// L2 /:file/:year
-func (a *App) L2(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	path := ps.ByName("year")
-	file := ps.ByName("file")
-	switch {
-	case path == "local-law" && IsValidFileNumber(file):
-		a.LocalLaw(w, r, file)
-	case file == "local-laws":
-		a.LocalLaws(w, r, ps)
-	case file == "councilmembers":
-		a.Councilmember(w, r, ps)
-	case file == "static":
-		a.staticHandler.ServeHTTP(w, r)
-	case file == "data":
-		a.ProxyJSON(w, r, ps)
-	case file == "reports":
-		ps = append(ps, httprouter.Param{Key: "report", Value: path})
-		a.Reports(w, r, ps)
-	default:
-		http.Error(w, "Not Found", 404)
-	}
-}
-
 // ProxyJSON proxies to /data/file.json to gs://intronyc/build/$file.json
-//
-// Note: the router match pattern is `/:file/:year` so `:file` must be == "data"
-func (a *App) ProxyJSON(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	path := ps.ByName("year")
+func (a *App) ProxyJSON(w http.ResponseWriter, r *http.Request) {
+	path := r.PathValue("path")
 
 	if !strings.HasSuffix(path, ".json") {
-		log.Printf("year %q", path)
+		// log.Printf("year %q", path)
 		http.Error(w, "Not Found", 404)
 		return
 	}
@@ -183,43 +157,11 @@ func (a *App) ProxyJSON(w http.ResponseWriter, r *http.Request, ps httprouter.Pa
 	}
 }
 
-// L1 handles /:file
-//
-// Redirects are cached for the lifetime of the process but not persisted
-func (a *App) L1(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-
-	file := ps.ByName("file")
-	switch file {
-	case "robots.txt":
-		a.RobotsTXT(w, r, ps)
-		return
-	case "local-laws":
-		a.LocalLaws(w, r, ps)
-		return
-	case "councilmembers":
-		a.Councilmembers(w, r, ps)
-		return
-	case "recent":
-		a.RecentLegislation(w, r, ps)
-		return
-	case "reports":
-		a.Reports(w, r, ps)
-		return
-	case "map":
-		a.Map(w, r, ps)
-		return
-	case "events", "calendar", "events.ics":
-		a.Events(w, r, ps)
-		return
+func redirect(p string) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		u := &url.URL{Path: p, RawQuery: r.URL.RawQuery}
+		http.Redirect(w, r, u.String(), 301)
 	}
-	if IsValidFileNumber(file) {
-		a.IntroRedirect(w, r, ps)
-	}
-	if strings.HasSuffix(file, ".json") && IsValidFileNumber(strings.TrimSuffix(file, ".json")) {
-		a.IntroJSON(w, r, ps)
-	}
-	http.Error(w, "Not Found", 404)
-	return
 }
 
 func main() {
@@ -255,10 +197,37 @@ func main() {
 		panic(err)
 	}
 
-	router := httprouter.New()
-	router.GET("/", app.Search)
-	router.GET("/:file/:year", app.L2)
-	router.GET("/:file", app.L1)
+	fileRouter := http.NewServeMux()
+	fileRouter.HandleFunc("GET /{file}", app.FileRedirect)
+	fileRouter.HandleFunc("GET /{file}/local-law", app.LocalLaw)
+
+	router := http.NewServeMux()
+
+	router.HandleFunc("GET /{$}", app.Search)
+	router.HandleFunc("GET /robots.txt", app.RobotsTXT)
+	router.HandleFunc("GET /recent", app.RecentLegislation)
+	router.HandleFunc("GET /map", app.Map)
+	router.HandleFunc("GET /calendar", app.Events)
+	router.HandleFunc("GET /events", app.Events)
+	router.HandleFunc("GET /events.ics", app.Events)
+	router.HandleFunc("GET /councilmembers", app.Councilmembers)
+	router.HandleFunc("GET /councilmembers/{councilmember}", app.Councilmember)
+	router.HandleFunc("GET /local-laws", app.LocalLaws)
+	router.HandleFunc("GET /local-laws/{year}", app.LocalLaws)
+	router.HandleFunc("GET /data/{path}", app.ProxyJSON)
+	router.HandleFunc("GET /reports/", redirect("/reports/session")) // redirect -> /reports/session
+	router.Handle("GET /static/", app.staticHandler)
+
+	router.HandleFunc("GET /reports/most_sponsored", app.ReportMostSponsored)
+	router.HandleFunc("GET /reports/status", redirect("/reports/session")) // /reports/session
+	router.HandleFunc("GET /reports/session", app.ReportBySession)
+	router.HandleFunc("GET /reports/similarity", app.ReportSimilarity)
+	router.HandleFunc("GET /reports/councilmembers", app.ReportCouncilmembers)
+	router.HandleFunc("GET /reports/committees", app.ReportCommittees)
+	router.HandleFunc("GET /reports/attendance", app.ReportAttendance)
+	router.HandleFunc("GET /reports/resubmit", redirect("/reports/reintroductions"))
+
+	router.Handle("/", fileRouter)
 
 	// Determine port for HTTP service.
 	port := os.Getenv("PORT")

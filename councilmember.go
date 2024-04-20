@@ -13,7 +13,6 @@ import (
 
 	"cloud.google.com/go/storage"
 	"github.com/jehiah/legislator/db"
-	"github.com/julienschmidt/httprouter"
 )
 
 func (l LegislationList) Statuses() []Status {
@@ -94,8 +93,9 @@ func (s Status) CSSClass() string {
 // Councilmember returns the list of councilmembers at /councilmembers/$name
 //
 // Redirects from /councilmembers/$district -> /councilmembers/$name
-func (a *App) Councilmember(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	councilmember := ps.ByName("year")
+func (a *App) Councilmember(w http.ResponseWriter, r *http.Request) {
+
+	councilmember := r.PathValue("councilmember")
 	// log.Printf("Councilmember %q", councilmember)
 
 	if i, _ := strconv.Atoi(councilmember); i > 0 && i <= 51 {

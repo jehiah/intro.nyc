@@ -15,7 +15,6 @@ import (
 	"cloud.google.com/go/storage"
 	"github.com/gosimple/slug"
 	"github.com/jehiah/legislator/db"
-	"github.com/julienschmidt/httprouter"
 )
 
 func TrimCommittee(s string) string {
@@ -26,35 +25,6 @@ func TrimCommittee(s string) string {
 		s = strings.TrimPrefix(s, "Caucus - ")
 	}
 	return s
-}
-
-// Reports handles /reports/...
-func (a *App) Reports(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	switch ps.ByName("report") {
-	case "":
-		http.Redirect(w, r, "/reports/session", 302)
-	case "most_sponsored":
-		a.ReportMostSponsored(w, r)
-	case "status":
-		http.Redirect(w, r, "/reports/session", 301)
-	case "session":
-		a.ReportBySession(w, r)
-	case "similarity":
-		a.ReportSimilarity(w, r)
-	case "councilmembers":
-		a.ReportCouncilmembers(w, r)
-	case "committees":
-		a.ReportCommittees(w, r)
-	case "attendance":
-		a.ReportAttendance(w, r)
-	case "resubmit":
-		u := &url.URL{Path: "/reports/reintroductions", RawQuery: r.URL.RawQuery}
-		http.Redirect(w, r, u.String(), 301)
-	case "reintroductions":
-		a.ReportReintroductions(w, r)
-	default:
-		http.Error(w, "Not Found", 404)
-	}
 }
 
 type CommitteeSponsorship struct {

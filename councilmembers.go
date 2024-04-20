@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/jehiah/legislator/db"
-	"github.com/julienschmidt/httprouter"
 )
 
 type Person struct {
@@ -196,7 +195,7 @@ func (p Person) PartyShort() string {
 }
 
 // Councilmembers returns the list of councilmembers at /councilmembers
-func (a *App) Councilmembers(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func (a *App) Councilmembers(w http.ResponseWriter, r *http.Request) {
 	T := Printer(r.Context())
 	t := newTemplate(a.templateFS, "councilmembers.html")
 

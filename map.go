@@ -4,11 +4,9 @@ import (
 	"log"
 	"net/http"
 	"time"
-
-	"github.com/julienschmidt/httprouter"
 )
 
-func (a *App) Map(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func (a *App) Map(w http.ResponseWriter, r *http.Request) {
 	T := Printer(r.Context())
 	t := newTemplate(a.templateFS, "map.html")
 	w.Header().Set("content-type", "text/html")

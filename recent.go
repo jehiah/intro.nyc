@@ -13,7 +13,6 @@ import (
 
 	"cloud.google.com/go/storage"
 	"github.com/jehiah/legislator/db"
-	"github.com/julienschmidt/httprouter"
 )
 
 type RecentLegislation struct {
@@ -93,7 +92,7 @@ func NewDateGroups(r []RecentLegislation) []DateGroup {
 }
 
 // RecentLegislation returns the list of legislation changes /recent
-func (a *App) RecentLegislation(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func (a *App) RecentLegislation(w http.ResponseWriter, r *http.Request) {
 
 	t := newTemplate(a.templateFS, "recent_legislation.html")
 

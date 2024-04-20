@@ -16,7 +16,6 @@ import (
 	ics "github.com/arran4/golang-ical"
 	"github.com/gosimple/slug"
 	"github.com/jehiah/legislator/db"
-	"github.com/julienschmidt/httprouter"
 )
 
 type Event struct {
@@ -57,7 +56,7 @@ type EventPage struct {
 	Events []Event
 }
 
-func (a *App) Events(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func (a *App) Events(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	templateName := "events.html"
 	var err error

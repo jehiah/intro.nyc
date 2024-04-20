@@ -4,12 +4,10 @@ import (
 	"log"
 	"net/http"
 	"time"
-
-	"github.com/julienschmidt/httprouter"
 )
 
 // Search returns the root path of `/` for in-browser search
-func (a *App) Search(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
+func (a *App) Search(w http.ResponseWriter, r *http.Request) {
 	T := Printer(r.Context())
 	t := newTemplate(a.templateFS, "index.html")
 	w.Header().Set("content-type", "text/html")

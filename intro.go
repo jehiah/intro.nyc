@@ -12,7 +12,6 @@ import (
 
 	"github.com/jehiah/legislator/db"
 	"github.com/jehiah/legislator/legistar"
-	"github.com/julienschmidt/httprouter"
 )
 
 // IsValidFileNumber matches 0123-2020
@@ -32,11 +31,23 @@ func IsValidFileNumber(file string) bool {
 	return true
 }
 
+func (a *App) FileRedirect(w http.ResponseWriter, r *http.Request) {
+	file := r.PathValue("file")
+	if IsValidFileNumber(file) {
+		a.IntroRedirect(w, r, file)
+		return
+	}
+	if strings.HasSuffix(file, ".json") && IsValidFileNumber(strings.TrimSuffix(file, ".json")) {
+		a.IntroJSON(w, r, file)
+		return
+	}
+	http.Error(w, "Not Found", 404)
+}
+
 // IntroRedirect redirects from /1234-2020 to the URL for File "Intro 1234-2020"
 //
 // Redirects are cached for the lifetime of the process but not persisted
-func (a *App) IntroRedirect(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	file := ps.ByName("file")
+func (a *App) IntroRedirect(w http.ResponseWriter, r *http.Request, file string) {
 	if !IsValidFileNumber(file) {
 		http.Error(w, "Not Found", 404)
 		return
@@ -82,8 +93,7 @@ func (a *App) IntroRedirect(w http.ResponseWriter, r *http.Request, ps httproute
 }
 
 // IntroJSON returns a json to the URL for File "Intro 1234-2020"
-func (a *App) IntroJSON(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	file := ps.ByName("file")
+func (a *App) IntroJSON(w http.ResponseWriter, r *http.Request, file string) {
 	file = fmt.Sprintf("Int %s", strings.TrimSuffix(file, ".json"))
 	ctx := r.Context()
 
