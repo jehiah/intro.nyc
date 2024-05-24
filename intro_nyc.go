@@ -225,6 +225,7 @@ func main() {
 	router.HandleFunc("GET /reports/councilmembers", app.ReportCouncilmembers)
 	router.HandleFunc("GET /reports/committees", app.ReportCommittees)
 	router.HandleFunc("GET /reports/attendance", app.ReportAttendance)
+	router.HandleFunc("GET /reports/reintroductions", app.ReportReintroductions)
 	router.HandleFunc("GET /reports/resubmit", redirect("/reports/reintroductions"))
 
 	router.Handle("/", fileRouter)
