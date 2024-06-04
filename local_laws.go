@@ -3,14 +3,17 @@ package main
 import (
 	"fmt"
 	"html/template"
+	"io"
 	"log"
 	"net/http"
+	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
 	"strings"
 	"time"
 
+	"cloud.google.com/go/storage"
 	"github.com/jehiah/legislator/legistar"
 )
 
@@ -85,60 +88,17 @@ func groupLaws(l []LocalLaw) []LocalLawYear {
 // and handles /local-laws/2024-102
 func (a *App) LocalLaws(w http.ResponseWriter, r *http.Request) {
 	path := r.PathValue("year")
-	ctx := r.Context()
 	if matched, _ := regexp.MatchString("^(19|20)[9012][0-9]-[0-9]{1,3}$", path); matched {
-		c := strings.Split(path, "-")
-		n, _ := strconv.Atoi(c[1])
-		filter := legistar.AndFilters(
-			legistar.MatterTypeFilter("Introduction"),
-			legistar.MatterEnactmentNumberFilter(fmt.Sprintf("%s/%03d", c[0], n)),
-		)
-
-		matters, err := a.legistar.Matters(ctx, filter)
-		if err != nil {
-			log.Print(err)
-			http.Error(w, "unknown error", 500)
-			return
-		}
-		if len(matters) != 1 {
-			// TODO: cache?
-			http.Error(w, "Not Found", 404)
-			return
-		}
-
-		attachments, err := a.legistar.MatterAttachments(ctx, matters[0].ID)
-		if err != nil {
-			log.Print(err)
-			http.Error(w, "unknown error", 500)
-			return
-		}
-		for _, attachment := range attachments {
-			if strings.HasPrefix(attachment.Name, "Local Law") {
-				a.addExpireHeaders(w, time.Hour*24*7)
-				http.Redirect(w, r, attachment.Link, 301)
-				return
-			}
-		}
-
-		// no attachment - redirect to the legislation page
-		redirect, err := a.legistar.LookupWebURL(r.Context(), matters[0].ID)
-		if err != nil {
-			log.Print(err)
-			http.Error(w, "unknown error", 500)
-			return
-		}
-		// a.cachedRedirects[file] = redirect
-		a.addExpireHeaders(w, time.Hour)
-		http.Redirect(w, r, redirect, 302)
-
+		a.LocalLawPDF(w, r)
 		return
 	}
+	ctx := r.Context()
 
 	t := newTemplate(a.templateFS, "local_laws.html")
-	T := Printer(r.Context())
+	T := Printer(ctx)
 
 	var laws []LocalLaw
-	err := a.getJSONFile(r.Context(), "build/local_laws.json", &laws)
+	err := a.getJSONFile(ctx, "build/local_laws.json", &laws)
 	if err != nil {
 		log.Print(err)
 		http.Error(w, "Internal Server Error", 500)
@@ -197,6 +157,123 @@ func (a *App) LocalLaws(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Internal Server Error", 500)
 		return
 	}
+}
+
+// LocalLawPDF redirects to the attachment with name "Local Law ..."
+func (a *App) LocalLawPDF(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+	year, lawNumberStr, _ := strings.Cut(r.PathValue("year"), "-")
+	n, _ := strconv.Atoi(lawNumberStr)
+
+	filename := fmt.Sprintf("local_law_%d_of_%s.pdf", n, year)
+
+	// first check google storage
+	bucketfile := filepath.Join("local_laws", filename)
+	log.Printf("checking gs://intronyc/%s", bucketfile)
+	pdfReader, err := a.gsclient.Bucket("intronyc").Object(bucketfile).NewReader(ctx)
+	if err == storage.ErrObjectNotExist {
+		err = nil
+	}
+	if err != nil {
+		log.Print(err)
+		// http.Error(w, "unknown error", 500)
+		// return
+	} else {
+		if pdfReader != nil {
+			log.Printf("returning gs://intronyc/%s", bucketfile)
+			defer pdfReader.Close()
+
+			// handle 304
+			if r.Header.Get("if-modified-since") == pdfReader.Attrs.LastModified.Format(http.TimeFormat) {
+				w.WriteHeader(304)
+				return
+			}
+
+			w.Header().Set("content-type", "application/pdf")
+			a.addExpireHeaders(w, time.Hour*24*7)
+			w.Header().Set("content-disposition", fmt.Sprintf(`inline; filename="%s"`, filename))
+			w.Header().Set("content-length", fmt.Sprintf("%d", pdfReader.Attrs.Size))
+			w.Header().Set("last-modified", pdfReader.Attrs.LastModified.Format(http.TimeFormat))
+			io.Copy(w, pdfReader)
+			return
+		}
+	}
+
+	filter := legistar.AndFilters(
+		legistar.MatterTypeFilter("Introduction"),
+		legistar.MatterEnactmentNumberFilter(fmt.Sprintf("%s/%03d", year, n)),
+	)
+
+	matters, err := a.legistar.Matters(ctx, filter)
+	if err != nil {
+		log.Print(err)
+		http.Error(w, "unknown error", 500)
+		return
+	}
+	if len(matters) != 1 {
+		// TODO: cache?
+		http.Error(w, "Not Found", 404)
+		return
+	}
+
+	attachments, err := a.legistar.MatterAttachments(ctx, matters[0].ID)
+	if err != nil {
+		log.Print(err)
+		http.Error(w, "unknown error", 500)
+		return
+	}
+	for _, attachment := range attachments {
+		if strings.HasPrefix(attachment.Name, "Local Law") {
+			// fetch it and cache it
+			pdfWriter := a.gsclient.Bucket("intronyc").Object(bucketfile).NewWriter(ctx)
+			pdfWriter.ContentType = "application/pdf"
+			// if err != nil {
+			// 	log.Print(err)
+			// 	http.Error(w, "unknown error", 500)
+			// 	return
+			// }
+			defer pdfWriter.Close()
+			log.Printf("downloading %s", attachment.Link)
+			req, err := http.NewRequestWithContext(ctx, "GET", attachment.Link, nil)
+			if err != nil {
+				log.Print(err)
+				http.Error(w, "unknown error", 500)
+				return
+			}
+			resp, err := http.DefaultClient.Do(req)
+			if err != nil {
+				log.Print(err)
+				http.Error(w, "unknown error", 500)
+				return
+
+			}
+			defer resp.Body.Close()
+			if resp.StatusCode != 200 {
+				log.Print("status code", resp.StatusCode)
+				http.Error(w, "unknown error", 500)
+				return
+			}
+			// copy resp.Body to pdfWriter and w
+			w.Header().Set("content-type", "application/pdf")
+			a.addExpireHeaders(w, time.Hour*24*7)
+			w.Header().Set("content-disposition", fmt.Sprintf(`inline; filename="%s"`, filename))
+			io.Copy(io.MultiWriter(pdfWriter, w), resp.Body)
+			return
+		}
+	}
+
+	// no attachment - redirect to the legislation page
+	redirect, err := a.legistar.LookupWebURL(r.Context(), matters[0].ID)
+	if err != nil {
+		log.Print(err)
+		http.Error(w, "unknown error", 500)
+		return
+	}
+	// a.cachedRedirects[file] = redirect
+	a.addExpireHeaders(w, time.Hour)
+	http.Redirect(w, r, redirect, 302)
+
+	return
 }
 
 // LocalLaw redirects to the attachment with name "Local Law ..."
