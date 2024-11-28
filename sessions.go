@@ -33,6 +33,20 @@ func (s Session) Overlaps(start, end time.Time) bool {
 	return false
 }
 
+func (s Session) Contains(t time.Time) bool {
+	ty := t.Year()
+	return ty >= s.StartYear && ty <= s.EndYear
+}
+
+func FindSession(year int) Session {
+	for _, ss := range Sessions {
+		if year >= ss.StartYear && year <= ss.EndYear {
+			return ss
+		}
+	}
+	return Session{}
+}
+
 func (s Session) String() string { return fmt.Sprintf("%d-%d", s.StartYear, s.EndYear) }
 
 var Sessions = []Session{

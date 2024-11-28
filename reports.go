@@ -553,7 +553,7 @@ func (a *App) ReportCouncilmembers(w http.ResponseWriter, r *http.Request) {
 	peopleOfficeRecord := make(map[string]db.OfficeRecord)
 	if selectedCommittee != "" {
 		var people []db.Person
-		err := a.getJSONFile(r.Context(), "build/people_all.json", &people)
+		err := a.getJSONFile(r.Context(), "build/e.json", &people)
 		if err != nil {
 			log.Print(err)
 			http.Error(w, "Internal Server Error", 500)

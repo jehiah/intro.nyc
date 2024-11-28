@@ -32,18 +32,23 @@ var static embed.FS
 
 var americaNewYork, _ = time.LoadLocation("America/New_York")
 
+type CachedLegislation struct {
+	Set time.Time
+	*Legislation
+}
+
 type App struct {
-	legistar    *legistar.Client
-	devMode     bool
-	gsclient    *storage.Client
-	devFilePath string
+	legistar      *legistar.Client
+	devMode       bool
+	gsclient      *storage.Client
+	devFilePath   string
+	staticHandler http.Handler
+	templateFS    fs.FS
 
-	cachedRedirects map[string]string
-	staticHandler   http.Handler
-	templateFS      fs.FS
-
-	fileCache  map[string]CachedFile
-	cacheMutex sync.RWMutex
+	cachedRedirects   map[string]string
+	fileCache         map[string]CachedFile
+	cachedLegislation map[string]*CachedLegislation
+	cacheMutex        sync.RWMutex
 }
 
 type CachedFile struct {
@@ -179,14 +184,16 @@ func main() {
 	defer client.Close()
 
 	app := &App{
-		legistar:        legistar.NewClient("nyc", os.Getenv("NYC_LEGISLATOR_TOKEN")),
-		gsclient:        client,
-		devMode:         *devMode,
-		devFilePath:     *devFilePath,
-		cachedRedirects: make(map[string]string),
-		staticHandler:   http.FileServer(http.FS(static)),
-		templateFS:      content,
-		fileCache:       make(map[string]CachedFile),
+		legistar:      legistar.NewClient("nyc", os.Getenv("NYC_LEGISLATOR_TOKEN")),
+		gsclient:      client,
+		devMode:       *devMode,
+		devFilePath:   *devFilePath,
+		staticHandler: http.FileServer(http.FS(static)),
+		templateFS:    content,
+
+		cachedRedirects:   make(map[string]string),
+		cachedLegislation: make(map[string]*CachedLegislation),
+		fileCache:         make(map[string]CachedFile),
 	}
 	if *devMode {
 		app.templateFS = os.DirFS(".")

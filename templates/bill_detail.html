@@ -1,0 +1,32 @@
+{{template "base" .}}
+{{ define "title" }}{{.Legislation.File}} {{.Legislation.Title}}{{ end }}
+{{ template "base.html" . }}
+
+{{define "middle"}}
+{{ with .Legislation}}
+<div style="display: flex;">
+    <div style="flex: 1;">
+        <a href="{{.IntroLink}}" class="file-link"><span class="badge file">{{.IntroLinkText}}</span></a>
+        <h2>{{ .Title }}</h2>
+        <p><strong>File Number:</strong> {{ .File }}</p>
+        <p><strong>Status:</strong> {{ .StatusName }}</p>
+        <p><strong>Intro Date:</strong> {{ .IntroDate.Format "January 2, 2006" }}</p>
+        <p><strong>Sponsors:</strong></p>
+        <ul>
+            {{ range .Sponsors }}
+            <li>{{ .FullName }}</li>
+            {{ end }}
+        </ul>
+        <h2>Council Members' Status</h2>
+        <ul>
+            {{ range $.Councilmembers }}
+            <li><a href="/councilmembers/{{.Person.Slug}}">{{ .FullName }}</a> {{.Party}}</li>
+            {{ end }}
+        </ul>
+    </div>
+    <div style="flex: 1;">
+        <h2>District Map</h2>
+    </div>
+</div>
+{{ end }}
+{{ end }}

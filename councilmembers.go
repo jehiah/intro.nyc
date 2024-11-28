@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -194,20 +195,37 @@ func (p Person) PartyShort() string {
 	return ""
 }
 
+func (a *App) GetCouncilMembers(ctx context.Context, session Session) ([]Person, error) {
+	var people []db.Person
+	err := a.getJSONFile(ctx, "build/people_active.json", &people)
+	if err != nil {
+		return nil, err
+	}
+
+	var metadata []PersonMetadata
+	err = a.getJSONFile(ctx, "build/people_metadata.json", &metadata)
+	if err != nil {
+		return nil, err
+	}
+	metadataLookup := make(map[int]PersonMetadata)
+	for _, m := range metadata {
+		metadataLookup[m.ID] = m
+	}
+	var out []Person
+	for _, p := range people {
+		if !session.Overlaps(p.Start, p.End) {
+			continue
+		}
+		out = append(out, Person{Person: p, PersonMetadata: metadataLookup[p.ID]})
+
+	}
+	return out, nil
+}
+
 // Councilmembers returns the list of councilmembers at /councilmembers
 func (a *App) Councilmembers(w http.ResponseWriter, r *http.Request) {
 	T := Printer(r.Context())
 	t := newTemplate(a.templateFS, "councilmembers.html")
-
-	var people []db.Person
-	err := a.getJSONFile(r.Context(), "build/people_active.json", &people)
-	if err != nil {
-		log.Print(err)
-		http.Error(w, "Internal Server Error", 500)
-		return
-	}
-
-	cacheTTL := time.Minute * 30
 
 	type Page struct {
 		Page     string
@@ -219,28 +237,13 @@ func (a *App) Councilmembers(w http.ResponseWriter, r *http.Request) {
 		Page:  "councilmembers",
 		Title: T.Sprintf("NYC Council Members"),
 	}
-	var metadata []PersonMetadata
-	err = a.getJSONFile(r.Context(), "build/people_metadata.json", &metadata)
+	var err error
+	body.People, err = a.GetCouncilMembers(r.Context(), CurrentSession)
 	if err != nil {
 		log.Print(err)
 		http.Error(w, "Internal Server Error", 500)
 		return
 	}
-	metadataLookup := make(map[int]PersonMetadata)
-	for _, m := range metadata {
-		metadataLookup[m.ID] = m
-	}
-	now := time.Now()
-	for _, p := range people {
-		if p.Start.After(now) {
-			continue
-		}
-		if p.End.Before(now) {
-			continue
-		}
-		body.People = append(body.People, Person{Person: p, PersonMetadata: metadataLookup[p.ID]})
-	}
-
 	err = a.getJSONFile(r.Context(), "build/last_sync.json", &body.LastSync)
 	if err != nil {
 		log.Print(err)
@@ -249,6 +252,7 @@ func (a *App) Councilmembers(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("content-type", "text/html")
+	cacheTTL := time.Minute * 30
 	a.addExpireHeaders(w, cacheTTL)
 	err = t.ExecuteTemplate(w, "councilmembers.html", body)
 	if err != nil {
