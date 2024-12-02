@@ -1,8 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"html/template"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 
@@ -15,8 +17,40 @@ type Legislation struct {
 	db.Legislation
 }
 
+// FileID returns the file number without the "Int " or "Res " prefix
+func (ll Legislation) FileID() string {
+	_, c, _ := strings.Cut(ll.File, " ")
+	return c
+}
+
+// FileNumber returns the File prefix as a number (without the session year)
+func (ll Legislation) FileNumber() int {
+	s, _, ok := strings.Cut(ll.FileID(), "-")
+	n, err := strconv.Atoi(s)
+	if err != nil || !ok {
+		return 0
+	}
+	return n
+}
+
+// FileYear returns the session year of the legislation
+func (ll Legislation) FileYear() int {
+	f := ll.FileID()
+	// some older entries have "Int 0349-1998-A"
+	if strings.Count(f, "-") == 2 {
+		f = strings.Join(strings.Split(f, "-")[:2], "-")
+	}
+	_, c, _ := strings.Cut(f, "-")
+	year, _ := strconv.Atoi(c)
+	return year
+}
+
+func (ll Legislation) Session() Session {
+	return FindSession(ll.FileYear())
+}
+
 func (ll Legislation) IntroLink() template.URL {
-	f := strings.TrimPrefix(ll.File, "Int ")
+	f := ll.FileID()
 	// some older entries have "Int 0349-1998-A"
 	if strings.Count(f, "-") == 2 {
 		f = strings.Join(strings.Split(f, "-")[:2], "-")
@@ -50,15 +84,43 @@ func (ll Legislation) Hearings() []db.History {
 	}
 	return o
 }
-func (ll Legislation) Votes() []db.History {
-	var o []db.History
+func (ll Legislation) Votes() []History {
+	var o []History
 	for _, h := range ll.History {
 		switch h.Action {
 		case "Approved by Committee", "Approved by Council":
-			o = append(o, h)
+			o = append(o, History{h})
 		}
 	}
 	return o
+}
+
+type History struct {
+	db.History
+}
+
+func (h History) VotePassed() bool {
+	ayes, nayes, _ := h.getVotes()
+	return ayes > nayes
+}
+
+func (h History) VoteSummary() string {
+	ayes, nays, abstains := h.getVotes()
+	return fmt.Sprintf("%d:%d:%d", ayes, abstains, nays)
+}
+
+func (h History) getVotes() (ayes int, nays int, abstains int) {
+	for _, v := range h.Votes {
+		switch v.Vote {
+		case "Affirmative":
+			ayes++
+		case "Negative":
+			nays++
+		case "Abstain":
+			abstains++
+		}
+	}
+	return
 }
 
 func (ll Legislation) RecentAction() (string, time.Time) {

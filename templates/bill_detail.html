@@ -1,32 +1,122 @@
 {{template "base" .}}
-{{ define "title" }}{{.Legislation.File}} {{.Legislation.Title}}{{ end }}
+{{ define "title" }}{{.Legislation.File}} {{.Legislation.Name}}{{ end }}
 {{ template "base.html" . }}
+
+{{define "head"}}
+
+<style>
+.action-date {
+  font-weight: 200;
+  font-size: .8rem;
+  margin: 0 .4em;
+}
+.action {
+  font-weight: 200;
+  font-size: .9em;
+}
+.legislation {
+  margin-bottom: 1.25rem;
+}
+
+.status-withdrawn > .name {
+  text-decoration: line-through;
+}
+
+.body {
+  font-weight: 200;
+  font-size: .8rem;
+}
+.session {
+    font-weight: 200;
+    font-size: .8rem;
+    /* display:block; */
+}
+.bill-number {
+    margin-bottom: 0;
+}
+.name {
+    font-size: 1.5rem;
+}
+.sponsor, .affirmative {
+    background-color: rgb(113, 213, 132);
+}
+.negative {
+    background-color: rgb(247, 194, 173);
+}
+.absent {
+    background-color: rgb(213, 213, 213);
+}
+</style>
+{{end}}
 
 {{define "middle"}}
 {{ with .Legislation}}
-<div style="display: flex;">
-    <div style="flex: 1;">
-        <a href="{{.IntroLink}}" class="file-link"><span class="badge file">{{.IntroLinkText}}</span></a>
-        <h2>{{ .Title }}</h2>
-        <p><strong>File Number:</strong> {{ .File }}</p>
-        <p><strong>Status:</strong> {{ .StatusName }}</p>
-        <p><strong>Intro Date:</strong> {{ .IntroDate.Format "January 2, 2006" }}</p>
-        <p><strong>Sponsors:</strong></p>
-        <ul>
-            {{ range .Sponsors }}
-            <li>{{ .FullName }}</li>
-            {{ end }}
-        </ul>
-        <h2>Council Members' Status</h2>
-        <ul>
+<div class="row">
+    <div class="col-12">
+        <div class="legislation status-{{.StatusName | CSSClass}}">
+            <h2 class="bill-number">NYC Council {{.TypeName}} {{.FileNumber}}</h2>
+            <a href="{{.IntroLink}}" class="file-link"><span class="badge file">{{.IntroLinkText}}</span></a>
+            <span class="session mb-2">{{.Session}} Legislative Session</span><br>
+            <span class="name">{{.Name}}</span><br>
+        
+            {{ if eq .StatusName "Enacted" }}
+            <span class="badge bg-success status">Enacted</span>
+            {{ else if eq .StatusName "Enacted (Mayor's Desk for Signature)" }}
+            <span class="badge bg-success status">Mayor's Desk for Signature</span>
+            {{else if eq .StatusName "Vetoed"}}
+            <span class="badge bg-danger status">Vetoed</span>
+            {{end}}
+
+            <span class="body">{{.BodyName}}</span><br/>
+
+            <span class="prime-sponsor">Sponsored by {{.PrimarySponsor.FullName }}</span>
+
+        </div>
+    </div>
+
+    <div class="col-sm-6 col-lg-3">
+        <strong>Status:</strong> {{ .StatusName }}
+    </div>
+    <div class="col-sm-6 col-lg-3">
+        <strong>Intro Date:</strong> {{ .IntroDate.Format "January 2, 2006" }}
+    </div>
+</div>  
+<div class="row">
+    <div class="col-12 col-md-6 col-lg-3">
+        <h3>Sponsors: {{.Sponsors | len}}</h3>
+        <ul class="list-group">
             {{ range $.Councilmembers }}
-            <li><a href="/councilmembers/{{.Person.Slug}}">{{ .FullName }}</a> {{.Party}}</li>
+            <li class="list-group-item {{ if ($.Legislation.SponsoredBy .ID ) }}sponsor{{end}}">
+                {{ if ($.Legislation.SponsoredBy .ID) }}
+                    <i class="bi bi-check-circle-fill"></i>
+                {{ end }}
+                {{ if $.Legislation.Session.IsCurrent }}
+                    <a href="/councilmembers/{{.Person.Slug}}">{{ .FullName }}</a> {{.Party}}
+                {{ else }}
+                    {{ .FullName }} {{.Party}}
+                {{ end }}
+            </li>
             {{ end }}
         </ul>
     </div>
-    <div style="flex: 1;">
-        <h2>District Map</h2>
-    </div>
+
+    {{ range .Votes }}
+        <div class="col-12 col-md-6 col-lg-3">
+        <h3>{{.Action}} {{.Date.Format "January 2, 2006"}}</h3>
+        <span class="badge {{if .VotePassed}}text-bg-success{{else}}text-bg-danger{{end}}">{{.VoteSummary}}</span>
+        <ul class="list-group">
+            {{ range .Votes }}
+            <li class="list-group-item {{if eq .Result 1}}affirmative{{ else if eq .Result 2 }}negative{{else}}absent{{end}}">
+                {{.FullName}} ({{.Vote}})
+            </li>
+            {{end}}
+        </ul>
+        </div>
+    {{ end}}
+
+    <!-- <div class="col-md-6">
+        <h3>District Map</h3>
+    </div> -->
 </div>
 {{ end }}
 {{ end }}
