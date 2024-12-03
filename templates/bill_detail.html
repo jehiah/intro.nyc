@@ -46,6 +46,14 @@
 .absent {
     background-color: rgb(213, 213, 213);
 }
+
+.person-block {
+    border: 1px solid #aaa7;
+    min-width:275px;
+}
+.flex-equal-width {
+    flex-grow: 1; flex-shrink: 1; flex-basis: 0;
+}
 </style>
 {{end}}
 
@@ -56,9 +64,7 @@
         <div class="legislation status-{{.StatusName | CSSClass}}">
             <h2 class="bill-number">NYC Council {{.TypeName}} {{.FileNumber}}</h2>
             <a href="{{.IntroLink}}" class="file-link"><span class="badge file">{{.IntroLinkText}}</span></a>
-            <span class="session mb-2">{{.Session}} Legislative Session</span><br>
-            <span class="name">{{.Name}}</span><br>
-        
+            <span class="session mb-2">{{.Session}} Legislative Session</span>
             {{ if eq .StatusName "Enacted" }}
             <span class="badge bg-success status">Enacted</span>
             {{ else if eq .StatusName "Enacted (Mayor's Desk for Signature)" }}
@@ -67,26 +73,51 @@
             <span class="badge bg-danger status">Vetoed</span>
             {{end}}
 
+            <br>
+            <span class="name">{{.Name}}</span><br>
+        
+            {{ if eq .StatusName "Enacted" }}
+            {{ else if eq .StatusName "Enacted (Mayor's Desk for Signature)" }}
+            {{else if eq .StatusName "Vetoed"}}
+            {{else}}
+            <span class="status"><strong>Status:</strong> {{ .StatusName }}</span>
             <span class="body">{{.BodyName}}</span><br/>
+            {{end}}
 
             <span class="prime-sponsor">Sponsored by {{.PrimarySponsor.FullName }}</span>
 
         </div>
     </div>
 
-    <div class="col-sm-6 col-lg-3">
-        <strong>Status:</strong> {{ .StatusName }}
-    </div>
-    <div class="col-sm-6 col-lg-3">
-        <strong>Intro Date:</strong> {{ .IntroDate.Format "January 2, 2006" }}
+    <div class="col-12 col-lg-3">
+        <strong>Introduced:</strong> {{ .IntroDate.Format "January 2, 2006" }}
     </div>
 </div>  
+
 <div class="row">
-    <div class="col-12 col-md-6 col-lg-3">
+
+
+    {{ range .Votes }}
+        <div class="col-12 mt-3">
+        <h3>{{.Action}} {{.Date.Format "January 2, 2006"}}</h3>
+        {{if ne .BodyID 1}}<span class="body">{{.BodyName}}</span>{{end}}
+        <span class="badge {{if .VotePassed}}text-bg-success{{else}}text-bg-danger{{end}}">Votes {{.VoteSummary}}</span>
+        <div class="d-flex flex-wrap align-content-start my-2 vote-summary">
+            {{ range .Votes }}
+            <div class="person-block flex-equal-width p-1 {{if eq .Result 1}}affirmative{{ else if eq .Result 2 }}negative{{else}}absent{{end}}">
+                {{.FullName}} ({{.Vote}})
+            </div>
+            {{end}}
+        </div>
+        </div>
+    {{ end}}
+
+
+    <div class="col-12 mt-3">
         <h3>Sponsors: {{.Sponsors | len}}</h3>
-        <ul class="list-group">
+        <div class="d-flex flex-wrap align-content-start my-2 sponsor-summary">
             {{ range $.Councilmembers }}
-            <li class="list-group-item {{ if ($.Legislation.SponsoredBy .ID ) }}sponsor{{end}}">
+            <div class="person-block flex-equal-width p-1 {{ if ($.Legislation.SponsoredBy .ID ) }}sponsor{{end}}">
                 {{ if ($.Legislation.SponsoredBy .ID) }}
                     <i class="bi bi-check-circle-fill"></i>
                 {{ end }}
@@ -95,28 +126,11 @@
                 {{ else }}
                     {{ .FullName }} {{.Party}}
                 {{ end }}
-            </li>
+            </div>
             {{ end }}
-        </ul>
+        </div>
     </div>
 
-    {{ range .Votes }}
-        <div class="col-12 col-md-6 col-lg-3">
-        <h3>{{.Action}} {{.Date.Format "January 2, 2006"}}</h3>
-        <span class="badge {{if .VotePassed}}text-bg-success{{else}}text-bg-danger{{end}}">{{.VoteSummary}}</span>
-        <ul class="list-group">
-            {{ range .Votes }}
-            <li class="list-group-item {{if eq .Result 1}}affirmative{{ else if eq .Result 2 }}negative{{else}}absent{{end}}">
-                {{.FullName}} ({{.Vote}})
-            </li>
-            {{end}}
-        </ul>
-        </div>
-    {{ end}}
-
-    <!-- <div class="col-md-6">
-        <h3>District Map</h3>
-    </div> -->
 </div>
 {{ end }}
 {{ end }}
