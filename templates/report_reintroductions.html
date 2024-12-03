@@ -106,14 +106,16 @@ strong {
 <tr>
     <td>
         {{ with .Legislation }}
-            <a href="{{.IntroLink}}" class="file-link"><span class="badge file">{{.IntroLinkText}}</span></a><br>
+            <a href="{{.IntroLink}}" class="file-link"><span class="badge file">{{.IntroLinkText}}</span></a>
+            <a href="{{.IntroLink}}+" class="file-link-plus"><i class="bi bi-patch-plus-fill"></i></a><br>
             <span class="attribution">by {{.PrimarySponsor.FullName}}</span>
         {{end}}
     </td>
     <td>
         {{ if .NewLegislation }}
         {{ with .NewLegislation }}
-        <a href="{{.IntroLink}}" class="file-link"><span class="badge file">{{.IntroLinkText}}</span></a><br>
+        <a href="{{.IntroLink}}" class="file-link"><span class="badge file">{{.IntroLinkText}}</span></a>
+        <a href="{{.IntroLink}}+" class="file-link-plus"><i class="bi bi-patch-plus-fill"></i></a><br>
         <span class="attribution">by 
           {{ if $.IsCurrentSession}}
           <a href="/councilmembers/{{.PrimarySponsor.Slug}}" class="sponsor">{{.PrimarySponsor.FullName}}</a> 

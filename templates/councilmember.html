@@ -140,6 +140,7 @@
  {{range .PrimarySponsor}}
   <div class="legislation status-{{.StatusName | CSSClass}}">
     <a href="{{.IntroLink}}" class="file-link"><span class="badge file">{{.IntroLinkText}}</span></a>
+    <a href="{{.IntroLink}}+" class="file-link-plus"><i class="bi bi-patch-plus-fill"></i></a>
 
     {{ if eq .StatusName "Enacted" }}
     <span class="badge bg-success status">Enacted</span>
@@ -179,7 +180,8 @@
 
  {{range .SecondarySponsor}}
   <div class="legislation">
-    <a href="{{.IntroLink}}" class="file-link"><span class="badge file">{{.IntroLinkText}}</span></a>
+    <a href="{{.IntroLink}}" class="file-link"><span class="badge file">{{.IntroLinkText}}</span>
+    <a href="{{.IntroLink}}+" class="file-link-plus"><i class="bi bi-patch-plus-fill"></i></a></a>
 
     {{ if eq .StatusName "Enacted" }}
     <span class="badge bg-success status">Enacted</span>

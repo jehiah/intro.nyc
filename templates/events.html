@@ -165,7 +165,8 @@ h2.date {
       {{if .IsDraft }}
       <span class="badge text-bg-secondary float-start me-1">{{.MatterType}}</span>
       {{else}}
-      <a href="{{.Legislation.IntroLink}}" class="file-link"><span class="badge file">{{.Legislation.IntroLinkText}}</span></a>
+      <a href="{{.Legislation.IntroLink}}" class="file-link"><span class="badge file">{{.Legislation.IntroLinkText}}</span>
+      <a href="{{.Legislation.IntroLink}}+" class="file-link-plus"><i class="bi bi-patch-plus-fill"></i></a></a>
       {{end}}
     {{.MatterName}}</p>
     {{end}}

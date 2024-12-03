@@ -227,11 +227,11 @@ func (a *App) IntroSummary(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// ttl := time.Hour
-	// if l.IntroDate.Year() < CurrentSession.StartYear {
-	// 	ttl = time.Hour * 48
-	// }
-	// a.addExpireHeaders(w, ttl)
+	ttl := time.Hour
+	if l.IntroDate.Year() < CurrentSession.StartYear {
+		ttl = time.Hour * 48
+	}
+	a.addExpireHeaders(w, ttl)
 
 	template := "bill_detail.html"
 	t := newTemplate(a.templateFS, template)

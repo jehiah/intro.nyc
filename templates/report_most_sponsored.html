@@ -172,6 +172,7 @@
   <div class="col-10 col-md-11 legislation status-{{.StatusName | CSSClass}}">
 
     <a href="{{.IntroLink}}" class="file-link"><span class="badge file">{{.IntroLinkText}}</span></a>
+    <a href="{{.IntroLink}}+" class="file-link-plus"><i class="bi bi-patch-plus-fill"></i></a>
     <span class="name">{{.Name}}</span>
 
     {{ if eq .StatusName "Enacted" }}

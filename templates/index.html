@@ -102,7 +102,9 @@ Loading...
 
 <template id="legislation-template">
   <div class="legislation">
-    <a href="" class="file-link"><span class="badge file"></span></a> <span class="name"></span>
+    <a href="" class="file-link"><span class="badge file"></span></a>
+    <a href="" class="file-link-plus"><i class="bi bi-patch-plus-fill"></i></a>
+    <span class="name"></span>
     <span class="badge bg-success status">Enacted</span>
     <span class="badge bg-danger status">Vetoed</span>
     <br>
@@ -318,6 +320,7 @@ function addSearchResult(row) {
     }
     const file = row.File.replace("Int ", "")
     clone.querySelectorAll(".file-link")[0].href="/" + file;
+    clone.querySelectorAll(".file-link-plus")[0].href="/" + file + "+";
     clone.querySelectorAll(".file")[0].textContent="intro.nyc/"+file;
     clone.querySelectorAll(".name")[0].textContent=row.Name;
     clone.querySelectorAll(".title")[0].textContent=row.Title;
