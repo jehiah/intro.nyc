@@ -111,27 +111,6 @@ func instagramUsername(s string) string {
 	return strings.Trim(u.Path, "/")
 }
 
-func (t PersonMetadata) GetSocialAccounts() []SocialAccount {
-	if len(t.SocialAccounts) > 0 {
-		return t.SocialAccounts
-	}
-	accounts := []SocialAccount{
-		{Username: twitterUsername(t.Twitter), Link: t.Twitter, Platform: "twitter"},
-		{Username: twitterUsername(t.TwitterPersonal), Link: t.TwitterPersonal, Platform: "twitter"},
-		{Username: facebookUsername(t.Facebook), Link: t.Facebook, Platform: "facebook"},
-		{Username: facebookUsername(t.FacebookPersonal), Link: t.FacebookPersonal, Platform: "facebook"},
-		{Username: instagramUsername(t.Instagram), Link: t.Instagram, Platform: "instagram"},
-		{Username: instagramUsername(t.InstagramPersonal), Link: t.InstagramPersonal, Platform: "instagram"},
-	}
-	var o []SocialAccount
-	for _, a := range accounts {
-		if a.Link != "" {
-			o = append(o, a)
-		}
-	}
-	return o
-}
-
 func (p Person) CouncilTitle() string {
 	now := time.Now()
 	for _, oo := range p.OfficeRecords {

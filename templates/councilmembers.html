@@ -66,7 +66,7 @@
   {{ if or (eq .MemberType "CHAIR") (eq .Title "CHAIRPERSON") }}<span class="member-type"> {{ if eq .Title "CHAIRPERSON" }}(chair){{else}}({{.Title | ToLower}}){{end}}</span>{{end}}
   <br>
   {{end }}</div>
-  <div class="col-sm-4 col-md-4 social">{{ range .GetSocialAccounts }}
+  <div class="col-sm-4 col-md-4 social">{{ range .SocialAccounts }}
   <a href="{{.Link}}" class="{{.CSSClass}}">{{.Username}}</a><br>
   {{end}}
   </div>
