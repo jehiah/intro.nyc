@@ -1,44 +1,45 @@
-{{template "base" .}}
-{{define "title"}}{{.Title}}{{end}}
-{{define "head"}}
-
-<link href='https://api.mapbox.com/mapbox-gl-js/v2.14.0/mapbox-gl.css' rel='stylesheet' />
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{.Title}}</title>
+    <link href='https://api.mapbox.com/mapbox-gl-js/v2.14.0/mapbox-gl.css' rel='stylesheet' />
 
 <style>
 
 #map {
-    min-height: 600px;
+    width: 100%;
+    height: 100%;
 }
+
+.spinner {
+    display: inline-block;
+    width: 1.5rem;
+    height: 1.5rem;
+    vertical-align: text-bottom;
+    border: 0.25em solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: spinner-border 1.25s linear infinite;
+}
+
+@keyframes spinner-border {
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
 </style>
-{{end}}
-
-
-{{define "middle"}}
-
-<div class="row">
-<div class="col-sm-12">
+</head>
+<body>
 
 <div id="map-loading">
 <div class="spinner-border text-primary" role="status" ></div>
 Loading...
 </div>
 
-</div>
-</div>
-</div>
-
-<div class="row g-0 mx-0">
-<div class="col-sm-12">
-    
 <div id="map"></div>
 
-</div>
-</div>
-<div class="container">
-
-{{end}}
-
-{{define "javascript"}}
 <script src="https://unpkg.com/@turf/turf@6/turf.min.js"></script>
 <script src='https://api.mapbox.com/mapbox-gl-js/v2.14.0/mapbox-gl.js'></script>
 <script type="module">
@@ -50,13 +51,20 @@ var bounds = [
     [-73.5, 41.0]  // Northeast coordinates
 ];
 
+const u = new URLSearchParams(window.location.search);
+const qd = u.get('district');
+const selectedDistricts = new Set(qd ? qd.split(',').map(d => +d) : []);
+const qm = u.get('councilmembers')
+console.log('qm', qm)
+const selectedMembers = new Set(qm ? qm.split(',') : []);
+
 mapboxgl.accessToken = 'pk.eyJ1IjoiamVoaWFoIiwiYSI6IlRXOEpQV1kifQ.oUrBuVkkuZHmi0QUBvIBhg';
 const map = new mapboxgl.Map({
 container: 'map', // container ID
 // style: 'mapbox://styles/mapbox/streets-v12', // style URL
 style: 'mapbox://styles/jehiah/clfkhedeg000f01oj4nz5c06x',
 center: [-73.9772, 40.7749], // NYC coordinates
-zoom: 10, // starting zoom
+zoom: 9, // starting zoom
 maxBounds: bounds // Set the maximum bounds for the map
 });
 map.addControl(new mapboxgl.NavigationControl());
@@ -64,16 +72,25 @@ let sourceObject = null;
 
 const councilMembers = {}
 
-fetch("/data/people_metadata.json").then((response) => response.json()).then(d => {
+await fetch("/data/people_metadata.json").then((response) => response.json()).then(d => {
     d.forEach(p => {
         // there are multiples - use the last one for now
         councilMembers[p.District] = p.FullName
+        if (selectedMembers.has(p.Slug)) {
+            selectedDistricts.add(p.District)
+        }
     })
 })
 
 let councilMapPromise = 
         fetch("/static/nyc_city_council_2024.geojson")
-          .then((response) => response.json())
+          .then((response) => response.json()).then(councilMap => {
+            // console.log(councilMap.features)
+            councilMap.features.forEach(d => {
+                d.properties.selected = selectedDistricts.has(+d.properties.namecol)
+            })
+            return councilMap
+          })
 
 // from https://github.com/mapbox/polylabel/issues/54#issuecomment-638917580
 function findPolylabel(feature){
@@ -85,6 +102,7 @@ function findPolylabel(feature){
     let maxArea = 0, maxPolygon = [];
     for (let i = 0, l = feature.geometry.coordinates.length; i < l; i++){
       const p = feature.geometry.coordinates[i];
+    //   const area = geoArea({type: "Polygon", coordinates: p})
       const area = turf.area({type: "Polygon", coordinates: p})
       if (area > maxArea){
         maxPolygon = p;
@@ -128,9 +146,23 @@ map.on('load', () => {
             id: 'city-council-districts',
             type: 'fill',
             source: 'city-council-districts',
+            'filter': ['==', 'selected', true],
             paint: {
-                'fill-color': '#B6DCEB', // District fill color
-                'fill-opacity': 0.5, // District fill opacity
+                // 'fill-color': '#B6DCEB', // District fill color
+                'fill-color': '#7ec9e6',
+                'fill-opacity': 0.7, // District fill opacity
+                // 'fill-outline-color': '#19486A' // Dark blue stroke color
+                'fill-outline-color': '#155d8d', // Dark blue stroke color
+            }
+        });
+        map.addLayer({
+            id: 'city-council-districts-unselected',
+            type: 'fill',
+            source: 'city-council-districts',
+            'filter': ['==', 'selected', false],
+            paint: {
+                'fill-color': '#ffffff', // District fill color
+                'fill-opacity': .4, // District fill opacity
                 // 'fill-outline-color': '#19486A' // Dark blue stroke color
                 'fill-outline-color': '#155d8d', // Dark blue stroke color
             }
@@ -143,7 +175,7 @@ map.on('load', () => {
             layout: {
                 'text-field': '{namecol}',
                 'text-font': ['Open Sans Bold'],
-                'text-size': 12,
+                'text-size': 9,
                 // 'symbol-placement': 'point', // Only display one label per point
                 'text-allow-overlap': true, // Allow labels to overlap with each other
                 // 'text-anchor': 'left'
@@ -157,8 +189,7 @@ map.on('load', () => {
             }
         });
 
-        // Add a popup to show district information when a district is clicked
-        map.on('click', 'city-council-districts', function (e) {
+        const showDistrict = function (e) {
         var properties = e.features[0].properties;
         properties.dist = parseInt(properties.namecol, 10)
         var councilMember = councilMembers[properties.dist];
@@ -169,15 +200,24 @@ map.on('load', () => {
             .setLngLat(e.lngLat)
             .setHTML('<h3>' + districtName + '</h3>' + '<p>Council Member: <br><strong><a href="/councilmembers/' + properties.dist + '">' + councilMember + '</a></strong></p>' + '<p><a href="' + website + '">Website</a></p>')
             .addTo(map);
-        });
+        } 
+        // Add a popup to show district information when a district is clicked
+        map.on('click', 'city-council-districts', showDistrict);
+        map.on('click', 'city-council-districts-unselected', showDistrict);
 
         // Change the cursor to a pointer when the mouse is over a district
         map.on('mouseenter', 'city-council-districts', function () {
             map.getCanvas().style.cursor = 'pointer';
         });
+        map.on('mouseenter', 'city-council-districts-unselected', function () {
+            map.getCanvas().style.cursor = 'pointer';
+        });
 
         // Change it back to a default cursor when it leaves
         map.on('mouseleave', 'city-council-districts', function () {
+            map.getCanvas().style.cursor = '';
+        });
+        map.on('mouseleave', 'city-council-districts-unselected', function () {
             map.getCanvas().style.cursor = '';
         });
     })
@@ -255,5 +295,5 @@ Add an event listener that runs
 
 
 </script>
-{{end}}
-
+</body>
+</html> 

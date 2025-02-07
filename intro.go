@@ -241,11 +241,15 @@ func (a *App) IntroSummary(w http.ResponseWriter, r *http.Request) {
 		SubPage        string
 		Legislation    Legislation
 		Councilmembers []Person
+		SponsorSlugs   []string
 	}
 	body := Page{
 		Page:        "",
 		SubPage:     "",
 		Legislation: *l,
+	}
+	for _, s := range l.Sponsors {
+		body.SponsorSlugs = append(body.SponsorSlugs, s.Slug)
 	}
 	body.Councilmembers, err = a.GetCouncilMembers(ctx, FindSession(l.IntroDate.Year()))
 	if err != nil {

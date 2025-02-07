@@ -39,6 +39,7 @@ func newTemplate(fs fs.FS, n string, funcs ...template.FuncMap) *template.Templa
 		"TrimPrefix":    strings.TrimPrefix,
 		"toJSON":        toJSON,
 		"TrimCommittee": TrimCommittee,
+		"Join":          strings.Join,
 	}
 	if len(funcs) > 0 {
 		for _, f := range funcs {
