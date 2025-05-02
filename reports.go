@@ -462,6 +462,10 @@ func (a *App) ReportSimilarity(w http.ResponseWriter, r *http.Request) {
 						// Maternity, Paternity, Jury Duty, Medical, Bereavement, Conflict, Suspended, 	Non-voting, Excused, Parental
 						continue
 					}
+					if data[v.ID] == nil {
+						// vote from someone no longer in session
+						continue
+					}
 					data[v.ID].ExpectedVotes++
 					if v.VoteID == desired {
 						data[v.ID].Votes++
