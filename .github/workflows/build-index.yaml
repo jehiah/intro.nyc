@@ -1,0 +1,35 @@
+name: build-index
+on:
+  push:
+    branches:
+      - master
+  workflow_dispatch:
+  repository_dispatch:
+    types: [reindex]
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout intro_nyc
+      uses: actions/checkout@v4
+      with:
+        path: intro_nyc
+    - name: Checkout nyc_legislation
+      uses: actions/checkout@v4
+      with:
+        repository: jehiah/nyc_legislation
+        path: nyc_legislation
+    - name: Install jq
+      run: 'sudo apt-get install jq'
+    - name: Compile Introduction Index
+      run: 'intro_nyc/scripts/build_index.sh'
+    - name: Set up Cloud SDK
+      uses: 'google-github-actions/auth@v2'
+      with:
+        credentials_json: '${{ secrets.GOOGLE_CREDENTIALS }}'
+    - name: Upload Indexes
+      uses: 'google-github-actions/upload-cloud-storage@v2'
+      with:
+        path: nyc_legislation/build
+        destination: 'intronyc'
+
