@@ -3,11 +3,8 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
-	"regexp"
-	"strconv"
 	"strings"
 	"time"
 
@@ -15,34 +12,18 @@ import (
 	"github.com/jehiah/legislator/legistar"
 )
 
-// IsValidFileNumber matches 0123-2020
-func IsValidFileNumber(file string) bool {
-	if ok, _ := regexp.MatchString("^[0-9]{4}-(19|20)[9012][0-9]$", file); !ok {
-		return false
-	}
-	n := strings.Split(file, "-")
-	seq, _ := strconv.Atoi(n[0])
-	if seq > 3500 || seq < 1 {
-		return false
-	}
-	year, _ := strconv.Atoi(n[1])
-	if year > time.Now().Year() || year < 1996 {
-		return false
-	}
-	return true
-}
-
 func (a *App) FileRedirect(w http.ResponseWriter, r *http.Request) {
+
 	file := r.PathValue("file")
-	if IsValidFileNumber(file) {
+	if IsValidIntroID(file) {
 		a.IntroRedirect(w, r, file)
 		return
 	}
-	if strings.HasSuffix(file, ".json") && IsValidFileNumber(strings.TrimSuffix(file, ".json")) {
+	if strings.HasSuffix(file, ".json") && IsValidIntroID(strings.TrimSuffix(file, ".json")) {
 		a.IntroJSON(w, r, file)
 		return
 	}
-	if strings.HasSuffix(file, "+") && IsValidFileNumber(strings.TrimSuffix(file, "+")) {
+	if strings.HasSuffix(file, "+") && IsValidIntroID(strings.TrimSuffix(file, "+")) {
 		a.IntroSummary(w, r)
 		return
 	}
@@ -53,22 +34,22 @@ func (a *App) FileRedirect(w http.ResponseWriter, r *http.Request) {
 // IntroRedirect redirects from /1234-2020 to the URL for File "Intro 1234-2020"
 //
 // Redirects are cached for the lifetime of the process but not persisted
-func (a *App) IntroRedirect(w http.ResponseWriter, r *http.Request, file string) {
-	if !IsValidFileNumber(file) {
+func (a *App) IntroRedirect(w http.ResponseWriter, r *http.Request, s string) {
+	id, err := ParseIntroID(s)
+	if err != nil {
 		http.Error(w, "Not Found", 404)
 		return
 	}
-	file = fmt.Sprintf("Int %s", file)
 
-	if redirect, ok := a.cachedRedirects[file]; ok {
+	if redirect, ok := a.cachedRedirects[id]; ok {
 		a.addExpireHeaders(w, time.Hour)
 		http.Redirect(w, r, redirect, 302)
 		return
 	}
 
 	filter := legistar.AndFilters(
-		legistar.MatterTypeFilter("Introduction"),
-		legistar.MatterFileFilter(file),
+		legistar.MatterTypeFilter(id.Type()),
+		legistar.MatterFileFilter(id.File()),
 	)
 
 	// TODO: retry with a suffix -A for older years
@@ -93,16 +74,22 @@ func (a *App) IntroRedirect(w http.ResponseWriter, r *http.Request, file string)
 		http.Error(w, "unknown error", 500)
 		return
 	}
-	a.cachedRedirects[file] = redirect
+	a.cachedRedirects[id] = redirect
 	a.addExpireHeaders(w, time.Hour)
 	http.Redirect(w, r, redirect, 302)
 }
 
 // IntroJSON returns a json to the URL for File "Intro 1234-2020"
-func (a *App) IntroJSON(w http.ResponseWriter, r *http.Request, file string) {
-	file = fmt.Sprintf("Int %s", strings.TrimSuffix(file, ".json"))
+func (a *App) IntroJSON(w http.ResponseWriter, r *http.Request, s string) {
+	s = strings.TrimSuffix(s, ".json")
+	id, err := ParseIntroID(s)
+	if err != nil {
+		http.Error(w, "Not Found", 404)
+		return
+	}
+
 	ctx := r.Context()
-	l, err := a.GetLegislation(ctx, file)
+	l, err := a.GetLegislation(ctx, id)
 	if err != nil {
 		log.Print(err)
 		http.Error(w, "unknown error", 500)
@@ -119,10 +106,10 @@ func (a *App) IntroJSON(w http.ResponseWriter, r *http.Request, file string) {
 	json.NewEncoder(w).Encode(l)
 }
 
-func (a *App) GetLegislation(ctx context.Context, file string) (*Legislation, error) {
+func (a *App) GetLegislation(ctx context.Context, id IntroID) (*Legislation, error) {
 
 	a.cacheMutex.RLock()
-	if v, ok := a.cachedLegislation[file]; ok {
+	if v, ok := a.cachedLegislation[id]; ok {
 		if time.Since(v.Set) < time.Hour {
 			a.cacheMutex.RUnlock()
 			return v.Legislation, nil
@@ -131,8 +118,8 @@ func (a *App) GetLegislation(ctx context.Context, file string) (*Legislation, er
 	a.cacheMutex.RUnlock()
 
 	filter := legistar.AndFilters(
-		legistar.MatterTypeFilter("Introduction"),
-		legistar.MatterFileFilter(file),
+		legistar.MatterTypeFilter(id.Type()),
+		legistar.MatterFileFilter(id.File()),
 	)
 
 	// TODO: retry with a suffix -A for older years
@@ -198,7 +185,7 @@ func (a *App) GetLegislation(ctx context.Context, file string) (*Legislation, er
 	v := Legislation{l}
 
 	a.cacheMutex.Lock()
-	a.cachedLegislation[file] = &CachedLegislation{
+	a.cachedLegislation[id] = &CachedLegislation{
 		Set:         time.Now(),
 		Legislation: &v,
 	}
@@ -208,15 +195,15 @@ func (a *App) GetLegislation(ctx context.Context, file string) (*Legislation, er
 }
 
 func (a *App) IntroSummary(w http.ResponseWriter, r *http.Request) {
-	file := strings.TrimSuffix(r.PathValue("file"), "+")
-	if !IsValidFileNumber(file) {
+	s := strings.TrimSuffix(r.PathValue("file"), "+")
+	id, err := ParseIntroID(s)
+	if err != nil {
 		http.Error(w, "Not Found", 404)
 		return
 	}
-	file = fmt.Sprintf("Int %s", file)
 	ctx := r.Context()
 
-	l, err := a.GetLegislation(ctx, file)
+	l, err := a.GetLegislation(ctx, id)
 	if err != nil {
 		log.Print(err)
 		http.Error(w, "unknown error", 500)

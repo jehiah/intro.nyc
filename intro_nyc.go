@@ -45,9 +45,9 @@ type App struct {
 	staticHandler http.Handler
 	templateFS    fs.FS
 
-	cachedRedirects   map[string]string
+	cachedRedirects   map[IntroID]string
 	fileCache         map[string]CachedFile
-	cachedLegislation map[string]*CachedLegislation
+	cachedLegislation map[IntroID]*CachedLegislation
 	cacheMutex        sync.RWMutex
 }
 
@@ -191,8 +191,8 @@ func main() {
 		staticHandler: http.FileServer(http.FS(static)),
 		templateFS:    content,
 
-		cachedRedirects:   make(map[string]string),
-		cachedLegislation: make(map[string]*CachedLegislation),
+		cachedRedirects:   make(map[IntroID]string),
+		cachedLegislation: make(map[IntroID]*CachedLegislation),
 		fileCache:         make(map[string]CachedFile),
 	}
 	if *devMode {
