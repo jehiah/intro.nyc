@@ -211,6 +211,10 @@ func main() {
 	router := http.NewServeMux()
 
 	router.HandleFunc("GET /{$}", app.Search)
+	router.HandleFunc("GET /.well-known/atproto-did", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("content-type", "text/plain")
+		w.Write([]byte("did:plc:42n7xtt43jwp5ukmuubb2mmo\n"))
+	})
 	router.HandleFunc("GET /robots.txt", app.RobotsTXT)
 	router.HandleFunc("GET /recent", app.RecentLegislation)
 	router.HandleFunc("GET /map", app.Map)
