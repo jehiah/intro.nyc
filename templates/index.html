@@ -57,7 +57,6 @@
   text-decoration: line-through;
 }
 
-
 </style>
 {{end}}
 
@@ -75,10 +74,26 @@ Loading...
 <div id="search" style="display:none;">
 <h2><i class="bi bi-search"></i> Search NYC Council Legislation</h2>
 <form action="/" method="GET" id="searchform">
-  <div class="input-group mb-1">
+  <div class="input-group mb-3">
     <input type="text" class="form-control" placeholder='ex: "sidewalk" or "emissions"' id="q" name="q">
     <button class="btn btn-primary" type="submit" id="search-btn">Search</button>
   </div>
+
+<div class="float-end" id="radio-control">
+  <div class="form-check form-check-reverse">
+    <input class="form-check-input" type="radio" name="intro-type" id="introduction" value="introduction" checked>
+    <label class="form-check-label" for="introduction">
+      Introductions
+    </label>
+  </div>
+
+  <div class="form-check form-check-reverse">
+    <input class="form-check-input" type="radio" name="intro-type" id="resolution" value="resolution">
+    <label class="form-check-label" for="resolution">
+      Resolutions
+    </label>
+  </div>  
+</div>
 
 {{ range .Sessions }}
 <div class="form-check">
@@ -105,8 +120,9 @@ Loading...
     <a href="" class="file-link"><span class="badge file"></span></a>
     <a href="" class="file-link-plus"><i class="bi bi-patch-plus-fill"></i></a>
     <span class="name"></span>
-    <span class="badge bg-success status">Enacted</span>
-    <span class="badge bg-danger status">Vetoed</span>
+    <span class="badge bg-success status enacted">Enacted</span>
+    <span class="badge bg-danger status vetoed">Vetoed</span>
+    <span class="badge bg-success status adopted">Adopted</span>
     <br>
     <span class="title"></span>
     <span class="last-update"></span>
@@ -179,6 +195,9 @@ const urlSearchParams = new URLSearchParams(window.location.search)
 document.getElementById("q").value = urlSearchParams.get("q");
 const defaultSession = urlSearchParams.get("session") ? urlSearchParams.get("session") : "{{index .Sessions 0}}";
 document.getElementsByName("session").forEach(e => {e.checked = (e.value == defaultSession)})
+if (urlSearchParams.get("type") === "resolution") {
+  document.getElementsByName("intro-type").forEach(e => {e.checked = (e.value == urlSearchParams.get("type"))})
+}
 
 
 function newIndex() {
@@ -192,8 +211,6 @@ function newIndex() {
   });
 }
 var index = {}
-index[defaultSession] = newIndex();
-
 var lookupData = {};
 var recentData = [];
 // isRecentDate checks if a date is in the last 30 days
@@ -210,26 +227,21 @@ function compareDates(a, b) {
   return (a>b)-(a<b)
 }
 
-  fetch(`/data/search_index_${defaultSession}.json`)
-  .then(response => {return response.json();})
-  .then(d => {
-    d.forEach(dd => {
-      dd.ShortFile = dd.File.split('-')[0].replace(/^Int 0+/,"") // allows searching w/o leading zero
-      dd.LastModifiedDt = new Date(dd.LastModified)
-      index[defaultSession].add(dd);
-      lookupData[dd.File] = dd
-    })
-  }).then(_ =>{
-  document.getElementById("search-loading").style.display = 'none';
 
+loadSearchIndex(defaultSession, radioSelectedValue("intro-type")).then(_ => {
+  document.getElementById("search-loading").style.display = 'none';
   const q = document.getElementById("q");
   document.getElementById('search').style.display = '';
-  search(q.value, radioSelectedValue("session"))
+
   q.addEventListener("input", onsearchupdate);
   document.getElementsByName("session").forEach(d => {
     d.addEventListener("change", onsearchupdate)
   })
+  document.getElementsByName("intro-type").forEach(d => {
+    d.addEventListener("change", onsearchupdate)
+  })
   document.getElementById("searchform").addEventListener("submit", event => {event.preventDefault()})
+  search(q.value, radioSelectedValue("session"), radioSelectedValue("intro-type"));
 })
 
 function radioSelectedValue(field) {
@@ -253,32 +265,50 @@ function onsearchupdate() {
     qs.set("session", session)
   }
 
+  const introType = radioSelectedValue("intro-type");
+  if (introType != "introduction") {
+    qs.set("type", introType)
+  }
+
   const l = qs.toString();
   history.pushState(null, document.title, l.length == 0 ? "/" : "/?" + l)
 
-  if (index[session] == undefined) {
-    document.querySelector("#search-results").innerHTML = '<div class="spinner-border text-primary" role="status" ></div>';
-    // clear previous results before fetch
+  if (index[session + introType] == undefined) {
+  // clear previous results before fetch
+  document.querySelector("#search-results").innerHTML = '<div class="spinner-border text-primary" role="status" ></div>';
+  }
 
-    index[session] = newIndex();
-    fetch(`/data/search_index_${session}.json`)
-    .then(response => {return response.json();})
+  loadSearchIndex(session, introType).then(_ => {
+    search(q.value, session, introType);
+  })
+}
+
+function loadSearchIndex(session, introType) {
+  key = session + introType
+  if (index[key] == undefined) {
+    let prefix = ""
+    if (introType == "resolution") {
+      prefix = "resolution_"
+    }
+   return fetch(`/data/search_index_${prefix}${session}.json`)
+    .then(response => response.json())
     .then(d => {
+      index[key] = newIndex();
       d.forEach(dd => {
         dd.LastModifiedDt = new Date(dd.LastModified)
-        index[session].add(dd);
+        index[key].add(dd);
         lookupData[dd.File] = dd
       })
-      search(q.value, session)
     })
   } else {
-    search(q.value, session)
+    return Promise.resolve()
   }
 }
 
-function search(q, session) {
+function search(q, session , introType) {
+  const key = session + introType
   document.querySelector("#search-results").innerHTML = '';
-  var results = index[session].search(q, 75)
+  var results = index[key].search(q, 75)
   // console.log("results", results)
   var seen = {};
   var resultArray = [];
@@ -318,7 +348,12 @@ function addSearchResult(row) {
     if (row.StatusName == "Withdrawn") {
       clone.querySelectorAll(".legislation")[0].className += " status-withdrawn";
     }
-    const file = row.File.replace("Int ", "")
+    const resolution = row.File.indexOf("Res") == 0;
+    if (resolution) {
+      clone.querySelectorAll(".file-link")[0].className += " resolution";
+      clone.querySelectorAll(".file-link-plus")[0].className += " resolution";
+    }
+    const file = row.File.replace("Int ", "").replace("Res ", "res-");
     clone.querySelectorAll(".file-link")[0].href="/" + file;
     clone.querySelectorAll(".file-link-plus")[0].href="/" + file + "+";
     clone.querySelectorAll(".file")[0].textContent="intro.nyc/"+file;
@@ -326,14 +361,19 @@ function addSearchResult(row) {
     clone.querySelectorAll(".title")[0].textContent=row.Title;
     var enacted = false;
     var vetoed = false;
+    var adopted = false;
     if (row.StatusName == "Enacted (Mayor's Desk for Signature)" || row.StatusName == "Enacted") {
       enacted = true;
     }
     if (row.StatusName == "Vetoed") {
       vetoed = true;
     }
-    clone.querySelectorAll(".status")[0].style.display = enacted ? "" : "none";
-    clone.querySelectorAll(".status")[1].style.display = vetoed ? "" : "none";
+    if (resolution && row.StatusName == "Adopted") {
+      adopted = true;
+    }
+    clone.querySelectorAll(".status.enacted").forEach(e => e.style.display = enacted ? "" : "none");
+    clone.querySelectorAll(".status.vetoed").forEach(e => e.style.display = vetoed ? "" : "none");
+    clone.querySelectorAll(".status.adopted").forEach(e => e.style.display = adopted ? "" : "none");
 
     if (isRecentDate(row.LastModifiedDt, 14)) {
       const diff = diffDates(row.LastModifiedDt, new Date());

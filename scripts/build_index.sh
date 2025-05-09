@@ -108,6 +108,13 @@ else
     jq -c -s "map({File, Name, Title, Summary, StatusName, LastModified:  ([.History[]? | select(.ActionID == 27 or .ActionID == 33 or .ActionID == 32 or .ActionID == 68 or .ActionID == 58)])[-1]?.Date})" resolution/2024/????.json > build/search_index_resolution_2024-2025.json
 fi
 
+# backfill 2022-2023
+# backfill 2018-2021
+# backfill 2014-2017
+# jq -c -s "map({File, Name, Title, Summary, StatusName, LastModified:  ([.History[]? | select(.ActionID == 27 or .ActionID == 33 or .ActionID == 32 or .ActionID == 68 or .ActionID == 58)])[-1]?.Date})" resolution/2022/????.json resolution/2023/????.json > build/search_index_resolution_2022-2023.json
+# jq -c -s "map({File, Name, Title, Summary, StatusName, LastModified:  ([.History[]? | select(.ActionID == 27 or .ActionID == 33 or .ActionID == 32 or .ActionID == 68 or .ActionID == 58)])[-1]?.Date})" resolution/2018/????.json resolution/2019/????.json resolution/2020/????.json resolution/2021/????.json > build/search_index_resolution_2018-2021.json
+# jq -c -s "map({File, Name, Title, Summary, StatusName, LastModified:  ([.History[]? | select(.ActionID == 27 or .ActionID == 33 or .ActionID == 32 or .ActionID == 68 or .ActionID == 58)])[-1]?.Date})" resolution/2014/????.json resolution/2015/????.json resolution/2016/????.json resolution/2017/????.json > build/search_index_resolution_2014-2017.json
+
 
 for FILE in resubmit/*.json; do
     cp $FILE build/resubmit_$(basename $FILE)
