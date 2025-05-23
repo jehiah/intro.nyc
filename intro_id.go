@@ -28,6 +28,25 @@ func (i IntroID) Type() string {
 	return "Introduction"
 }
 
+// FileNumber returns the File prefix as a number (without the session year)
+func (i IntroID) FileNumber() int {
+	c := strings.TrimPrefix(string(i), "res-")
+	s, _, ok := strings.Cut(c, "-")
+	n, err := strconv.Atoi(s)
+	if err != nil || !ok {
+		return 0
+	}
+	return n
+}
+
+// FileYear returns the session year of the legislation or resolution
+func (i IntroID) FileYear() int {
+	c := strings.TrimPrefix(string(i), "res-")
+	_, y, _ := strings.Cut(c, "-")
+	year, _ := strconv.Atoi(y)
+	return year
+}
+
 func ParseFile(f string) (IntroID, error) {
 	var i, prefix IntroID
 	switch {
@@ -40,6 +59,12 @@ func ParseFile(f string) (IntroID, error) {
 	default:
 		return "", fmt.Errorf("invalid file number %q", f)
 	}
+
+	// some older entries have "Int 0349-1998-A"
+	if strings.Count(string(i), "-") == 2 {
+		i = IntroID(strings.Join(strings.Split(string(i), "-")[:2], "-"))
+	}
+
 	if !IsValidFileNumber(string(i)) {
 		return "", fmt.Errorf("invalid file number %q", f)
 	}
