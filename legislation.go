@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"html/template"
 	"sort"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/jehiah/legislator/db"
@@ -17,32 +15,20 @@ type Legislation struct {
 	db.Legislation
 }
 
-// FileID returns the file number without the "Int " or "Res " prefix
-func (ll Legislation) FileID() string {
-	_, c, _ := strings.Cut(ll.File, " ")
-	return c
+// IntroID returns the file number without the "Int " or "Res " prefix
+func (ll Legislation) IntroID() IntroID {
+	i, _ := ParseFile(ll.File)
+	return i
 }
 
 // FileNumber returns the File prefix as a number (without the session year)
 func (ll Legislation) FileNumber() int {
-	s, _, ok := strings.Cut(ll.FileID(), "-")
-	n, err := strconv.Atoi(s)
-	if err != nil || !ok {
-		return 0
-	}
-	return n
+	return ll.IntroID().FileNumber()
 }
 
 // FileYear returns the session year of the legislation
 func (ll Legislation) FileYear() int {
-	f := ll.FileID()
-	// some older entries have "Int 0349-1998-A"
-	if strings.Count(f, "-") == 2 {
-		f = strings.Join(strings.Split(f, "-")[:2], "-")
-	}
-	_, c, _ := strings.Cut(f, "-")
-	year, _ := strconv.Atoi(c)
-	return year
+	return ll.IntroID().FileYear()
 }
 
 func (ll Legislation) Session() Session {
@@ -50,12 +36,7 @@ func (ll Legislation) Session() Session {
 }
 
 func (ll Legislation) IntroLink() template.URL {
-	f := ll.FileID()
-	// some older entries have "Int 0349-1998-A"
-	if strings.Count(f, "-") == 2 {
-		f = strings.Join(strings.Split(f, "-")[:2], "-")
-	}
-	return template.URL("/" + f)
+	return template.URL("/" + string(ll.IntroID()))
 }
 func (ll Legislation) IntroLinkText() string {
 	return "intro.nyc" + string(ll.IntroLink())
