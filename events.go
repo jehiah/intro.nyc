@@ -224,7 +224,7 @@ func (a *App) CalendarFile(w http.ResponseWriter, body EventPage) {
 				if i.IsDraft() {
 					fmt.Fprintf(desc, "%s ", i.MatterType)
 				} else {
-					fmt.Fprintf(desc, "%s ", i.MatterFile)
+					fmt.Fprintf(desc, "https://intro.nyc/%s ", i.Legislation().IntroLink())
 				}
 				fmt.Fprintf(desc, "%s\n", i.MatterName)
 			case "N/A":

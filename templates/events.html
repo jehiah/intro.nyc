@@ -155,7 +155,7 @@ h2.date {
   {{range .Items}}
   <div class="agenda-item ps-2 my-1">
     {{if eq .AgendaNote "Preconsidered"}}
-    <span class="badge text-bg-primary float-start me-1">preconsidered</span>
+    <span class="badge text-bg-primary me-1">preconsidered</span>
     {{end}}
     {{if eq .MatterType "Oversight"}}
     <p class="item-title matter-type-{{.MatterType | Slugify}}">{{.Title}}</p>
@@ -163,7 +163,7 @@ h2.date {
     {{if eq .MatterType "Introduction"}}
     <p>
       {{if .IsDraft }}
-      <span class="badge text-bg-secondary float-start me-1">{{.MatterType}}</span>
+      <span class="badge text-bg-secondary me-1">{{.MatterType}}</span>
       {{else}}
       <a href="{{.Legislation.IntroLink}}" class="file-link"><span class="badge file">{{.Legislation.IntroLinkText}}</span>
       <a href="{{.Legislation.IntroLink}}+" class="file-link-plus"><i class="bi bi-patch-plus-fill"></i></a></a>
@@ -172,12 +172,12 @@ h2.date {
     {{end}}
     {{if eq .MatterType "Resolution"}}
     <p>
-      <span class="badge text-bg-secondary float-start me-1">{{if .IsDraft}}{{.MatterType}}{{else}}{{.MatterFile}}{{end}}</span>
-      {{.MatterName}}
-    </p>
-    {{end}}
-    {{if eq .MatterType "Land Use Application"}}
-    <p>{{.MatterName}}</p>
+      <span class="badge text-bg-secondary me-1">{{.MatterType}}</span>
+      {{if not .IsDraft}}
+      <a href="{{.Legislation.IntroLink}}" class="file-link"><span class="badge file">{{.Legislation.IntroLinkText}}</span>
+      <a href="{{.Legislation.IntroLink}}+" class="file-link-plus"><i class="bi bi-patch-plus-fill"></i></a></a>
+      {{end}}
+      {{.MatterName}}</p>
     {{end}}
     {{if eq .MatterType "N/A"}}
     <p>{{.MatterName}}</p>
