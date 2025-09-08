@@ -179,6 +179,11 @@ h2.date {
       {{end}}
       {{.MatterName}}</p>
     {{end}}
+    {{if eq .MatterType "Land Use Application"}}
+    <p>
+      <span class="badge text-bg-secondary me-1">{{.MatterType}}</span>
+      {{.MatterName}}</p>
+    {{end}}
     {{if eq .MatterType "N/A"}}
     <p>{{.MatterName}}</p>
     {{end}}
