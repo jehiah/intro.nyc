@@ -45,6 +45,9 @@ func (ll Legislation) NumberSponsors() int {
 	return len(ll.Sponsors)
 }
 func (ll Legislation) PrimarySponsor() db.PersonReference {
+	if len(ll.Sponsors) == 0 {
+		return db.PersonReference{}
+	}
 	return ll.Sponsors[0]
 }
 func (ll Legislation) SponsoredBy(id int) bool {

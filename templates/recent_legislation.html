@@ -65,7 +65,7 @@
 
     <br>
     <span class="name">{{.Name}}</span><br>
-    <span class="attribution">by <a href="/councilmembers/{{.PrimarySponsor.Slug}}" class="sponsor">{{.PrimarySponsor.FullName}}</a> {{if gt .NumberSponsors 1}} with {{.NumberSponsors}} sponsors{{end}},</span> <span class="body">{{.BodyName}}</span>
+    {{ if gt .NumberSponsors 0 }} <span class="attribution">by <a href="/councilmembers/{{.PrimarySponsor.Slug}}" class="sponsor">{{.PrimarySponsor.FullName}}</a> {{if gt .NumberSponsors 1}} with {{.NumberSponsors}} sponsors{{end}},</span> {{end}} <span class="body">{{.BodyName}}</span>
   </div>
   {{end}}
 {{end}}
