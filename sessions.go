@@ -50,6 +50,7 @@ func FindSession(year int) Session {
 func (s Session) String() string { return fmt.Sprintf("%d-%d", s.StartYear, s.EndYear) }
 
 var Sessions = []Session{
+	{2026, 2029},
 	{2024, 2025},
 	{2022, 2023},
 	{2018, 2021},
@@ -60,4 +61,12 @@ var Sessions = []Session{
 	{2002, 2003},
 	{1998, 2001},
 }
-var CurrentSession = Sessions[0]
+var CurrentSession Session
+
+func init() {
+	if time.Now().After(time.Date(2026, time.January, 7, 15, 0, 0, 0, time.UTC)) {
+		CurrentSession = Sessions[0]
+	} else {
+		CurrentSession = Sessions[1]
+	}
+}

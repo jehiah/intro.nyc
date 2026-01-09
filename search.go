@@ -20,7 +20,10 @@ func (a *App) Search(w http.ResponseWriter, r *http.Request) {
 	body := Page{
 		Page:     "search",
 		Title:    T.Sprintf("NYC Council Legislation Search"),
-		Sessions: Sessions[:4],
+		Sessions: Sessions[1:5],
+	}
+	if time.Now().After(time.Date(2026, time.January, 15, 15, 0, 0, 0, time.UTC)) {
+		body.Sessions = Sessions[:5]
 	}
 	err := t.ExecuteTemplate(w, "index.html", body)
 	if err != nil {
