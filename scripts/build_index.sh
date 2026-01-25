@@ -13,7 +13,7 @@ mkdir -p build
 
 declare -a RECENT_YEARS
 CURRENT_YEAR=$(date +%Y)
-if ! [ -e introduction/${CURRENT_YEAR} ]; then
+if ! [ -e introduction/${CURRENT_YEAR} ] && ! [ -e resolution/${CURRENT_YEAR} ]; then
     CURRENT_YEAR=$((CURRENT_YEAR - 1))
 fi
 START=${START:-"2024"}
