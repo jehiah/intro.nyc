@@ -11,11 +11,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout intro_nyc
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         path: intro_nyc
     - name: Checkout nyc_legislation
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         repository: jehiah/nyc_legislation
         path: nyc_legislation
@@ -24,11 +24,11 @@ jobs:
     - name: Compile Introduction Index
       run: 'intro_nyc/scripts/build_index.sh'
     - name: Set up Cloud SDK
-      uses: 'google-github-actions/auth@v2'
+      uses: 'google-github-actions/auth@v3'
       with:
         credentials_json: '${{ secrets.GOOGLE_CREDENTIALS }}'
     - name: Upload Indexes
-      uses: 'google-github-actions/upload-cloud-storage@v2'
+      uses: 'google-github-actions/upload-cloud-storage@v3'
       with:
         path: nyc_legislation/build
         destination: 'intronyc'

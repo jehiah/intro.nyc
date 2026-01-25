@@ -129,14 +129,13 @@ func (a *App) ProxyJSON(w http.ResponseWriter, r *http.Request) {
 	path := r.PathValue("path")
 
 	if !strings.HasSuffix(path, ".json") {
-		// log.Printf("year %q", path)
 		http.Error(w, "Not Found", 404)
 		return
 	}
 
 	cacheTTL := time.Minute * 15
 	switch path {
-	case "search_index_2022-2023.json", "search_index_2018-2021.json":
+	case "search_index_2022-2023.json", "search_index_2018-2021.json", "search_index_2024-2025.json":
 		cacheTTL = time.Hour * 24
 	}
 
