@@ -16,7 +16,7 @@ CURRENT_YEAR=$(date +%Y)
 if ! [ -e introduction/${CURRENT_YEAR} ] && ! [ -e resolution/${CURRENT_YEAR} ]; then
     CURRENT_YEAR=$((CURRENT_YEAR - 1))
 fi
-START=${START:-"2024"}
+START=${START:-"2026"}
 while [ $START -le $CURRENT_YEAR ]; do
     RECENT_YEARS+=( "${START}" )
     ((START++))
@@ -93,21 +93,21 @@ for PERSON in people/*.json; do
     fi
 done
 
-if [ -e introduction/2026 ]; then
-    echo "building search_index_2026-2027.json"
-    jq -c -s "map({File, Name, Title, Summary, StatusName, LastModified:  ([.History[]? | select(.ActionID == 27 or .ActionID == 33 or .ActionID == 32 or .ActionID == 68 or .ActionID == 58)])[-1]?.Date})" introduction/2026/????.json > build/search_index_2026-2027.json
+if [ -e introduction/2027 ]; then
+    echo "building search_index_2026-2029.json"
+    jq -c -s "map({File, Name, Title, Summary, StatusName, LastModified:  ([.History[]? | select(.ActionID == 27 or .ActionID == 33 or .ActionID == 32 or .ActionID == 68 or .ActionID == 58)])[-1]?.Date})" introduction/2026/????.json introduction/2027/????.json > build/search_index_2026-2029.json
 else
-    echo "building search_index_2024-2025.json"
-    jq -c -s "map({File, Name, Title, Summary, StatusName, LastModified:  ([.History[]? | select(.ActionID == 27 or .ActionID == 33 or .ActionID == 32 or .ActionID == 68 or .ActionID == 58)])[-1]?.Date})" introduction/2024/????.json introduction/2025/????.json > build/search_index_2024-2025.json
+    echo "building search_index_2026-2029.json"
+    jq -c -s "map({File, Name, Title, Summary, StatusName, LastModified:  ([.History[]? | select(.ActionID == 27 or .ActionID == 33 or .ActionID == 32 or .ActionID == 68 or .ActionID == 58)])[-1]?.Date})" introduction/2026/????.json > build/search_index_2026-2029.json
 fi
 
 
-if [ -e resolution/2026 ]; then
-    echo "building search_resolution_index_2026-2027.json"
-    jq -c -s "map({File, Name, Title, Summary, StatusName, LastModified:  ([.History[]? | select(.ActionID == 27 or .ActionID == 33 or .ActionID == 32 or .ActionID == 68 or .ActionID == 58)])[-1]?.Date})" resolution/2026/????.json > build/search_index_resolution_2026-2027.json
+if [ -e resolution/2027 ]; then
+    echo "building search_resolution_index_2026-2029.json"
+    jq -c -s "map({File, Name, Title, Summary, StatusName, LastModified:  ([.History[]? | select(.ActionID == 27 or .ActionID == 33 or .ActionID == 32 or .ActionID == 68 or .ActionID == 58)])[-1]?.Date})" resolution/2026/????.json resolution/2027/????.json > build/search_index_resolution_2026-2029.json
 else
-    echo "building search_index_resolution_2024-2025.json"
-    jq -c -s "map({File, Name, Title, Summary, StatusName, LastModified:  ([.History[]? | select(.ActionID == 27 or .ActionID == 33 or .ActionID == 32 or .ActionID == 68 or .ActionID == 58)])[-1]?.Date})" resolution/2024/????.json resolution/2025/????.json > build/search_index_resolution_2024-2025.json
+    echo "building search_index_resolution_2026-2029.json"
+    jq -c -s "map({File, Name, Title, Summary, StatusName, LastModified:  ([.History[]? | select(.ActionID == 27 or .ActionID == 33 or .ActionID == 32 or .ActionID == 68 or .ActionID == 58)])[-1]?.Date})" resolution/2026/????.json > build/search_index_resolution_2026-2029.json
 fi
 
 # backfill 2022-2023
