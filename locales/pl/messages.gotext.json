@@ -1,0 +1,36 @@
+{
+    "language": "pl",
+    "messages": [
+        {
+            "id": "NYC Council Legislation Search",
+            "message": "NYC Council Legislation Search",
+            "translation": "NYC Council Legislation Search",
+            "translatorComment": "Copied from source.",
+            "fuzzy": true
+        },
+        {
+            "id": "NYC Local Laws of {Year}",
+            "message": "NYC Local Laws of {Year}",
+            "translation": "NYC Local Laws of {Year}",
+            "translatorComment": "Copied from source.",
+            "placeholders": [
+                {
+                    "id": "Year",
+                    "string": "%[1]d",
+                    "type": "int",
+                    "underlyingType": "int",
+                    "argNum": 1,
+                    "expr": "localLaw.Year"
+                }
+            ],
+            "fuzzy": true
+        },
+        {
+            "id": "NYC Council Members",
+            "message": "NYC Council Members",
+            "translation": "NYC Council Members",
+            "translatorComment": "Copied from source.",
+            "fuzzy": true
+        }
+    ]
+}
