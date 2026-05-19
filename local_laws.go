@@ -133,7 +133,7 @@ func (a *App) LocalLaws(w http.ResponseWriter, r *http.Request) {
 	}
 	body := Page{
 		Page:         "local-laws",
-		Title:        T.Sprintf("NYC Local Laws of %d", localLaw.Year),
+		Title:        fmt.Sprintf("NYC Local Laws of %d", localLaw.Year),
 		LocalLawYear: localLaw,
 		All:          g,
 	}
