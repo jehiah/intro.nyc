@@ -95,7 +95,6 @@ func (a *App) LocalLaws(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	t := newTemplate(a.templateFS, "local_laws.html")
-	T := Printer(ctx)
 
 	var laws []LocalLaw
 	err := a.getJSONFile(ctx, "build/local_laws.json", &laws)
