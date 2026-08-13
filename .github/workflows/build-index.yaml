@@ -11,11 +11,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Checkout intro_nyc
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
       with:
         path: intro_nyc
     - name: Checkout nyc_legislation
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
       with:
         repository: jehiah/nyc_legislation
         path: nyc_legislation
