@@ -1,5 +1,7 @@
 // Export the bill in the forms a drafter actually needs.
 
+import { titleText } from "./schema.js";
+
 function sectionNumberLabel(index) {
   // Rule 3: spell out "Section" for the first bill section only.
   return index === 0 ? "Section 1." : `\u00a7 ${index + 1}.`;
@@ -32,37 +34,77 @@ function collapseRuns(runs) {
   return out;
 }
 
-function blocksOf(doc) {
-  const title = doc.firstChild;
-  const sections = [];
+function titleOf(doc) {
+  return titleText(doc.firstChild.attrs);
+}
+
+// Walk every block of every bill section, handing each to `render`.
+function eachBlock(doc, render) {
+  const out = [];
+  let index = 0;
   doc.forEach((node) => {
-    if (node.type.name === "bill_section") sections.push(node);
+    if (node.type.name !== "bill_section") return;
+    const i = index++;
+    node.forEach((child) => out.push(render(child, i)));
+    out.push("");
   });
-  return { title, sections };
+  return out;
 }
 
 // Plain text. Additions are delimited with underscores because plain text
 // cannot underline; deletions keep the manual's brackets (Rule 11.1).
 export function toPlainText(doc) {
-  const { title, sections } = blocksOf(doc);
-  const lines = ["A LOCAL LAW", "", title.textContent, "", "Be it enacted by the Council as follows:", ""];
+  const lines = [
+    "A LOCAL LAW",
+    "",
+    titleOf(doc),
+    "",
+    "Be it enacted by the Council as follows:",
+    "",
+  ];
 
-  sections.forEach((section, i) => {
-    const parts = [];
-    section.forEach((child) => {
-      const runs = collapseRuns(inlineRuns(child));
-      const text = runs
+  lines.push(
+    ...eachBlock(doc, (child, i) => {
+      const text = collapseRuns(inlineRuns(child))
         .map((r) => (r.del ? `[${r.text}]` : r.ins ? `_${r.text}_` : r.text))
         .join("");
       if (child.type.name === "section_lead") {
-        parts.push(`${sectionNumberLabel(i)} ${text}`);
-      } else {
-        const label = child.attrs.label ? child.attrs.label + " " : "";
-        parts.push(`  ${label}${text}`);
+        return `${sectionNumberLabel(i)} ${text}`;
       }
-    });
-    lines.push(...parts, "");
-  });
+      const label = child.attrs.label ? child.attrs.label + " " : "";
+      return `  ${label}${text}`;
+    })
+  );
+
+  return lines.join("\n");
+}
+
+// Markdown, for pasting into notes, issues or memos. Markdown has no underline,
+// so additions use inline HTML and deletions keep their brackets.
+export function toMarkdown(doc) {
+  const lines = [
+    "# A LOCAL LAW",
+    "",
+    `**${titleOf(doc)}**`,
+    "",
+    "_Be it enacted by the Council as follows:_",
+    "",
+  ];
+
+  lines.push(
+    ...eachBlock(doc, (child, i) => {
+      const text = collapseRuns(inlineRuns(child))
+        .map((r) =>
+          r.del ? `\\[${r.text}\\]` : r.ins ? `<u>${r.text}</u>` : r.text
+        )
+        .join("");
+      if (child.type.name === "section_lead") {
+        return `**${sectionNumberLabel(i)}** ${text}`;
+      }
+      const label = child.attrs.label ? `**${child.attrs.label}** ` : "";
+      return `> ${label}${text}`;
+    })
+  );
 
   return lines.join("\n");
 }
@@ -70,64 +112,80 @@ export function toPlainText(doc) {
 // The text as it would read once adopted: brackets and their contents gone,
 // additions kept.
 export function toAdoptedText(doc) {
-  const { sections } = blocksOf(doc);
-  const lines = [];
-  sections.forEach((section, i) => {
-    section.forEach((child) => {
+  const lines = ["A LOCAL LAW", "", titleOf(doc), ""];
+  lines.push(
+    ...eachBlock(doc, (child, i) => {
       const text = collapseRuns(inlineRuns(child))
         .filter((r) => !r.del)
         .map((r) => r.text)
         .join("")
         .replace(/\s{2,}/g, " ")
         .trim();
-      if (!text) return;
+      if (!text) return "";
       if (child.type.name === "section_lead") {
-        lines.push(`${sectionNumberLabel(i)} ${text}`);
-      } else {
-        const label = child.attrs.label ? child.attrs.label + " " : "";
-        lines.push(`  ${label}${text}`);
+        return `${sectionNumberLabel(i)} ${text}`;
       }
-    });
-    lines.push("");
-  });
+      const label = child.attrs.label ? child.attrs.label + " " : "";
+      return `  ${label}${text}`;
+    })
+  );
   return lines.join("\n");
+}
+
+function runHTML(runs) {
+  return runs
+    .map((r) => {
+      const text = escapeHTML(r.text);
+      if (r.del) return `[${text}]`;
+      if (r.ins) return `<u>${text}</u>`;
+      return text;
+    })
+    .join("");
 }
 
 // HTML shaped for pasting into the Legislative Division's Word template:
 // Times New Roman 12pt, double-spaced justified body (Rule 2).
 export function toRichText(doc) {
-  const { title, sections } = blocksOf(doc);
-  const body = ["font-family:'Times New Roman',serif;font-size:12pt;line-height:2;text-align:justify"].join("");
-
-  const runHTML = (runs) =>
-    runs
-      .map((r) => {
-        const text = escapeHTML(r.text);
-        if (r.del) return `[${text}]`;
-        if (r.ins) return `<u>${text}</u>`;
-        return text;
-      })
-      .join("");
+  const body =
+    "font-family:'Times New Roman',serif;font-size:12pt;line-height:2;text-align:justify";
 
   const parts = [
     `<p style="${body};text-align:center">A LOCAL LAW</p>`,
-    `<p style="${body}">${escapeHTML(title.textContent)}</p>`,
+    `<p style="${body}">${escapeHTML(titleOf(doc))}</p>`,
     `<p style="${body}"><u>Be it enacted by the Council as follows:</u></p>`,
   ];
 
-  sections.forEach((section, i) => {
-    section.forEach((child) => {
+  parts.push(
+    ...eachBlock(doc, (child, i) => {
       const html = runHTML(collapseRuns(inlineRuns(child)));
       if (child.type.name === "section_lead") {
-        parts.push(`<p style="${body}">${sectionNumberLabel(i)} ${html}</p>`);
-      } else {
-        const label = child.attrs.label ? escapeHTML(child.attrs.label) + " " : "";
-        parts.push(`<p style="${body}">${label}${html}</p>`);
+        return `<p style="${body}">${sectionNumberLabel(i)} ${html}</p>`;
       }
-    });
-  });
+      const label = child.attrs.label ? escapeHTML(child.attrs.label) + " " : "";
+      return `<p style="${body}">${label}${html}</p>`;
+    }).filter(Boolean)
+  );
 
   return `<div>${parts.join("\n")}</div>`;
+}
+
+// A standalone HTML document, for filing or printing.
+export function toHTMLDocument(doc) {
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>${escapeHTML(titleOf(doc))}</title>
+<style>
+body{font-family:'Times New Roman',Times,serif;font-size:12pt;line-height:2;max-width:44em;margin:3em auto;padding:0 2em;text-align:justify}
+u{text-decoration:underline}
+</style>
+</head>
+<body>
+${toRichText(doc)}
+</body>
+</html>
+`;
 }
 
 function escapeHTML(s) {

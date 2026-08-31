@@ -1,7 +1,9 @@
 # Smart Legislation Editor — Plan
 
-A drafting environment for New York City Council legislation, built into
-intro.nyc at `/editor`.
+A drafting environment for New York City Council legislation. It is its own
+site, served at `editor.intro.nyc` in production and under `/editor/` in
+development, with its own chrome (`templates/editor_base.html`) rather than the
+intro.nyc site nav.
 
 The editor exists because bill text is not ordinary prose. A bill amending
 consolidated law must reproduce the existing text verbatim, bracket everything
@@ -49,15 +51,20 @@ Mapbox.
 | Node | Content | Notes |
 | --- | --- | --- |
 | `doc` | `bill_title enacting_clause bill_section+` | |
-| `bill_title` | `inline*` | Rule 2.1. Rendered under a centered "A LOCAL LAW". Single subject; describes any repeal. |
+| `bill_title` | atom | Rule 2.1. Attrs: `code` (which bodies of law the bill amends) and `subject`. Composed into "To amend …, in relation to …"; edited from the title nav, not in the document, so the required prefix cannot be mangled. |
 | `enacting_clause` | atom | Rule 2.2. Fixed text, underlined, not editable, not line-numbered. |
-| `bill_section` | `section_lead law_block*` | Attrs: `num`, `kind` (`amend`/`add`/`repeal`/`unconsolidated`/`effective`), `cite`, `history`. |
+| `bill_section` | `section_lead law_block*` | Attrs: `kind` (`amend`/`add`/`repeal`/`unconsolidated`/`effective`), `cite`, `code`. |
 | `section_lead` | `inline*` | The unconsolidated lead-in. Never underlined (Rule 3). Auto-composed, hand-editable. |
-| `law_block` | `inline*` | Consolidated text. Attrs: `level` (`section`…`item`), `designator`, `heading`, `added` (whole block is new). |
+| `law_block` | `inline*` | Consolidated text. Attrs: `level` (`section`…`item`), `designator`, `label`. |
 
-`bill_section` numbering is derived, never stored by hand: the first is
-`Section 1.` spelled out, the rest are `§ 2.`, `§ 3.` (Rule 3). The last bill
-section is the effective date (Rule 6).
+`bill_section` numbering is derived, never stored: `Section 1.` spelled out for
+the first and `§ 2.`, `§ 3.` thereafter are a CSS counter over document order
+(Rule 3), so it cannot drift when sections are inserted or reordered. The last
+bill section is the effective date (Rule 6).
+
+Designators are likewise drawn from node attributes by CSS rather than typed, so
+a drafter cannot renumber the Administrative Code by putting the cursor in the
+wrong place.
 
 ### Marks
 
@@ -92,6 +99,11 @@ This is the core of the editor. In a `bill_section` of kind `amend`, inside
 
 In a `bill_section` of kind `add`, all consolidated text is `ins` by
 construction and typing behaves normally.
+
+`Enter` is inert inside amended law: splitting a `law_block` would renumber the
+law. A `filterTransaction` backstop rejects any transaction that removes
+original text through a path the handlers do not cover — cut, drag, unusual
+`beforeinput` events — so the invariant holds regardless of how an edit arrives.
 
 ## 5. Section picker
 
@@ -155,16 +167,42 @@ names its rule. The initial set:
 Checks are pure functions over the document, so they are cheap to extend and can
 later be reused server-side.
 
-## 8. Export
+## 8. Export and sharing
 
-- **Bill text** — plain text with `[deleted]` and underlining conventions,
-  bill-section numbering, and the title/enacting-clause/body/effective-date
+A download menu offers, from one document model:
+
+- **Copy for Word** — HTML shaped for the Legislative Division's template:
+  Times New Roman 12pt, double-spaced body, justified, real `<u>` and literal
+  brackets.
+- **Copy text / Download .txt** — plain text; `[deleted]` brackets and
+  `_underscored_` additions, in the title/enacting-clause/body/effective-date
   order of Rule 2.
-- **Rich text** — HTML shaped for pasting into the Legislative Division's Word
-  template: Times New Roman 12pt, double-spaced body, justified.
-- **JSON** — the ProseMirror document, for round-tripping and future storage.
+- **Copy markdown / Download .md** — markdown has no underline, so additions
+  use inline HTML and deletions keep their brackets.
+- **Download .html** — a standalone printable document.
+- **Download as adopted** — the text as it would read once enacted, with
+  bracketed material dropped, for proofreading.
+- **Download .json** — the document model, for round-tripping.
 
-Drafts persist to `localStorage`; nothing is sent to the server in phase 1–4.
+**Share** saves the draft and returns a read-only link. That page is rendered
+server-side in Go from the stored document (`renderBill` in `editor.go`) and
+reuses `static/editor/editor.css`, so a shared bill is byte-for-byte the bill
+being drafted and needs no JavaScript.
+
+## 8.1 Persistence
+
+`POST /api/draft` creates or updates a draft; `GET /api/draft/{id}` reads one;
+`GET /d/{id}` is the read-only view. Storage is a single JSON file
+(`--draft-file`, default `drafts.json`) written atomically.
+
+A draft has two identifiers: an unguessable `id`, which is the share link, and a
+`secret`, which is the edit token. The secret is returned only to the client
+that saved the draft and is never included in a read response, so possession of
+a share link grants reading and not writing. `localStorage` also keeps the last
+document, so a reload is instant and a failed save is not data loss.
+
+Accounts, per-user document browsing, and Firestore-backed storage are a later
+revision; the handler boundary is where that swap happens.
 
 ## 9. Deferred: the legislation API
 
@@ -178,7 +216,7 @@ produced today by `scripts/extract_law_fixture.py` from the ALP XML export:
 ```
 
 When the corpus grows past a fixture, the same shape is served from
-`GET /editor/api/law?q=` and `GET /editor/api/law/{cite}`, backed by the full
+`GET /api/law?q=` and `GET /api/law/{cite}`, backed by the full
 XML export in `gs://intronyc/` and fetched through the existing `App.getFile`
 cache. The editor's fetch layer already goes through those URLs, so the swap is
 a server-side change only.
@@ -186,11 +224,40 @@ a server-side change only.
 ## 10. Phases
 
 1. **Skeleton** — route, template, schema, ProseMirror mounting, bill
-   scaffold, `ins`/`del` marks and their rendering. *(this change)*
-2. **Tracked amendments** — the Rule 11.1 editing engine. *(this change)*
+   scaffold, `ins`/`del` marks and their rendering. *(done)*
+2. **Tracked amendments** — the Rule 11.1 editing engine. *(done)*
 3. **Corpus + picker + references** — fixture loading, lead-in composition,
-   reference builder. *(this change)*
-4. **Style checks + export.** *(this change)*
-5. Real legislation API over the full Administrative Code and Charter.
-6. Server-side drafts, sharing, and diffing against a bill's prior version.
-7. Resolutions (Rule 10) and Construction Code conventions (Appendix A).
+   reference builder. *(done)*
+4. **Style checks + export.** *(done)*
+5. **Its own site, sharing and persistence** — editor chrome, title nav, draft
+   API, read-only view. *(done)*
+6. Real legislation API over the full Administrative Code and Charter. Deriving
+   amendment history from the ALP annotations is a good approximation, but the
+   Rule 3.1.11 cases — a provision printed as part of a larger amendment
+   without itself being changed — need per-provision history.
+7. Accounts and a draft browser, with documents in Firestore; diffing a bill
+   against its prior version.
+8. Whole-bill features: declarations of intent, short titles, sunset and
+   severability clauses, reporting requirements (Rule 7); definitions helpers
+   (Rule 9); the Rule 6 effective-date assistant.
+9. Resolutions (Rule 10) and Construction Code conventions (Appendix A).
+
+## 11. Files
+
+| Path | Role |
+| --- | --- |
+| `editor.go` | page handlers, draft API, server-side bill rendering |
+| `editor_draft.go` | the draft store |
+| `templates/editor_base.html` | the editor site's chrome |
+| `templates/editor.html` | title nav, control bar, dialogs |
+| `templates/bill_readonly.html` | the shared read-only view |
+| `static/editor/editor.css` | printed-bill styling, shared by both views |
+| `static/editor/js/schema.js` | document model |
+| `static/editor/js/track.js` | Rule 11.1 amendment engine |
+| `static/editor/js/corpus.js` | law corpus, lead-ins, history recitals |
+| `static/editor/js/refs.js` | Rule 5 cross-references |
+| `static/editor/js/lint.js` | style checks |
+| `static/editor/js/serialize.js` | export |
+| `static/editor/js/drafts.js` | persistence |
+| `static/editor/js/main.js` | wiring |
+| `scripts/extract_law_fixture.py` | ALP XML → fixture |

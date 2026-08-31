@@ -1,29 +1,74 @@
 {{template "base" .}}
 {{define "title"}}{{.Title}}{{end}}
-{{define "head"}}
-<link rel="stylesheet" href="/static/editor/editor.css">
+
+{{define "brandbar"}}
+<span id="editor-status"></span>
+{{end}}
+
+{{define "nav"}}
+<nav class="editor-nav">
+
+  <div class="title-row">
+    <span class="title-stamp">A Local Law</span>
+    <select id="title-code" class="title-code" aria-label="Bodies of law this bill amends"
+            title="Which bodies of law this bill amends (Rule 2.1)">
+      <option value="administrative code">To amend the administrative code&hellip;</option>
+      <option value="charter">To amend the New York city charter&hellip;</option>
+      <option value="both">To amend the charter and the administrative code&hellip;</option>
+      <option value="unconsolidated">Unconsolidated &mdash; In relation to&hellip;</option>
+    </select>
+    <input type="text" id="title-subject" class="title-subject" autocomplete="off"
+           placeholder="the subject of this bill" aria-label="Bill subject">
+  </div>
+
+  <div class="control-row">
+    <button type="button" class="btn btn-sm btn-primary" id="btn-insert-law">
+      <i class="bi bi-plus-lg"></i> Insert law section</button>
+    <button type="button" class="btn btn-sm btn-outline-primary" id="btn-insert-ref">
+      <i class="bi bi-plus-lg"></i> Reference</button>
+
+    <span class="sep"></span>
+
+    <button type="button" class="btn btn-sm btn-outline-danger" id="btn-mark-deleted"
+            title="Bracket the selection (Rule 11.1)">[ Delete ]</button>
+    <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-restore"
+            title="Un-bracket a deletion">Restore</button>
+    <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-undo" title="Undo">
+      <i class="bi bi-arrow-counterclockwise"></i></button>
+    <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-redo" title="Redo">
+      <i class="bi bi-arrow-clockwise"></i></button>
+
+    <span class="sep"></span>
+
+    <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-new">New bill</button>
+
+    <div class="control-right">
+      <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-share">
+        <i class="bi bi-share"></i> Share</button>
+
+      <div class="menu-wrap">
+        <button type="button" class="btn btn-sm btn-primary" id="btn-download" aria-haspopup="true" aria-expanded="false">
+          <i class="bi bi-download"></i> Download</button>
+        <div class="menu" id="download-menu">
+          <div class="menu-heading">Bill text</div>
+          <button type="button" data-export="copy-rich">Copy for Word</button>
+          <button type="button" data-export="copy-text">Copy text</button>
+          <button type="button" data-export="download-text">Download .txt</button>
+          <div class="menu-heading">Markdown</div>
+          <button type="button" data-export="copy-markdown">Copy markdown</button>
+          <button type="button" data-export="download-markdown">Download .md</button>
+          <div class="menu-heading">Other</div>
+          <button type="button" data-export="download-html">Download .html</button>
+          <button type="button" data-export="download-adopted">Download as adopted</button>
+          <button type="button" data-export="download-json">Download .json</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</nav>
 {{end}}
 
 {{define "middle"}}
-
-<div class="editor-toolbar">
-  <button type="button" class="btn btn-sm btn-primary" id="btn-insert-law"><i class="bi bi-file-earmark-plus"></i> Insert law section</button>
-  <button type="button" class="btn btn-sm btn-outline-primary" id="btn-insert-ref"><i class="bi bi-link-45deg"></i> Reference</button>
-  <span class="sep"></span>
-  <button type="button" class="btn btn-sm btn-outline-danger" id="btn-mark-deleted" title="Bracket the selection (Rule 11.1)">[ Delete ]</button>
-  <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-restore" title="Undo a bracketed deletion">Restore</button>
-  <span class="sep"></span>
-  <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-undo"><i class="bi bi-arrow-counterclockwise"></i></button>
-  <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-redo"><i class="bi bi-arrow-clockwise"></i></button>
-  <span class="sep"></span>
-  <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-copy-rich" title="Copy formatted for the Legislative Division Word template">Copy</button>
-  <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-export-txt">.txt</button>
-  <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-export-adopted" title="The text as it would read once adopted">As adopted</button>
-  <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-export-json">.json</button>
-  <span class="sep"></span>
-  <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-new">New bill</button>
-  <span class="ms-auto text-secondary small" id="editor-status">Loading&hellip;</span>
-</div>
 
 <div class="editor-layout">
   <div>
@@ -34,7 +79,7 @@
       Typing inside amended law brackets what it replaces and underlines what it
       adds, per Rule 11.1 of the
       <a href="https://council.nyc.gov/legislation/">NYC Bill Drafting Manual</a>.
-      Backspace over bracketed text to restore it. Drafts are saved in this browser only.
+      Backspace over bracketed text to restore it.
     </p>
   </div>
 
@@ -142,6 +187,24 @@
     <div class="text-end">
       <button type="button" class="btn btn-outline-secondary" data-close="modal-ref">Cancel</button>
       <button type="button" class="btn btn-primary" id="btn-ref-insert">Insert</button>
+    </div>
+  </div>
+</div>
+
+<div class="editor-modal" id="modal-share">
+  <div class="panel">
+    <h5>Share a read-only copy</h5>
+    <p class="text-secondary small">
+      Anyone with this link can read the bill as it stands. The link does not
+      grant the ability to edit.
+    </p>
+    <div class="input-group mb-3">
+      <input type="text" class="form-control" id="share-url" readonly>
+      <button type="button" class="btn btn-primary" id="btn-share-copy">Copy</button>
+    </div>
+    <div class="text-end">
+      <a class="btn btn-outline-secondary" id="share-open" target="_blank" rel="noopener">Open</a>
+      <button type="button" class="btn btn-outline-secondary" data-close="modal-share">Close</button>
     </div>
   </div>
 </div>

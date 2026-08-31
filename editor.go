@@ -1,32 +1,48 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
+	"html"
+	"html/template"
 	"io"
 	"log"
 	"net/http"
+	"strings"
 	"time"
 )
 
-// Editor renders the legislation drafting editor at /editor
+const maxDraftBytes = 1 << 20
+
+// editorRoot is where the editor is mounted for this request. The editor is its
+// own site at editor.intro.nyc and lives under /editor/ everywhere else.
+func editorRoot(r *http.Request) string {
+	if strings.HasPrefix(r.Host, "editor.") {
+		return "/"
+	}
+	return "/editor/"
+}
+
+// Editor renders the drafting editor.
 func (a *App) Editor(w http.ResponseWriter, r *http.Request) {
 	T := Printer(r.Context())
 	templateName := "editor.html"
-	t := newTemplate(a.templateFS, templateName)
+	t := newTemplateWithBase(a.templateFS, "editor_base.html", templateName)
 	w.Header().Set("content-type", "text/html")
 	a.addExpireHeaders(w, time.Minute*5)
 	type Page struct {
 		Page  string
 		Title string
+		Root  string
 	}
 	body := Page{
 		Page:  "editor",
 		Title: T.Sprintf("Legislation Editor"),
+		Root:  editorRoot(r),
 	}
-	err := t.ExecuteTemplate(w, templateName, body)
-	if err != nil {
+	if err := t.ExecuteTemplate(w, templateName, body); err != nil {
 		log.Print(err)
 		http.Error(w, "Internal Server Error", 500)
-		return
 	}
 }
 
@@ -47,5 +63,197 @@ func (a *App) EditorLawCorpus(w http.ResponseWriter, r *http.Request) {
 	a.addExpireHeaders(w, time.Minute*15)
 	if _, err := io.Copy(w, f); err != nil {
 		log.Printf("editor corpus: %s", err)
+	}
+}
+
+// EditorSaveDraft creates or updates a draft.
+func (a *App) EditorSaveDraft(w http.ResponseWriter, r *http.Request) {
+	var req struct {
+		ID     string          `json:"id"`
+		Secret string          `json:"secret"`
+		Title  string          `json:"title"`
+		Doc    json.RawMessage `json:"doc"`
+	}
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxDraftBytes)).Decode(&req); err != nil {
+		http.Error(w, "Bad Request", 400)
+		return
+	}
+	if len(req.Doc) == 0 || !json.Valid(req.Doc) {
+		http.Error(w, "Bad Request", 400)
+		return
+	}
+
+	draft, err := a.drafts.Save(req.ID, req.Secret, req.Title, req.Doc)
+	if err == errDraftForbidden {
+		http.Error(w, "Forbidden", 403)
+		return
+	}
+	if err != nil {
+		log.Printf("editor save: %s", err)
+		http.Error(w, "Internal Server Error", 500)
+		return
+	}
+
+	w.Header().Set("content-type", "application/json")
+	w.Header().Set("cache-control", "no-store")
+	json.NewEncoder(w).Encode(map[string]any{
+		"id": draft.ID,
+		// Returned on save so the client can keep editing; possession of the
+		// read-only link alone never grants write access.
+		"secret":  draft.Secret,
+		"updated": draft.Updated,
+	})
+}
+
+// EditorGetDraft returns a draft for editing or reloading.
+func (a *App) EditorGetDraft(w http.ResponseWriter, r *http.Request) {
+	draft, ok := a.drafts.Get(r.PathValue("id"))
+	if !ok {
+		http.Error(w, "Not Found", 404)
+		return
+	}
+	w.Header().Set("content-type", "application/json")
+	w.Header().Set("cache-control", "no-store")
+	json.NewEncoder(w).Encode(draft.Public())
+}
+
+// EditorReadOnly renders a saved draft as a read-only bill.
+func (a *App) EditorReadOnly(w http.ResponseWriter, r *http.Request) {
+	draft, ok := a.drafts.Get(r.PathValue("id"))
+	if !ok {
+		http.Error(w, "Not Found", 404)
+		return
+	}
+
+	var doc pmNode
+	if err := json.Unmarshal(draft.Doc, &doc); err != nil {
+		log.Printf("editor read-only %s: %s", draft.ID, err)
+		http.Error(w, "Internal Server Error", 500)
+		return
+	}
+
+	templateName := "bill_readonly.html"
+	t := newTemplateWithBase(a.templateFS, "editor_base.html", templateName)
+	w.Header().Set("content-type", "text/html")
+	w.Header().Set("cache-control", "no-store")
+
+	type Page struct {
+		Page    string
+		Title   string
+		Root    string
+		ID      string
+		Updated time.Time
+		Bill    template.HTML
+	}
+	body := Page{
+		Page:    "editor",
+		Title:   draft.Title,
+		Root:    editorRoot(r),
+		ID:      draft.ID,
+		Updated: draft.Updated,
+		Bill:    renderBill(&doc),
+	}
+	if err := t.ExecuteTemplate(w, templateName, body); err != nil {
+		log.Print(err)
+		http.Error(w, "Internal Server Error", 500)
+	}
+}
+
+/* ------------------------------------------------------- document rendering */
+
+// pmNode mirrors the ProseMirror document JSON produced by
+// static/editor/js/schema.js.
+type pmNode struct {
+	Type    string         `json:"type"`
+	Attrs   map[string]any `json:"attrs"`
+	Content []pmNode       `json:"content"`
+	Text    string         `json:"text"`
+	Marks   []struct {
+		Type string `json:"type"`
+	} `json:"marks"`
+}
+
+func (n pmNode) attr(name string) string {
+	if s, ok := n.Attrs[name].(string); ok {
+		return s
+	}
+	return ""
+}
+
+func (n pmNode) hasMark(name string) bool {
+	for _, m := range n.Marks {
+		if m.Type == name {
+			return true
+		}
+	}
+	return false
+}
+
+// titlePrefixes mirrors TITLE_PREFIXES in static/editor/js/schema.js.
+var titlePrefixes = map[string]string{
+	"administrative code": "To amend the administrative code of the city of New York, in relation to",
+	"charter":             "To amend the New York city charter, in relation to",
+	"both":                "To amend the New York city charter and the administrative code of the city of New York, in relation to",
+	"unconsolidated":      "In relation to",
+}
+
+func billTitle(n pmNode) string {
+	prefix, ok := titlePrefixes[n.attr("code")]
+	if !ok {
+		prefix = titlePrefixes["administrative code"]
+	}
+	return strings.TrimSpace(prefix + " " + n.attr("subject"))
+}
+
+// renderBill produces the same markup the editor renders, so the read-only view
+// and the editor share static/editor/editor.css.
+func renderBill(doc *pmNode) template.HTML {
+	var b strings.Builder
+	b.WriteString(`<div class="bill-doc">`)
+	for _, node := range doc.Content {
+		renderNode(&b, node)
+	}
+	b.WriteString(`</div>`)
+	return template.HTML(b.String())
+}
+
+func renderNode(b *strings.Builder, n pmNode) {
+	switch n.Type {
+	case "bill_title":
+		fmt.Fprintf(b, `<p class="bill-title">%s</p>`, html.EscapeString(billTitle(n)))
+	case "enacting_clause":
+		b.WriteString(`<p class="enacting-clause">Be it enacted by the Council as follows:</p>`)
+	case "bill_section":
+		fmt.Fprintf(b, `<section class="bill-section kind-%s">`, html.EscapeString(n.attr("kind")))
+		for _, child := range n.Content {
+			renderNode(b, child)
+		}
+		b.WriteString(`</section>`)
+	case "section_lead":
+		b.WriteString(`<p class="section-lead">`)
+		renderInline(b, n.Content)
+		b.WriteString(`</p>`)
+	case "law_block":
+		fmt.Fprintf(b,
+			`<p class="law-block level-%s" data-label="%s">`,
+			html.EscapeString(n.attr("level")),
+			html.EscapeString(n.attr("label")),
+		)
+		renderInline(b, n.Content)
+		b.WriteString(`</p>`)
+	}
+}
+
+func renderInline(b *strings.Builder, content []pmNode) {
+	for _, n := range content {
+		text := html.EscapeString(n.Text)
+		switch {
+		case n.hasMark("del"):
+			fmt.Fprintf(b, `<span class="del">%s</span>`, text)
+		case n.hasMark("ins"):
+			fmt.Fprintf(b, `<u class="ins">%s</u>`, text)
+		default:
+			b.WriteString(text)
+		}
 	}
 }

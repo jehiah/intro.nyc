@@ -45,6 +45,7 @@ type App struct {
 	staticHandler http.Handler
 	templateFS    fs.FS
 	staticFS      fs.FS
+	drafts        *DraftStore
 
 	cachedRedirects   map[IntroID]string
 	fileCache         map[string]CachedFile
@@ -173,6 +174,7 @@ func main() {
 	logRequests := flag.Bool("log-requests", false, "log requests")
 	devMode := flag.Bool("dev-mode", false, "development mode")
 	devFilePath := flag.String("file-path", "", "path to files normally retrieved from gs://intronyc/")
+	draftFile := flag.String("draft-file", "drafts.json", "path to the editor draft store")
 	flag.Parse()
 
 	log.Print("starting server...")
@@ -183,6 +185,11 @@ func main() {
 	}
 	defer client.Close()
 
+	drafts, err := NewDraftStore(*draftFile)
+	if err != nil {
+		log.Fatalf("Failed to open draft store: %v", err)
+	}
+
 	app := &App{
 		legistar:      legistar.NewClient("nyc", os.Getenv("NYC_LEGISLATOR_TOKEN")),
 		gsclient:      client,
@@ -191,6 +198,7 @@ func main() {
 		staticHandler: http.FileServer(http.FS(static)),
 		templateFS:    content,
 		staticFS:      static,
+		drafts:        drafts,
 
 		cachedRedirects:   make(map[IntroID]string),
 		cachedLegislation: make(map[IntroID]*CachedLegislation),
@@ -210,7 +218,21 @@ func main() {
 	fileRouter.HandleFunc("GET /{file}", app.FileRedirect)
 	fileRouter.HandleFunc("GET /{file}/local-law", app.LocalLaw)
 
+	// The editor is its own site. It is mounted at editor.intro.nyc in
+	// production and under /editor/ everywhere else.
+	editorRouter := http.NewServeMux()
+	editorRouter.HandleFunc("GET /{$}", app.Editor)
+	editorRouter.HandleFunc("GET /api/law", app.EditorLawCorpus)
+	editorRouter.HandleFunc("POST /api/draft", app.EditorSaveDraft)
+	editorRouter.HandleFunc("GET /api/draft/{id}", app.EditorGetDraft)
+	editorRouter.HandleFunc("GET /d/{id}", app.EditorReadOnly)
+	editorRouter.Handle("GET /static/", app.staticHandler)
+
 	router := http.NewServeMux()
+
+	router.Handle("editor.intro.nyc/", editorRouter)
+	router.HandleFunc("GET /editor", redirect("/editor/"))
+	router.Handle("/editor/", http.StripPrefix("/editor", editorRouter))
 
 	router.HandleFunc("GET /{$}", app.Search)
 	router.HandleFunc("GET /.well-known/atproto-did", func(w http.ResponseWriter, r *http.Request) {
@@ -227,8 +249,6 @@ func main() {
 	router.HandleFunc("GET /councilmembers/{councilmember}", app.Councilmember)
 	router.HandleFunc("GET /local-laws", app.LocalLaws)
 	router.HandleFunc("GET /local-laws/{year}", app.LocalLaws)
-	router.HandleFunc("GET /editor", app.Editor)
-	router.HandleFunc("GET /editor/api/law", app.EditorLawCorpus)
 	router.HandleFunc("GET /data/{path}", app.ProxyJSON)
 	router.HandleFunc("GET /reports/", redirect("/reports/session")) // redirect -> /reports/session
 	router.Handle("GET /static/", app.staticHandler)

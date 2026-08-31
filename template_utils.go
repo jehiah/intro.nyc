@@ -29,6 +29,10 @@ func toJSON(v interface{}) string {
 }
 
 func newTemplate(fs fs.FS, n string, funcs ...template.FuncMap) *template.Template {
+	return newTemplateWithBase(fs, "base.html", n, funcs...)
+}
+
+func newTemplateWithBase(fs fs.FS, base, n string, funcs ...template.FuncMap) *template.Template {
 	funcMap := template.FuncMap{
 		"ToLower":       strings.ToLower,
 		"Comma":         commaInt,
@@ -49,5 +53,5 @@ func newTemplate(fs fs.FS, n string, funcs ...template.FuncMap) *template.Templa
 		}
 	}
 	t := template.New("empty").Funcs(funcMap)
-	return template.Must(t.ParseFS(fs, filepath.Join("templates", n), "templates/base.html"))
+	return template.Must(t.ParseFS(fs, filepath.Join("templates", n), filepath.Join("templates", base)))
 }

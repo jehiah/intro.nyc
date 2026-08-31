@@ -36,14 +36,56 @@ export function designatorLabel(level, designator) {
   }
 }
 
+// Rule 2.1: the title states which bodies of law the bill amends and briefly
+// refers to its subject. Only the subject is drafted by hand, so the two are
+// held separately and composed here.
+export const TITLE_PREFIXES = {
+  "administrative code":
+    "To amend the administrative code of the city of New York, in relation to",
+  charter: "To amend the New York city charter, in relation to",
+  both:
+    "To amend the New York city charter and the administrative code of the " +
+    "city of New York, in relation to",
+  // Rule 2.1: a wholly unconsolidated law does not name the Charter or Code.
+  unconsolidated: "In relation to",
+};
+
+export function titleText(attrs) {
+  const prefix = TITLE_PREFIXES[attrs.code] || TITLE_PREFIXES["administrative code"];
+  return `${prefix} ${attrs.subject || ""}`.trim();
+}
+
 const nodes = {
   doc: { content: "bill_title enacting_clause bill_section+" },
 
-  // Rule 2.1. Rendered beneath a centered "A LOCAL LAW".
+  // Rendered beneath a centered "A LOCAL LAW". Edited from the toolbar rather
+  // than in the document, so the required prefix cannot be mangled.
   bill_title: {
-    content: "inline*",
-    parseDOM: [{ tag: "p.bill-title" }],
-    toDOM: () => ["p", { class: "bill-title" }, 0],
+    atom: true,
+    selectable: false,
+    attrs: {
+      code: { default: "administrative code" },
+      subject: { default: "" },
+    },
+    parseDOM: [
+      {
+        tag: "p.bill-title",
+        getAttrs: (dom) => ({
+          code: dom.getAttribute("data-code") || "administrative code",
+          subject: dom.getAttribute("data-subject") || "",
+        }),
+      },
+    ],
+    toDOM: (node) => [
+      "p",
+      {
+        class: "bill-title",
+        "data-code": node.attrs.code,
+        "data-subject": node.attrs.subject,
+        contenteditable: "false",
+      },
+      titleText(node.attrs),
+    ],
   },
 
   // Rule 2.2. Fixed, underlined, and never part of the body.

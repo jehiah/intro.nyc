@@ -4,6 +4,8 @@
 // are pure functions of the document, which keeps them cheap to extend and
 // makes them reusable outside the editor.
 
+import { titleText } from "./schema.js";
+
 const TEXT_CHECKS = [
   {
     rule: "6.1",
@@ -134,27 +136,37 @@ function structuralChecks(doc) {
   }
 
   const title = doc.firstChild;
+  const titleString = title ? titleText(title.attrs) : "";
   const repeals = sections.some(
     (s) =>
       s.node.attrs.kind === "repeal" || /\bREPEALED\b/.test(s.node.textContent)
   );
-  if (repeals && title && !/\bto repeal\b/i.test(title.textContent)) {
+  if (repeals && !/\bto repeal\b/i.test(titleString)) {
     problems.push({
-      from: 1,
-      to: 1 + title.content.size,
+      from: 0,
+      to: 0,
       rule: "2.1.1",
       severity: "error",
       message:
         "A bill that repeals a provision must identify the repeal in its title.",
     });
   }
-  if (title && /\.\s*$/.test(title.textContent)) {
+  if (/\.\s*$/.test(titleString)) {
     problems.push({
-      from: 1,
-      to: 1 + title.content.size,
+      from: 0,
+      to: 0,
       rule: "2.1",
       severity: "warning",
       message: "Do not put a period at the end of the bill title.",
+    });
+  }
+  if (title && !title.attrs.subject.trim()) {
+    problems.push({
+      from: 0,
+      to: 0,
+      rule: "2.1",
+      severity: "warning",
+      message: "The bill title does not state a subject yet.",
     });
   }
 

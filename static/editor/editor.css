@@ -1,39 +1,170 @@
 /* Legislation editor.
-   The document surface deliberately imitates the printed bill: Times New Roman
-   12pt, double-spaced, justified (Rule 2). */
+   The `.bill-doc` rules are shared by the editor surface and the server-rendered
+   read-only view, so a shared bill looks exactly like the one being drafted. */
+
+/* ------------------------------------------------------------------- chrome */
+
+.editor-nav {
+  background: #fff;
+  border-bottom: 1px solid #dee2e6;
+  padding: 0.6rem 1.25rem 0;
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.title-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  padding-bottom: 0.5rem;
+}
+
+.title-stamp {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.7rem;
+  color: #6c757d;
+  white-space: nowrap;
+}
+
+.title-code {
+  border: 0;
+  background: transparent;
+  font-family: "Times New Roman", Times, serif;
+  font-size: 1rem;
+  color: #495057;
+  padding: 0.15rem 0.25rem;
+  border-radius: 3px;
+}
+
+.title-code:hover,
+.title-code:focus {
+  background: #f1f3f7;
+  outline: none;
+}
+
+.title-subject {
+  flex: 1 1 16rem;
+  min-width: 12rem;
+  border: 0;
+  border-bottom: 1px solid #ced4da;
+  font-family: "Times New Roman", Times, serif;
+  font-size: 1rem;
+  padding: 0.15rem 0.25rem;
+}
+
+.title-subject:focus {
+  outline: none;
+  border-bottom-color: #2f56a6;
+  background: #f8faff;
+}
+
+.control-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+  padding-bottom: 0.6rem;
+}
+
+.control-row .sep {
+  width: 1px;
+  height: 1.5rem;
+  background: #dee2e6;
+  margin: 0 0.35rem;
+}
+
+.control-right {
+  margin-left: auto;
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.readonly-badge {
+  font-size: 0.8rem;
+  color: #6c757d;
+  border: 1px solid #dee2e6;
+  border-radius: 999px;
+  padding: 0.15rem 0.6rem;
+}
+
+#editor-status {
+  font-size: 0.8rem;
+  opacity: 0.85;
+}
+
+/* Download menu, kept dependency-free */
+.menu-wrap {
+  position: relative;
+}
+
+.menu {
+  display: none;
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.35rem);
+  min-width: 15rem;
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+  padding: 0.35rem 0;
+  z-index: 30;
+}
+
+.menu.open {
+  display: block;
+}
+
+.menu button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: none;
+  padding: 0.4rem 1rem;
+  font-size: 0.875rem;
+}
+
+.menu button:hover {
+  background: #f1f3f7;
+}
+
+.menu-heading {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #adb5bd;
+  padding: 0.5rem 1rem 0.15rem;
+}
+
+/* ------------------------------------------------------------------ layout */
+
+.editor-main {
+  padding: 1.5rem 1.25rem 0;
+}
 
 .editor-layout {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 20rem;
   gap: 1.5rem;
   align-items: start;
+  max-width: 76rem;
+  margin: 0 auto;
+}
+
+.editor-layout.readonly {
+  grid-template-columns: minmax(0, 1fr);
+  max-width: 52rem;
 }
 
 @media (max-width: 900px) {
   .editor-layout {
     grid-template-columns: minmax(0, 1fr);
   }
-}
-
-.editor-toolbar {
-  position: sticky;
-  top: 0;
-  z-index: 5;
-  background: #fff;
-  border-bottom: 1px solid #dee2e6;
-  padding: 0.5rem 0;
-  margin-bottom: 1rem;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-  align-items: center;
-}
-
-.editor-toolbar .sep {
-  width: 1px;
-  height: 1.5rem;
-  background: #dee2e6;
-  margin: 0 0.35rem;
 }
 
 .editor-paper {
@@ -44,7 +175,9 @@
   min-height: 60vh;
 }
 
-.ProseMirror {
+/* --------------------------------------------------------------- the bill */
+
+.bill-doc {
   font-family: "Times New Roman", Times, serif;
   font-size: 12pt;
   line-height: 2;
@@ -54,7 +187,7 @@
   counter-reset: billsection;
 }
 
-.ProseMirror p {
+.bill-doc p {
   margin: 0 0 0.75rem 0;
 }
 
@@ -64,6 +197,10 @@
   text-align: center;
   letter-spacing: 0.05em;
   margin-bottom: 1rem;
+}
+
+.bill-title:empty::after {
+  content: "\00a0";
 }
 
 .enacting-clause {
@@ -78,9 +215,10 @@
 }
 
 /* Rule 3: bill sections are numbered consecutively and only the first spells
-   out the word "Section". Derived from document order so it cannot drift. */
+   out the word "Section". Derived from document order so it cannot drift.
+   Rule 11.4: a space follows the section symbol. */
 .bill-section > .section-lead::before {
-  content: "\00a7 " counter(billsection) ". ";
+  content: "\00a7\0020" counter(billsection) ". ";
 }
 
 .bill-section:first-of-type > .section-lead::before {
@@ -115,27 +253,24 @@
 }
 
 /* Rule 11.1: additions are underlined, deletions stay in the bill inside
-   brackets. The brackets are generated so they cannot be edited away. */
-.ProseMirror u.ins {
+   brackets. The brackets are drawn by CSS so they cannot be edited away. */
+.bill-doc u.ins {
   text-decoration: underline;
   text-decoration-skip-ink: none;
 }
 
-.ProseMirror span.del::before {
+.bill-doc span.del::before {
   content: "[";
 }
-.ProseMirror span.del::after {
+.bill-doc span.del::after {
   content: "]";
 }
-.ProseMirror span.del {
+.bill-doc span.del {
   color: #8b0000;
 }
 
-.kind-repeal > .section-lead {
-  font-variant: none;
-}
+/* ------------------------------------------------------------ style checks */
 
-/* Style checks */
 .lint {
   border-bottom: 2px dotted transparent;
 }
@@ -152,7 +287,7 @@
 
 .editor-sidebar {
   position: sticky;
-  top: 4rem;
+  top: 8rem;
   font-family: "Be Vietnam Pro", sans-serif;
 }
 
@@ -167,14 +302,14 @@
   text-align: left;
   background: none;
   border: 0;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid #e9ecef;
   padding: 0.5rem 0.25rem;
   font-size: 0.85rem;
   line-height: 1.4;
 }
 
 .issue:hover {
-  background: #f6f8fb;
+  background: #eef2f9;
 }
 
 .issue-rule {
@@ -188,7 +323,8 @@
   color: #444;
 }
 
-/* Modals, kept dependency-free */
+/* ------------------------------------------------------------------ modals */
+
 .editor-modal {
   display: none;
   position: fixed;

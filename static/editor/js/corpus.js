@@ -158,12 +158,8 @@ export function buildBillSection({
 // The starting document: a title, the enacting clause, and an effective date
 // (Rules 2 and 6).
 export function emptyBill(code = "administrative code") {
-  const c = CODES[code] || CODES["administrative code"];
   return schema.nodes.doc.create(null, [
-    schema.nodes.bill_title.create(
-      null,
-      schema.text(`To amend the ${c.full}, in relation to `)
-    ),
+    schema.nodes.bill_title.create({ code, subject: "" }),
     schema.nodes.enacting_clause.create(),
     schema.nodes.bill_section.create({ kind: "effective" }, [
       schema.nodes.section_lead.create(

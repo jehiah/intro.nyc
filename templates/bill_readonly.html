@@ -1,0 +1,22 @@
+{{template "base" .}}
+{{define "title"}}{{.Title}}{{end}}
+
+{{define "nav"}}
+<nav class="editor-nav readonly-nav">
+  <div class="control-row">
+    <span class="readonly-badge"><i class="bi bi-eye"></i> Read only</span>
+    <span class="rule-cite">Last saved {{Time .Updated}}</span>
+    <div class="control-right">
+      <a class="btn btn-sm btn-outline-secondary" href="{{.Root}}">Open the editor</a>
+    </div>
+  </div>
+</nav>
+{{end}}
+
+{{define "middle"}}
+<div class="editor-layout readonly">
+  <div class="editor-paper">
+    {{.Bill}}
+  </div>
+</div>
+{{end}}

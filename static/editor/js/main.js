@@ -1,5 +1,5 @@
-// Editor wiring: ProseMirror setup, the law-section picker, the reference
-// builder, style checks and export.
+// Editor wiring: ProseMirror setup, the title nav, the law-section picker, the
+// reference builder, style checks, export and persistence.
 
 import { EditorState, Plugin, TextSelection } from "prosemirror-state";
 import { EditorView, Decoration, DecorationSet } from "prosemirror-view";
@@ -7,7 +7,7 @@ import { keymap } from "prosemirror-keymap";
 import { baseKeymap, toggleMark } from "prosemirror-commands";
 import { history, undo, redo } from "prosemirror-history";
 
-import { schema, designatorLabel } from "./schema.js";
+import { schema, designatorLabel, titleText } from "./schema.js";
 import {
   trackedChangesPlugin,
   trackedBackspace,
@@ -31,19 +31,32 @@ import {
 } from "./corpus.js";
 import { buildReference, SUBUNIT_LEVELS } from "./refs.js";
 import { runChecks } from "./lint.js";
-import { toPlainText, toAdoptedText, toRichText } from "./serialize.js";
-
-const DRAFT_KEY = "intro.nyc.editor.draft";
+import {
+  toPlainText,
+  toMarkdown,
+  toAdoptedText,
+  toRichText,
+  toHTMLDocument,
+} from "./serialize.js";
+import {
+  loadLocal,
+  saveLocal,
+  clearLocal,
+  loadHandle,
+  saveDraft,
+  fetchDraft,
+  readOnlyURL,
+} from "./drafts.js";
 
 let view;
 let corpus = [];
-let problems = [];
+let handle = loadHandle();
 
 /* ------------------------------------------------------------------ plugins */
 
 function lintPlugin(onUpdate) {
   const compute = (doc) => {
-    problems = runChecks(doc, schema);
+    const problems = runChecks(doc, schema);
     onUpdate(problems);
     return DecorationSet.create(
       doc,
@@ -71,25 +84,31 @@ function lintPlugin(onUpdate) {
   });
 }
 
-function autosavePlugin() {
+function persistencePlugin() {
   let timer = null;
   return new Plugin({
     view() {
       return {
         update(v, prev) {
           if (v.state.doc.eq(prev.doc)) return;
+          saveLocal(v.state.doc.toJSON());
           clearTimeout(timer);
-          timer = setTimeout(() => {
-            localStorage.setItem(
-              DRAFT_KEY,
-              JSON.stringify(v.state.doc.toJSON())
-            );
-            setStatus("Draft saved locally");
-          }, 500);
+          timer = setTimeout(() => persist(v.state.doc), 900);
         },
       };
     },
   });
+}
+
+async function persist(doc) {
+  setStatus("Saving\u2026");
+  try {
+    handle = await saveDraft(handle, titleText(doc.firstChild.attrs), doc.toJSON());
+    setStatus("Saved");
+  } catch (e) {
+    console.error(e);
+    setStatus("Saved in this browser only");
+  }
 }
 
 function editorKeymap() {
@@ -111,8 +130,6 @@ function editorKeymap() {
   });
 }
 
-/* --------------------------------------------------------------------- init */
-
 function createState(doc) {
   return EditorState.create({
     doc,
@@ -122,20 +139,28 @@ function createState(doc) {
       keymap(baseKeymap),
       trackedChangesPlugin(),
       lintPlugin(renderProblems),
-      autosavePlugin(),
+      persistencePlugin(),
     ],
   });
 }
 
-function loadDraft() {
-  const saved = localStorage.getItem(DRAFT_KEY);
-  if (!saved) return emptyBill();
-  try {
-    return schema.nodeFromJSON(JSON.parse(saved));
-  } catch (e) {
-    console.warn("could not restore draft", e);
-    return emptyBill();
-  }
+/* --------------------------------------------------------------- title nav */
+
+function syncTitleInputs() {
+  const { code, subject } = view.state.doc.firstChild.attrs;
+  document.getElementById("title-code").value = code;
+  document.getElementById("title-subject").value = subject;
+}
+
+function setTitleAttrs(attrs) {
+  const current = view.state.doc.firstChild.attrs;
+  const tr = view.state.tr
+    .setMeta(TRACKED, true)
+    // Title edits are their own undo stream; they should not interleave with
+    // amendments to the bill text.
+    .setMeta("addToHistory", false)
+    .setNodeMarkup(0, null, { ...current, ...attrs });
+  view.dispatch(tr);
 }
 
 /* ------------------------------------------------------------ document edits */
@@ -170,7 +195,7 @@ function insertText(text) {
   view.focus();
 }
 
-/* ----------------------------------------------------------------- UI: modal */
+/* ---------------------------------------------------------------- UI: chrome */
 
 function openModal(id) {
   document.getElementById(id).classList.add("open");
@@ -178,9 +203,14 @@ function openModal(id) {
 function closeModal(id) {
   document.getElementById(id).classList.remove("open");
 }
-
 function setStatus(text) {
   document.getElementById("editor-status").textContent = text;
+}
+function escapeHTML(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
 }
 
 /* ------------------------------------------------------- UI: section picker */
@@ -218,6 +248,14 @@ function renderPickerBlocks() {
   renderPickerPreview();
 }
 
+function selectedBlocks(section) {
+  const checked = [
+    ...document.querySelectorAll("#picker-blocks input:checked"),
+  ].map((el) => Number(el.value));
+  const indices = checked.length ? checked : [0];
+  return indices.map((i) => section.blocks[i]).filter(Boolean);
+}
+
 function renderPickerPreview() {
   const cite = document.getElementById("picker-section").value;
   const operation = document.querySelector(
@@ -248,15 +286,7 @@ function renderPickerPreview() {
   document.getElementById("picker-history").textContent =
     section.history && section.history.note
       ? section.history.note
-      : "No amendment history recorded — no recital required (Rule 3.1.2).";
-}
-
-function selectedBlocks(section) {
-  const checked = [
-    ...document.querySelectorAll("#picker-blocks input:checked"),
-  ].map((el) => Number(el.value));
-  const indices = checked.length ? checked : [0];
-  return indices.map((i) => section.blocks[i]).filter(Boolean);
+      : "No amendment history recorded \u2014 no recital required (Rule 3.1.2).";
 }
 
 function insertFromPicker() {
@@ -285,24 +315,22 @@ function insertFromPicker() {
 
 /* ---------------------------------------------------- UI: reference builder */
 
-function renderReferencePreview() {
-  document.getElementById("ref-preview").textContent = currentReference();
-}
-
 function currentReference() {
   const cite = document.getElementById("ref-cite").value.trim() || "___";
   const context = document.getElementById("ref-context").value;
   const chain = SUBUNIT_LEVELS.map((level) => ({
     level,
-    designator: document
-      .getElementById("ref-" + level)
-      .value.trim(),
+    designator: document.getElementById("ref-" + level).value.trim(),
   })).filter((u) => u.designator);
 
   const anchorValue = document.getElementById("ref-anchor").value;
   const anchor = anchorValue === "none" ? null : anchorValue;
 
   return buildReference({ chain, cite, context, anchor });
+}
+
+function renderReferencePreview() {
+  document.getElementById("ref-preview").textContent = currentReference();
 }
 
 /* -------------------------------------------------------- UI: style checks */
@@ -337,6 +365,10 @@ function renderProblems(list) {
         : ""
     }`;
     item.addEventListener("click", () => {
+      if (problem.to === 0) {
+        document.getElementById("title-subject").focus();
+        return;
+      }
       const tr = view.state.tr.setSelection(
         TextSelection.create(
           view.state.doc,
@@ -362,6 +394,11 @@ function download(filename, text, type = "text/plain") {
   URL.revokeObjectURL(url);
 }
 
+async function copyText(text, label) {
+  await navigator.clipboard.writeText(text);
+  setStatus(label);
+}
+
 async function copyRichText() {
   const html = toRichText(view.state.doc);
   const text = toPlainText(view.state.doc);
@@ -372,38 +409,65 @@ async function copyRichText() {
         "text/plain": new Blob([text], { type: "text/plain" }),
       }),
     ]);
-    setStatus("Copied — paste into the Legislative Division template");
+    setStatus("Copied \u2014 paste into the Legislative Division template");
   } catch (e) {
-    await navigator.clipboard.writeText(text);
-    setStatus("Copied as plain text");
+    await copyText(text, "Copied as plain text");
   }
 }
 
-/* ----------------------------------------------------------------- bootstrap */
+const EXPORTS = {
+  "copy-rich": copyRichText,
+  "copy-text": () => copyText(toPlainText(view.state.doc), "Copied bill text"),
+  "download-text": () => download("bill.txt", toPlainText(view.state.doc)),
+  "copy-markdown": () =>
+    copyText(toMarkdown(view.state.doc), "Copied markdown"),
+  "download-markdown": () =>
+    download("bill.md", toMarkdown(view.state.doc), "text/markdown"),
+  "download-html": () =>
+    download("bill.html", toHTMLDocument(view.state.doc), "text/html"),
+  "download-adopted": () =>
+    download("bill-as-adopted.txt", toAdoptedText(view.state.doc)),
+  "download-json": () =>
+    download(
+      "bill.json",
+      JSON.stringify(view.state.doc.toJSON(), null, 2),
+      "application/json"
+    ),
+};
 
-function escapeHTML(s) {
-  return String(s)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
+/* ---------------------------------------------------------------- UI: share */
+
+async function share() {
+  setStatus("Saving\u2026");
+  try {
+    await persist(view.state.doc);
+  } catch (e) {
+    /* persist reports its own status */
+  }
+  if (!handle) {
+    setStatus("Could not create a share link");
+    return;
+  }
+  const url = readOnlyURL(handle.id);
+  document.getElementById("share-url").value = url;
+  document.getElementById("share-open").href = url;
+  openModal("modal-share");
 }
+
+/* ----------------------------------------------------------------- bootstrap */
 
 function wireUI() {
   document
     .getElementById("btn-insert-law")
     .addEventListener("click", () => openModal("modal-picker"));
-  document
-    .getElementById("btn-insert-ref")
-    .addEventListener("click", () => {
-      renderReferencePreview();
-      openModal("modal-ref");
-    });
-  document
-    .getElementById("btn-mark-deleted")
-    .addEventListener("click", () => {
-      markDeleted(view.state, view.dispatch.bind(view));
-      view.focus();
-    });
+  document.getElementById("btn-insert-ref").addEventListener("click", () => {
+    renderReferencePreview();
+    openModal("modal-ref");
+  });
+  document.getElementById("btn-mark-deleted").addEventListener("click", () => {
+    markDeleted(view.state, view.dispatch.bind(view));
+    view.focus();
+  });
   document.getElementById("btn-restore").addEventListener("click", () => {
     restoreDeleted(view.state, view.dispatch.bind(view));
     view.focus();
@@ -417,29 +481,47 @@ function wireUI() {
     view.focus();
   });
   document.getElementById("btn-new").addEventListener("click", () => {
-    if (!confirm("Discard the current draft and start a new bill?")) return;
-    localStorage.removeItem(DRAFT_KEY);
+    if (!confirm("Start a new bill? The current draft link stays available.")) {
+      return;
+    }
+    clearLocal();
+    handle = null;
     view.updateState(createState(emptyBill()));
+    syncTitleInputs();
     setStatus("New bill");
   });
 
   document
-    .getElementById("btn-copy-rich")
-    .addEventListener("click", copyRichText);
-  document.getElementById("btn-export-txt").addEventListener("click", () => {
-    download("bill.txt", toPlainText(view.state.doc));
-  });
+    .getElementById("title-code")
+    .addEventListener("change", (e) => setTitleAttrs({ code: e.target.value }));
   document
-    .getElementById("btn-export-adopted")
-    .addEventListener("click", () => {
-      download("bill-as-adopted.txt", toAdoptedText(view.state.doc));
-    });
-  document.getElementById("btn-export-json").addEventListener("click", () => {
-    download(
-      "bill.json",
-      JSON.stringify(view.state.doc.toJSON(), null, 2),
-      "application/json"
+    .getElementById("title-subject")
+    .addEventListener("input", (e) =>
+      setTitleAttrs({ subject: e.target.value })
     );
+
+  // Download menu
+  const menu = document.getElementById("download-menu");
+  const menuButton = document.getElementById("btn-download");
+  menuButton.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const open = menu.classList.toggle("open");
+    menuButton.setAttribute("aria-expanded", String(open));
+  });
+  document.addEventListener("click", () => {
+    menu.classList.remove("open");
+    menuButton.setAttribute("aria-expanded", "false");
+  });
+  menu.addEventListener("click", (e) => {
+    const action = e.target.dataset && e.target.dataset.export;
+    if (!action) return;
+    menu.classList.remove("open");
+    EXPORTS[action]();
+  });
+
+  document.getElementById("btn-share").addEventListener("click", share);
+  document.getElementById("btn-share-copy").addEventListener("click", () => {
+    copyText(document.getElementById("share-url").value, "Share link copied");
   });
 
   document.querySelectorAll("[data-close]").forEach((el) => {
@@ -459,30 +541,65 @@ function wireUI() {
     .getElementById("btn-picker-insert")
     .addEventListener("click", insertFromPicker);
 
-  ["ref-cite", "ref-context", "ref-anchor", ...SUBUNIT_LEVELS.map((l) => "ref-" + l)]
-    .forEach((id) =>
-      document.getElementById(id).addEventListener("input", renderReferencePreview)
-    );
-  document
-    .getElementById("ref-context")
-    .addEventListener("change", renderReferencePreview);
+  [
+    "ref-cite",
+    "ref-context",
+    "ref-anchor",
+    ...SUBUNIT_LEVELS.map((l) => "ref-" + l),
+  ].forEach((id) => {
+    const el = document.getElementById(id);
+    el.addEventListener("input", renderReferencePreview);
+    el.addEventListener("change", renderReferencePreview);
+  });
   document.getElementById("btn-ref-insert").addEventListener("click", () => {
     insertText(currentReference());
     closeModal("modal-ref");
   });
 }
 
+// A draft named in the URL wins; otherwise resume this browser's draft.
+async function initialDoc() {
+  const requested = new URLSearchParams(location.search).get("d");
+  const id = requested || (handle && handle.id);
+  if (id) {
+    try {
+      const draft = await fetchDraft(id);
+      if (requested && (!handle || handle.id !== requested)) {
+        // Opened someone else's draft: it can be edited locally and saved as a
+        // new draft, but not written back over theirs.
+        handle = null;
+      }
+      return schema.nodeFromJSON(draft.doc);
+    } catch (e) {
+      console.warn(e);
+    }
+  }
+  const local = loadLocal();
+  if (local) {
+    try {
+      return schema.nodeFromJSON(local);
+    } catch (e) {
+      console.warn("could not restore local draft", e);
+    }
+  }
+  return emptyBill();
+}
+
 async function main() {
   view = new EditorView(document.getElementById("editor"), {
-    state: createState(loadDraft()),
+    state: createState(emptyBill()),
+    attributes: { class: "bill-doc" },
   });
 
   wireUI();
+  syncTitleInputs();
+
+  view.updateState(createState(await initialDoc()));
+  syncTitleInputs();
 
   try {
     corpus = await loadCorpus();
-    const select = document.getElementById("picker-section");
-    select.innerHTML = corpus
+    document.getElementById("picker-section").innerHTML = corpus
       .map(
         (s) =>
           `<option value="${escapeHTML(s.cite)}">\u00a7 ${escapeHTML(

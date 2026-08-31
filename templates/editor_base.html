@@ -1,0 +1,106 @@
+{{define "base"}}
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{template "title" .}}</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.2/css/bootstrap.min.css" integrity="sha512-b2QcS5SsA8tZodcDtGRELiGv5SaKSk1vDHDaQRda0htPYWZ6046lr3kJ5bAAQdpV2mmA/4v0wQF9MyU6/pDIAg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="shortcut icon" type="image/png" href="/static/intro_nyc_logo.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap-icons/1.11.3/font/bootstrap-icons.min.css" integrity="sha512-dPXYcDub/aeb08c63jRq/k6GaKccl256JQy/AnOq7CAnEZ9FzSL9wSbcZkMp4R26vBsMLFYH4kQ67/bbV8XaCQ==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="/static/editor/editor.css">
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@200;400;500&display=swap');
+
+body {
+  font-family: 'Be Vietnam Pro', sans-serif;
+  background: #f4f5f7;
+}
+
+.brandbar {
+  background: #2f56a6;
+  color: #fff;
+  padding: .4rem 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+.brandbar a {
+  color: inherit;
+  text-decoration: none;
+}
+.brandbar .brand {
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: .4rem;
+}
+.brandbar .brand img {
+  width: 28px;
+  height: 28px;
+}
+.brandbar .brand-sub {
+  font-weight: 200;
+  opacity: .8;
+}
+.brandbar-right {
+  margin-left: auto;
+  font-size: .85rem;
+  font-weight: 200;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.btn-primary {
+  background: #2f56a6;
+  border-color: #2f56a6;
+}
+
+footer {
+  text-align: center;
+  font-size: .75rem;
+  color: #999;
+  padding: 2rem 1rem;
+}
+footer a:link, footer a:visited {
+  color: #777;
+}
+footer p {
+  margin-bottom: .5rem;
+}
+</style>
+{{block "head" .}}{{end}}
+
+</head>
+<body>
+
+<nav class="brandbar">
+  <a class="brand" href="{{.Root}}">
+    <img src="/static/intro_nyc_logo.png" alt="">intro.nyc <span class="brand-sub">editor</span></a>
+  <div class="brandbar-right">
+    {{block "brandbar" .}}{{end}}
+    <a href="https://intro.nyc/"><i class="bi bi-box-arrow-up-right"></i> intro.nyc</a>
+  </div>
+</nav>
+
+{{block "nav" .}}{{end}}
+
+<main class="editor-main">
+  {{ template "middle" .}}
+</main>
+
+<footer>
+<p>A drafting environment for New York City Council legislation, following the
+<a href="https://council.nyc.gov/legislation/">NYC Bill Drafting Manual</a>.</p>
+<p>Made with ❤️ by <a href="https://jehiah.cz/">@jehiah</a>. Code on <a href="https://github.com/jehiah/intro.nyc/">GitHub</a>.</p>
+</footer>
+
+{{ block "javascript" .}}{{end}}
+
+  </body>
+</html>
+{{end}}
