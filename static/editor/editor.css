@@ -1,0 +1,238 @@
+/* Legislation editor.
+   The document surface deliberately imitates the printed bill: Times New Roman
+   12pt, double-spaced, justified (Rule 2). */
+
+.editor-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 20rem;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+@media (max-width: 900px) {
+  .editor-layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.editor-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+  background: #fff;
+  border-bottom: 1px solid #dee2e6;
+  padding: 0.5rem 0;
+  margin-bottom: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+}
+
+.editor-toolbar .sep {
+  width: 1px;
+  height: 1.5rem;
+  background: #dee2e6;
+  margin: 0 0.35rem;
+}
+
+.editor-paper {
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 3px;
+  padding: 2.5rem 3rem;
+  min-height: 60vh;
+}
+
+.ProseMirror {
+  font-family: "Times New Roman", Times, serif;
+  font-size: 12pt;
+  line-height: 2;
+  text-align: justify;
+  white-space: pre-wrap;
+  outline: none;
+  counter-reset: billsection;
+}
+
+.ProseMirror p {
+  margin: 0 0 0.75rem 0;
+}
+
+.bill-title::before {
+  content: "A LOCAL LAW";
+  display: block;
+  text-align: center;
+  letter-spacing: 0.05em;
+  margin-bottom: 1rem;
+}
+
+.enacting-clause {
+  text-decoration: underline;
+  user-select: none;
+}
+
+.bill-section {
+  counter-increment: billsection;
+  display: block;
+  margin-bottom: 1rem;
+}
+
+/* Rule 3: bill sections are numbered consecutively and only the first spells
+   out the word "Section". Derived from document order so it cannot drift. */
+.bill-section > .section-lead::before {
+  content: "\00a7 " counter(billsection) ". ";
+}
+
+.bill-section:first-of-type > .section-lead::before {
+  content: "Section 1. ";
+}
+
+.section-lead {
+  text-indent: 2em;
+}
+
+/* The designator is drawn, not typed, so the law cannot be renumbered by
+   accident. */
+.law-block[data-label]:not([data-label=""])::before {
+  content: attr(data-label) " ";
+}
+
+.law-block {
+  text-indent: 2em;
+}
+
+.level-paragraph {
+  padding-left: 1.5em;
+}
+.level-subparagraph {
+  padding-left: 3em;
+}
+.level-clause {
+  padding-left: 4.5em;
+}
+.level-item {
+  padding-left: 6em;
+}
+
+/* Rule 11.1: additions are underlined, deletions stay in the bill inside
+   brackets. The brackets are generated so they cannot be edited away. */
+.ProseMirror u.ins {
+  text-decoration: underline;
+  text-decoration-skip-ink: none;
+}
+
+.ProseMirror span.del::before {
+  content: "[";
+}
+.ProseMirror span.del::after {
+  content: "]";
+}
+.ProseMirror span.del {
+  color: #8b0000;
+}
+
+.kind-repeal > .section-lead {
+  font-variant: none;
+}
+
+/* Style checks */
+.lint {
+  border-bottom: 2px dotted transparent;
+}
+.lint-error {
+  border-bottom-color: #dc3545;
+  background: rgba(220, 53, 69, 0.07);
+}
+.lint-warning {
+  border-bottom-color: #fd7e14;
+}
+.lint-info {
+  border-bottom-color: #6c757d;
+}
+
+.editor-sidebar {
+  position: sticky;
+  top: 4rem;
+  font-family: "Be Vietnam Pro", sans-serif;
+}
+
+#issues {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.issue {
+  display: block;
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid #f0f0f0;
+  padding: 0.5rem 0.25rem;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.issue:hover {
+  background: #f6f8fb;
+}
+
+.issue-rule {
+  font-weight: 500;
+  color: #2f56a6;
+  margin-right: 0.25rem;
+}
+
+.issue-excerpt {
+  font-family: "Times New Roman", Times, serif;
+  color: #444;
+}
+
+/* Modals, kept dependency-free */
+.editor-modal {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 1050;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 3rem 1rem;
+  overflow-y: auto;
+}
+
+.editor-modal.open {
+  display: block;
+}
+
+.editor-modal .panel {
+  background: #fff;
+  border-radius: 4px;
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+
+.preview-box {
+  font-family: "Times New Roman", Times, serif;
+  font-size: 12pt;
+  background: #f8f9fa;
+  border-left: 3px solid #2f56a6;
+  padding: 0.75rem 1rem;
+  white-space: pre-wrap;
+}
+
+#picker-blocks {
+  max-height: 16rem;
+  overflow-y: auto;
+  border: 1px solid #dee2e6;
+  border-radius: 3px;
+  padding: 0.5rem 0.75rem;
+}
+
+#picker-blocks .form-check-label {
+  font-family: "Times New Roman", Times, serif;
+}
+
+.rule-cite {
+  font-size: 0.8rem;
+  color: #6c757d;
+}

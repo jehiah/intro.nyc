@@ -44,6 +44,7 @@ type App struct {
 	devFilePath   string
 	staticHandler http.Handler
 	templateFS    fs.FS
+	staticFS      fs.FS
 
 	cachedRedirects   map[IntroID]string
 	fileCache         map[string]CachedFile
@@ -189,6 +190,7 @@ func main() {
 		devFilePath:   *devFilePath,
 		staticHandler: http.FileServer(http.FS(static)),
 		templateFS:    content,
+		staticFS:      static,
 
 		cachedRedirects:   make(map[IntroID]string),
 		cachedLegislation: make(map[IntroID]*CachedLegislation),
@@ -196,6 +198,7 @@ func main() {
 	}
 	if *devMode {
 		app.templateFS = os.DirFS(".")
+		app.staticFS = os.DirFS(".")
 		app.staticHandler = http.StripPrefix("/static/", http.FileServer(http.Dir("static")))
 	}
 	app.legistar.LookupURL, err = url.Parse("https://legistar.council.nyc.gov/gateway.aspx?m=l&id=")
@@ -224,6 +227,8 @@ func main() {
 	router.HandleFunc("GET /councilmembers/{councilmember}", app.Councilmember)
 	router.HandleFunc("GET /local-laws", app.LocalLaws)
 	router.HandleFunc("GET /local-laws/{year}", app.LocalLaws)
+	router.HandleFunc("GET /editor", app.Editor)
+	router.HandleFunc("GET /editor/api/law", app.EditorLawCorpus)
 	router.HandleFunc("GET /data/{path}", app.ProxyJSON)
 	router.HandleFunc("GET /reports/", redirect("/reports/session")) // redirect -> /reports/session
 	router.Handle("GET /static/", app.staticHandler)

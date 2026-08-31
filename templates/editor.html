@@ -1,0 +1,170 @@
+{{template "base" .}}
+{{define "title"}}{{.Title}}{{end}}
+{{define "head"}}
+<link rel="stylesheet" href="/static/editor/editor.css">
+{{end}}
+
+{{define "middle"}}
+
+<div class="editor-toolbar">
+  <button type="button" class="btn btn-sm btn-primary" id="btn-insert-law"><i class="bi bi-file-earmark-plus"></i> Insert law section</button>
+  <button type="button" class="btn btn-sm btn-outline-primary" id="btn-insert-ref"><i class="bi bi-link-45deg"></i> Reference</button>
+  <span class="sep"></span>
+  <button type="button" class="btn btn-sm btn-outline-danger" id="btn-mark-deleted" title="Bracket the selection (Rule 11.1)">[ Delete ]</button>
+  <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-restore" title="Undo a bracketed deletion">Restore</button>
+  <span class="sep"></span>
+  <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-undo"><i class="bi bi-arrow-counterclockwise"></i></button>
+  <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-redo"><i class="bi bi-arrow-clockwise"></i></button>
+  <span class="sep"></span>
+  <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-copy-rich" title="Copy formatted for the Legislative Division Word template">Copy</button>
+  <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-export-txt">.txt</button>
+  <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-export-adopted" title="The text as it would read once adopted">As adopted</button>
+  <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-export-json">.json</button>
+  <span class="sep"></span>
+  <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-new">New bill</button>
+  <span class="ms-auto text-secondary small" id="editor-status">Loading&hellip;</span>
+</div>
+
+<div class="editor-layout">
+  <div>
+    <div class="editor-paper">
+      <div id="editor"></div>
+    </div>
+    <p class="rule-cite mt-2">
+      Typing inside amended law brackets what it replaces and underlines what it
+      adds, per Rule 11.1 of the
+      <a href="https://council.nyc.gov/legislation/">NYC Bill Drafting Manual</a>.
+      Backspace over bracketed text to restore it. Drafts are saved in this browser only.
+    </p>
+  </div>
+
+  <aside class="editor-sidebar">
+    <h6 class="text-uppercase text-secondary">Style checks <span class="badge bg-secondary" id="issue-count">0</span></h6>
+    <div id="issues"></div>
+  </aside>
+</div>
+
+<div class="editor-modal" id="modal-picker">
+  <div class="panel">
+    <h5>Insert a section of existing law</h5>
+
+    <div class="mb-3">
+      <label class="form-label" for="picker-section">Section</label>
+      <select class="form-select" id="picker-section"></select>
+      <div class="rule-cite mt-1" id="picker-history"></div>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Operation</label>
+      <div>
+        <div class="form-check form-check-inline">
+          <input class="form-check-input" type="radio" name="picker-operation" id="op-amend" value="amend" checked>
+          <label class="form-check-label" for="op-amend">Amend</label>
+        </div>
+        <div class="form-check form-check-inline">
+          <input class="form-check-input" type="radio" name="picker-operation" id="op-add" value="add">
+          <label class="form-check-label" for="op-add">Add new provision</label>
+        </div>
+        <div class="form-check form-check-inline">
+          <input class="form-check-input" type="radio" name="picker-operation" id="op-repeal" value="repeal">
+          <label class="form-check-label" for="op-repeal">Repeal</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Provisions to bring into the bill</label>
+      <div id="picker-blocks"></div>
+      <div class="form-check mt-2">
+        <input class="form-check-input" type="checkbox" id="picker-separate">
+        <label class="form-check-label" for="picker-separate">
+          Put each provision in its own bill section
+          <span class="rule-cite">(Rule 3.4.2; otherwise intervening text is included, Rule 3.4.1)</span>
+        </label>
+      </div>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label">Bill section lead-in <span class="rule-cite">(Rule 3.1)</span></label>
+      <div class="preview-box" id="picker-preview"></div>
+    </div>
+
+    <div class="text-end">
+      <button type="button" class="btn btn-outline-secondary" data-close="modal-picker">Cancel</button>
+      <button type="button" class="btn btn-primary" id="btn-picker-insert">Insert</button>
+    </div>
+  </div>
+</div>
+
+<div class="editor-modal" id="modal-ref">
+  <div class="panel">
+    <h5>Build a cross-reference <span class="rule-cite">(Rule 5)</span></h5>
+
+    <div class="row g-2 mb-3">
+      <div class="col-sm-6">
+        <label class="form-label" for="ref-cite">Section</label>
+        <input type="text" class="form-control" id="ref-cite" placeholder="17-507">
+      </div>
+      <div class="col-sm-6">
+        <label class="form-label" for="ref-context">Where the reference will live</label>
+        <select class="form-select" id="ref-context">
+          <option value="same">Same body of law &mdash; bare section number</option>
+          <option value="charter">In the code, pointing at the charter</option>
+          <option value="administrative">In the charter, pointing at the code</option>
+          <option value="unconsolidated-administrative">Unconsolidated, pointing at the code</option>
+          <option value="unconsolidated-charter">Unconsolidated, pointing at the charter</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="row g-2 mb-3">
+      <div class="col"><label class="form-label" for="ref-subdivision">Subdiv.</label><input class="form-control" id="ref-subdivision" placeholder="a"></div>
+      <div class="col"><label class="form-label" for="ref-paragraph">Para.</label><input class="form-control" id="ref-paragraph" placeholder="1"></div>
+      <div class="col"><label class="form-label" for="ref-subparagraph">Subpara.</label><input class="form-control" id="ref-subparagraph" placeholder="b"></div>
+      <div class="col"><label class="form-label" for="ref-clause">Clause</label><input class="form-control" id="ref-clause" placeholder="2"></div>
+      <div class="col"><label class="form-label" for="ref-item">Item</label><input class="form-control" id="ref-item" placeholder="A"></div>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label" for="ref-anchor">End the chain at <span class="rule-cite">(Rule 5.1.3)</span></label>
+      <select class="form-select" id="ref-anchor">
+        <option value="none">the section number</option>
+        <option value="this section">this section</option>
+        <option value="this subdivision">this subdivision</option>
+        <option value="this paragraph">this paragraph</option>
+      </select>
+    </div>
+
+    <div class="mb-3">
+      <div class="preview-box" id="ref-preview"></div>
+    </div>
+
+    <div class="text-end">
+      <button type="button" class="btn btn-outline-secondary" data-close="modal-ref">Cancel</button>
+      <button type="button" class="btn btn-primary" id="btn-ref-insert">Insert</button>
+    </div>
+  </div>
+</div>
+
+{{end}}
+
+{{define "javascript"}}
+<script type="importmap">
+{
+  "imports": {
+    "orderedmap": "https://esm.sh/orderedmap@2.1.1",
+    "rope-sequence": "https://esm.sh/rope-sequence@1.3.4",
+    "w3c-keyname": "https://esm.sh/w3c-keyname@2.2.8",
+    "prosemirror-model": "https://esm.sh/*prosemirror-model@1.22.3",
+    "prosemirror-transform": "https://esm.sh/*prosemirror-transform@1.10.0",
+    "prosemirror-state": "https://esm.sh/*prosemirror-state@1.4.3",
+    "prosemirror-view": "https://esm.sh/*prosemirror-view@1.34.3",
+    "prosemirror-keymap": "https://esm.sh/*prosemirror-keymap@1.2.2",
+    "prosemirror-commands": "https://esm.sh/*prosemirror-commands@1.6.0",
+    "prosemirror-history": "https://esm.sh/*prosemirror-history@1.4.1"
+  }
+}
+</script>
+<link rel="stylesheet" href="https://esm.sh/prosemirror-view@1.34.3/style/prosemirror.css">
+<script type="module" src="/static/editor/js/main.js"></script>
+{{end}}
