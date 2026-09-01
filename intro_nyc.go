@@ -11,6 +11,7 @@ import (
 	"io/fs"
 	"log"
 	"net/http"
+	"net/http/httputil"
 	"net/url"
 	"os"
 	"os/exec"
@@ -19,7 +20,10 @@ import (
 	"sync"
 	"time"
 
+	"cloud.google.com/go/firestore"
 	"cloud.google.com/go/storage"
+	firebase "firebase.google.com/go/v4"
+	"firebase.google.com/go/v4/auth"
 	"github.com/gorilla/handlers"
 	"github.com/jehiah/legislator/legistar"
 )
@@ -45,13 +49,18 @@ type App struct {
 	staticHandler http.Handler
 	templateFS    fs.FS
 	staticFS      fs.FS
-	drafts        *DraftStore
 
 	// Local checkout of the nyc_code_archive repository; empty means read from
 	// gs://intronyc/law/.
 	lawPath    string
 	lawIndexes map[string]*lawIndex
 	lawMutex   sync.RWMutex
+
+	// editor.intro.nyc: Firebase authentication and Firestore documents.
+	firebaseAuth    *auth.Client
+	firebaseProxy   http.Handler
+	firestore       *firestore.Client
+	firebaseProject string
 
 	cachedRedirects   map[IntroID]string
 	fileCache         map[string]CachedFile
@@ -189,22 +198,39 @@ func main() {
 	logRequests := flag.Bool("log-requests", false, "log requests")
 	devMode := flag.Bool("dev-mode", false, "development mode")
 	devFilePath := flag.String("file-path", "", "path to files normally retrieved from gs://intronyc/")
-	draftFile := flag.String("draft-file", "drafts.json", "path to the editor draft store")
 	lawPath := flag.String("law-path", "", "path to a local checkout of nyc_code_archive; defaults to gs://intronyc/law/")
 	flag.Parse()
+	projectID := "intro-nyc"
 
 	log.Print("starting server...")
 
-	client, err := storage.NewClient(context.Background())
+	ctx := context.Background()
+	client, err := storage.NewClient(ctx)
 	if err != nil {
 		log.Fatalf("Failed to create client: %v", err)
 	}
 	defer client.Close()
 
-	drafts, err := NewDraftStore(*draftFile)
+	firebaseApp, err := firebase.NewApp(ctx, &firebase.Config{
+		ProjectID:        projectID,
+		ServiceAccountID: "firebase-adminsdk-t81ga@intro-nyc.iam.gserviceaccount.com",
+	})
 	if err != nil {
-		log.Fatalf("Failed to open draft store: %v", err)
+		log.Fatalf("Failed to create firebase app: %v", err)
 	}
+	authClient, err := firebaseApp.Auth(ctx)
+	if err != nil {
+		log.Fatalf("Failed to create firebase auth client: %v", err)
+	}
+	firestoreClient, err := firestore.NewClient(ctx, projectID)
+	if err != nil {
+		log.Fatalf("Failed to create firestore client: %v", err)
+	}
+	defer firestoreClient.Close()
+
+	// https://firebase.google.com/docs/auth/web/redirect-best-practices
+	// Sign-in helpers are proxied so the flow stays first-party for Safari.
+	firebaseHost := &url.URL{Scheme: "https", Host: "intro-nyc.firebaseapp.com"}
 
 	app := &App{
 		legistar:      legistar.NewClient("nyc", os.Getenv("NYC_LEGISLATOR_TOKEN")),
@@ -214,9 +240,18 @@ func main() {
 		staticHandler: http.FileServer(http.FS(static)),
 		templateFS:    content,
 		staticFS:      static,
-		drafts:        drafts,
 		lawPath:       *lawPath,
 		lawIndexes:    make(map[string]*lawIndex),
+
+		firebaseAuth:    authClient,
+		firestore:       firestoreClient,
+		firebaseProject: projectID,
+		firebaseProxy: &httputil.ReverseProxy{
+			Rewrite: func(r *httputil.ProxyRequest) {
+				r.SetXForwarded()
+				r.SetURL(firebaseHost)
+			},
+		},
 
 		cachedRedirects:   make(map[IntroID]string),
 		cachedLegislation: make(map[IntroID]*CachedLegislation),
@@ -245,17 +280,23 @@ func main() {
 	fileRouter.HandleFunc("GET /{file}", app.FileRedirect)
 	fileRouter.HandleFunc("GET /{file}/local-law", app.LocalLaw)
 
-	// The editor is its own site. It is mounted at editor.intro.nyc in
-	// production and under /editor/ everywhere else.
+	// The editor is its own site at editor.intro.nyc.
 	editorRouter := http.NewServeMux()
-	editorRouter.HandleFunc("GET /{$}", app.Editor)
+	editorRouter.HandleFunc("GET /{$}", app.EditorIndex)
+	editorRouter.HandleFunc("GET /sign_in", app.EditorSignIn)
+	editorRouter.HandleFunc("GET /sign_out", app.EditorSignOut)
+	editorRouter.HandleFunc("POST /data/session", app.EditorNewSession)
+	editorRouter.HandleFunc("GET /new", app.EditorNewForm)
+	editorRouter.HandleFunc("POST /new", app.EditorNewPost)
+	editorRouter.HandleFunc("GET /d/{id}", app.EditorDocument)
+	editorRouter.HandleFunc("GET /api/draft/{id}", app.EditorGetDraft)
+	editorRouter.HandleFunc("POST /api/draft/{id}", app.EditorSaveDraft)
+	editorRouter.HandleFunc("POST /api/share/{id}", app.EditorShare)
 	editorRouter.HandleFunc("GET /api/law/datasets", app.EditorLawDatasets)
 	editorRouter.HandleFunc("GET /api/law/search", app.EditorLawSearch)
 	editorRouter.HandleFunc("GET /api/law/section/{dataset}/{path...}", app.EditorLawSection)
-	editorRouter.HandleFunc("POST /api/draft", app.EditorSaveDraft)
-	editorRouter.HandleFunc("GET /api/draft/{id}", app.EditorGetDraft)
-	editorRouter.HandleFunc("GET /d/{id}", app.EditorReadOnly)
 	editorRouter.Handle("GET /static/", app.staticHandler)
+	editorRouter.Handle("/__/auth/", app.firebaseProxy)
 
 	router := http.NewServeMux()
 

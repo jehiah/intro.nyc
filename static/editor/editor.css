@@ -411,3 +411,97 @@
   font-size: 0.8rem;
   color: #6c757d;
 }
+
+/* --------------------------------------------- sign in, document list, new */
+
+.susi,
+.documents,
+.new-bill {
+  max-width: 44rem;
+  margin: 2rem auto;
+}
+
+.susi h1,
+.documents h1,
+.new-bill h1 {
+  font-size: 1.6rem;
+}
+
+.susi .lead {
+  color: #495057;
+  font-weight: 200;
+}
+
+#auth-container {
+  margin-top: 2rem;
+}
+
+.documents-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+
+.document-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+}
+
+.document-list li + li {
+  border-top: 1px solid #eef0f3;
+}
+
+.document-list a {
+  display: block;
+  padding: 0.85rem 1.15rem;
+  text-decoration: none;
+  color: inherit;
+}
+
+.document-list a:hover {
+  background: #eef2f9;
+}
+
+.document-title {
+  display: block;
+  font-family: "Times New Roman", Times, serif;
+  font-size: 1.05rem;
+}
+
+.document-meta {
+  display: block;
+  font-size: 0.78rem;
+  color: #868e96;
+  margin-top: 0.15rem;
+}
+
+.badge-public {
+  color: #2f56a6;
+}
+
+.documents .empty {
+  color: #6c757d;
+}
+
+.type-options .form-check {
+  padding: 0.5rem 0.5rem 0.5rem 2rem;
+  border-radius: 4px;
+}
+
+.type-options .form-check:hover {
+  background: #eef2f9;
+}
+
+.type-options .form-check-label .rule-cite {
+  display: block;
+  font-family: "Times New Roman", Times, serif;
+}
+
+.brandbar-user {
+  opacity: 0.85;
+}

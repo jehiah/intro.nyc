@@ -5,9 +5,16 @@
 <nav class="editor-nav readonly-nav">
   <div class="control-row">
     <span class="readonly-badge"><i class="bi bi-eye"></i> Read only</span>
-    <span class="rule-cite">Last saved {{Time .Updated}}</span>
+    <span class="rule-cite">
+      Last edited {{Time .Document.LastModified}}
+      {{if .Document.Owner}}by {{.Document.Owner}}{{end}}
+    </span>
     <div class="control-right">
-      <a class="btn btn-sm btn-outline-secondary" href="/">Open the editor</a>
+      {{if .User.SignedIn}}
+      <a class="btn btn-sm btn-outline-secondary" href="/">Bills</a>
+      {{else}}
+      <a class="btn btn-sm btn-outline-secondary" href="/sign_in">Sign in</a>
+      {{end}}
     </div>
   </div>
 </nav>

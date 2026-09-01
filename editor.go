@@ -9,38 +9,184 @@ import (
 	"net/http"
 	"strings"
 	"time"
+
+	"github.com/google/uuid"
 )
 
 const maxDraftBytes = 1 << 20
 
-// Editor renders the drafting editor.
-func (a *App) Editor(w http.ResponseWriter, r *http.Request) {
-	T := Printer(r.Context())
-	templateName := "editor.html"
-	t := newTemplateWithBase(a.templateFS, "editor_base.html", templateName)
+// renderEditor executes an editor template against the shared editor chrome.
+func (a *App) renderEditor(w http.ResponseWriter, r *http.Request, name string, body map[string]any) {
+	if _, ok := body["User"]; !ok {
+		body["User"] = a.User(r)
+	}
+	body["FirebaseProject"] = a.firebaseProject
+	body["AuthDomain"] = a.authDomain(r)
+
+	t := newTemplateWithBase(a.templateFS, "editor_base.html", name)
 	w.Header().Set("content-type", "text/html")
-	a.addExpireHeaders(w, time.Minute*5)
-	type Page struct {
-		Page  string
-		Title string
-	}
-	body := Page{
-		Page:  "editor",
-		Title: T.Sprintf("Legislation Editor"),
-	}
-	if err := t.ExecuteTemplate(w, templateName, body); err != nil {
+	if err := t.ExecuteTemplate(w, name, body); err != nil {
 		log.Print(err)
 		http.Error(w, "Internal Server Error", 500)
 	}
 }
 
-// EditorSaveDraft creates or updates a draft.
+// EditorIndex is the editor home: sign-in when signed out, the document list
+// when signed in.
+func (a *App) EditorIndex(w http.ResponseWriter, r *http.Request) {
+	user := a.User(r)
+	if !user.SignedIn() {
+		a.EditorSignIn(w, r)
+		return
+	}
+
+	documents, err := a.listDocuments(r.Context(), user)
+	if err != nil {
+		log.Printf("editor list: %s", err)
+		http.Error(w, "Internal Server Error", 500)
+		return
+	}
+
+	type row struct {
+		Document
+		Shared bool
+	}
+	rows := make([]row, 0, len(documents))
+	for _, d := range documents {
+		rows = append(rows, row{Document: d, Shared: d.UID != user.UID})
+	}
+
+	a.renderEditor(w, r, "editor_documents.html", map[string]any{
+		"Title":     "Bills",
+		"User":      user,
+		"Documents": rows,
+	})
+}
+
+// EditorNewForm asks for the title and type of a new bill (Rule 2.1).
+func (a *App) EditorNewForm(w http.ResponseWriter, r *http.Request) {
+	user := a.User(r)
+	if !user.SignedIn() {
+		http.Redirect(w, r, "/", 302)
+		return
+	}
+	a.renderEditor(w, r, "editor_new.html", map[string]any{
+		"Title": "New bill",
+		"User":  user,
+	})
+}
+
+// EditorNewPost creates a document and opens it.
+func (a *App) EditorNewPost(w http.ResponseWriter, r *http.Request) {
+	user := a.User(r)
+	if !user.SignedIn() {
+		http.Redirect(w, r, "/", 302)
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Bad Request", 400)
+		return
+	}
+
+	code := r.PostForm.Get("code")
+	if _, ok := titlePrefixes[code]; !ok {
+		code = "administrative code"
+	}
+	title := strings.TrimSpace(r.PostForm.Get("title"))
+
+	document := newDocument(uuid.NewString(), user, title, code)
+	if err := a.putDocument(r.Context(), document); err != nil {
+		log.Printf("editor create: %s", err)
+		http.Error(w, "Internal Server Error", 500)
+		return
+	}
+	http.Redirect(w, r, "/d/"+document.ID, 302)
+}
+
+// EditorDocument renders a document: the editor for those who may change it,
+// and the read-only bill for everyone else who may see it.
+func (a *App) EditorDocument(w http.ResponseWriter, r *http.Request) {
+	user := a.User(r)
+	document, err := a.getDocument(r.Context(), r.PathValue("id"))
+	if err == errDocumentNotFound {
+		http.Error(w, "Not Found", 404)
+		return
+	}
+	if err != nil {
+		log.Printf("editor get: %s", err)
+		http.Error(w, "Internal Server Error", 500)
+		return
+	}
+
+	access := document.AccessFor(user)
+	if !access.CanView() {
+		if !user.SignedIn() {
+			http.Redirect(w, r, "/sign_in?next="+document.ID, 302)
+			return
+		}
+		http.Error(w, "Forbidden", 403)
+		return
+	}
+
+	w.Header().Set("cache-control", "no-store")
+
+	if !access.CanEdit() {
+		var doc pmNode
+		if err := json.Unmarshal([]byte(document.Doc), &doc); err != nil {
+			log.Printf("editor render %s: %s", document.ID, err)
+			http.Error(w, "Internal Server Error", 500)
+			return
+		}
+		a.renderEditor(w, r, "bill_readonly.html", map[string]any{
+			"Title":    document.DisplayTitle(),
+			"User":     user,
+			"Document": document,
+			"Bill":     renderBill(&doc),
+		})
+		return
+	}
+
+	a.renderEditor(w, r, "editor.html", map[string]any{
+		"Title":    document.DisplayTitle(),
+		"User":     user,
+		"Document": document,
+		"IsOwner":  access == AccessOwner,
+	})
+}
+
+// EditorGetDraft returns the stored document for the editor to load.
+func (a *App) EditorGetDraft(w http.ResponseWriter, r *http.Request) {
+	document, access, ok := a.documentFor(w, r)
+	if !ok {
+		return
+	}
+	w.Header().Set("content-type", "application/json")
+	w.Header().Set("cache-control", "no-store")
+	json.NewEncoder(w).Encode(map[string]any{
+		"id":      document.ID,
+		"title":   document.Title,
+		"code":    document.Code,
+		"doc":     json.RawMessage(document.Doc),
+		"canEdit": access.CanEdit(),
+		"updated": document.LastModified,
+	})
+}
+
+// EditorSaveDraft stores a change from the editor.
 func (a *App) EditorSaveDraft(w http.ResponseWriter, r *http.Request) {
+	document, access, ok := a.documentFor(w, r)
+	if !ok {
+		return
+	}
+	if !access.CanEdit() {
+		http.Error(w, "Forbidden", 403)
+		return
+	}
+
 	var req struct {
-		ID     string          `json:"id"`
-		Secret string          `json:"secret"`
-		Title  string          `json:"title"`
-		Doc    json.RawMessage `json:"doc"`
+		Title string          `json:"title"`
+		Code  string          `json:"code"`
+		Doc   json.RawMessage `json:"doc"`
 	}
 	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, maxDraftBytes)).Decode(&req); err != nil {
 		http.Error(w, "Bad Request", 400)
@@ -51,12 +197,14 @@ func (a *App) EditorSaveDraft(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	draft, err := a.drafts.Save(req.ID, req.Secret, req.Title, req.Doc)
-	if err == errDraftForbidden {
-		http.Error(w, "Forbidden", 403)
-		return
+	document.Title = req.Title
+	if _, ok := titlePrefixes[req.Code]; ok {
+		document.Code = req.Code
 	}
-	if err != nil {
+	document.Doc = string(req.Doc)
+	document.LastModified = time.Now().UTC()
+
+	if err := a.putDocument(r.Context(), document); err != nil {
 		log.Printf("editor save: %s", err)
 		http.Error(w, "Internal Server Error", 500)
 		return
@@ -64,65 +212,75 @@ func (a *App) EditorSaveDraft(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("content-type", "application/json")
 	w.Header().Set("cache-control", "no-store")
+	json.NewEncoder(w).Encode(map[string]any{"updated": document.LastModified})
+}
+
+// EditorShare updates who may read or change a document. Only the owner may
+// change sharing.
+func (a *App) EditorShare(w http.ResponseWriter, r *http.Request) {
+	document, access, ok := a.documentFor(w, r)
+	if !ok {
+		return
+	}
+	if access != AccessOwner {
+		http.Error(w, "Forbidden", 403)
+		return
+	}
+
+	var req struct {
+		Editors []string `json:"editors"`
+		Viewers []string `json:"viewers"`
+		Public  bool     `json:"public"`
+	}
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<16)).Decode(&req); err != nil {
+		http.Error(w, "Bad Request", 400)
+		return
+	}
+
+	document.Editors = normalizeEmails(req.Editors)
+	// An address with edit access does not also need view access.
+	var viewers []string
+	for _, email := range normalizeEmails(req.Viewers) {
+		if !contains(document.Editors, email) {
+			viewers = append(viewers, email)
+		}
+	}
+	document.Viewers = viewers
+	document.Public = req.Public
+	document.LastModified = time.Now().UTC()
+
+	if err := a.putDocument(r.Context(), document); err != nil {
+		log.Printf("editor share: %s", err)
+		http.Error(w, "Internal Server Error", 500)
+		return
+	}
+
+	w.Header().Set("content-type", "application/json")
 	json.NewEncoder(w).Encode(map[string]any{
-		"id": draft.ID,
-		// Returned on save so the client can keep editing; possession of the
-		// read-only link alone never grants write access.
-		"secret":  draft.Secret,
-		"updated": draft.Updated,
+		"editors": document.Editors,
+		"viewers": document.Viewers,
+		"public":  document.Public,
 	})
 }
 
-// EditorGetDraft returns a draft for editing or reloading.
-func (a *App) EditorGetDraft(w http.ResponseWriter, r *http.Request) {
-	draft, ok := a.drafts.Get(r.PathValue("id"))
-	if !ok {
+// documentFor loads the document named in the path and checks read access.
+func (a *App) documentFor(w http.ResponseWriter, r *http.Request) (*Document, Access, bool) {
+	document, err := a.getDocument(r.Context(), r.PathValue("id"))
+	if err == errDocumentNotFound {
 		http.Error(w, "Not Found", 404)
-		return
+		return nil, AccessNone, false
 	}
-	w.Header().Set("content-type", "application/json")
-	w.Header().Set("cache-control", "no-store")
-	json.NewEncoder(w).Encode(draft.Public())
-}
-
-// EditorReadOnly renders a saved draft as a read-only bill.
-func (a *App) EditorReadOnly(w http.ResponseWriter, r *http.Request) {
-	draft, ok := a.drafts.Get(r.PathValue("id"))
-	if !ok {
+	if err != nil {
+		log.Printf("editor document: %s", err)
+		http.Error(w, "Internal Server Error", 500)
+		return nil, AccessNone, false
+	}
+	access := document.AccessFor(a.User(r))
+	if !access.CanView() {
 		http.Error(w, "Not Found", 404)
-		return
+		return nil, AccessNone, false
 	}
-
-	var doc pmNode
-	if err := json.Unmarshal(draft.Doc, &doc); err != nil {
-		log.Printf("editor read-only %s: %s", draft.ID, err)
-		http.Error(w, "Internal Server Error", 500)
-		return
-	}
-
-	templateName := "bill_readonly.html"
-	t := newTemplateWithBase(a.templateFS, "editor_base.html", templateName)
-	w.Header().Set("content-type", "text/html")
-	w.Header().Set("cache-control", "no-store")
-
-	type Page struct {
-		Page    string
-		Title   string
-		ID      string
-		Updated time.Time
-		Bill    template.HTML
-	}
-	body := Page{
-		Page:    "editor",
-		Title:   draft.Title,
-		ID:      draft.ID,
-		Updated: draft.Updated,
-		Bill:    renderBill(&doc),
-	}
-	if err := t.ExecuteTemplate(w, templateName, body); err != nil {
-		log.Print(err)
-		http.Error(w, "Internal Server Error", 500)
-	}
+	return document, access, true
 }
 
 /* ------------------------------------------------------- document rendering */

@@ -40,11 +40,13 @@
 
     <span class="sep"></span>
 
-    <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-new">New bill</button>
+    <a class="btn btn-sm btn-outline-secondary" href="/">Bills</a>
 
     <div class="control-right">
+      {{if .IsOwner}}
       <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-share">
         <i class="bi bi-share"></i> Share</button>
+      {{end}}
 
       <div class="menu-wrap">
         <button type="button" class="btn btn-sm btn-primary" id="btn-download" aria-haspopup="true" aria-expanded="false">
@@ -70,7 +72,7 @@
 
 {{define "middle"}}
 
-<div class="editor-layout">
+<div class="editor-layout" data-document-id="{{.Document.ID}}" data-can-share="{{.IsOwner}}">
   <div>
     <div class="editor-paper">
       <div id="editor"></div>
@@ -212,18 +214,40 @@
 
 <div class="editor-modal" id="modal-share">
   <div class="panel">
-    <h5>Share a read-only copy</h5>
-    <p class="text-secondary small">
-      Anyone with this link can read the bill as it stands. The link does not
-      grant the ability to edit.
-    </p>
-    <div class="input-group mb-3">
-      <input type="text" class="form-control" id="share-url" readonly>
-      <button type="button" class="btn btn-primary" id="btn-share-copy">Copy</button>
+    <h5>Share</h5>
+
+    <div class="mb-3">
+      <label class="form-label" for="share-editors">Can edit</label>
+      <textarea class="form-control" id="share-editors" rows="2"
+                placeholder="colleague@council.nyc.gov, another@council.nyc.gov"></textarea>
+      <div class="rule-cite mt-1">Email addresses, one per line or comma separated.</div>
     </div>
+
+    <div class="mb-3">
+      <label class="form-label" for="share-viewers">Can view</label>
+      <textarea class="form-control" id="share-viewers" rows="2"
+                placeholder="reviewer@council.nyc.gov"></textarea>
+    </div>
+
+    <div class="form-check mb-3">
+      <input class="form-check-input" type="checkbox" id="share-public">
+      <label class="form-check-label" for="share-public">
+        Anyone with the link can view
+        <span class="rule-cite">An unintroduced bill is usually not public.</span>
+      </label>
+    </div>
+
+    <div class="mb-3">
+      <label class="form-label" for="share-url">Link</label>
+      <div class="input-group">
+        <input type="text" class="form-control" id="share-url" readonly>
+        <button type="button" class="btn btn-outline-secondary" id="btn-share-copy">Copy</button>
+      </div>
+    </div>
+
     <div class="text-end">
-      <a class="btn btn-outline-secondary" id="share-open" target="_blank" rel="noopener">Open</a>
-      <button type="button" class="btn btn-outline-secondary" data-close="modal-share">Close</button>
+      <button type="button" class="btn btn-outline-secondary" data-close="modal-share">Cancel</button>
+      <button type="button" class="btn btn-primary" id="btn-share-save">Save sharing</button>
     </div>
   </div>
 </div>

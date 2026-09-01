@@ -1,0 +1,72 @@
+{{template "base" .}}
+{{define "title"}}{{.Title}}{{end}}
+
+{{define "middle"}}
+<div class="susi">
+  <h1>Draft legislation for the City of New York</h1>
+  <p class="lead">
+    A drafting environment that keeps bills in the form the
+    <a href="https://council.nyc.gov/legislation/">NYC Bill Drafting Manual</a>
+    requires: bracketed deletions, underlined additions, generated
+    legislative-history recitals and cross-references.
+  </p>
+
+  <div id="auth-container"></div>
+  <div id="loader" class="text-center">
+    <div class="spinner-border text-dark" role="status"></div>
+    Loading&hellip;
+  </div>
+</div>
+{{end}}
+
+{{define "javascript"}}
+<link type="text/css" rel="stylesheet" href="https://www.gstatic.com/firebasejs/ui/6.1.0/firebase-ui-auth.css" />
+<script src="https://www.gstatic.com/firebasejs/ui/6.1.0/firebase-ui-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.18.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/12.18.0/firebase-auth-compat.js"></script>
+<script>
+firebase.initializeApp({
+  apiKey: "AIzaSyBcC4nn_rRIsZD1UPm50z-xGmAx8pGSaMU",
+  projectId: "intro-nyc",
+  appId: "1:1021212379984:web:e57e149d0fd39c918c7a55",
+  authDomain: {{.AuthDomain}},
+  measurementId: "G-QW4X684W1R"
+});
+// The session lives in an HttpOnly cookie, so the client keeps no copy.
+firebase.auth().setPersistence(firebase.auth.Auth.Persistence.NONE);
+
+var ui = new firebaseui.auth.AuthUI(firebase.auth());
+ui.start('#auth-container', {
+  callbacks: {
+    signInSuccessWithAuthResult: function(authResult) {
+      document.getElementById('loader').style.display = 'block';
+      authResult.user.getIdToken().then(function(idToken) {
+        return fetch('/data/session', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id_token: idToken })
+        });
+      }).then(function() {
+        var next = new URLSearchParams(location.search).get('next');
+        window.location.href = next ? '/d/' + encodeURIComponent(next) : '/';
+      });
+      return false;
+    },
+    uiShown: function() {
+      document.getElementById('loader').style.display = 'none';
+    }
+  },
+  signInOptions: [
+    {
+      provider: firebase.auth.EmailAuthProvider.PROVIDER_ID,
+      signInMethod: firebase.auth.EmailAuthProvider.EMAIL_LINK_SIGN_IN_METHOD,
+      requireDisplayName: false
+    },
+    {
+      provider: firebase.auth.GoogleAuthProvider.PROVIDER_ID,
+      customParameters: { prompt: 'select_account' }
+    }
+  ]
+});
+</script>
+{{end}}

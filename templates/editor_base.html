@@ -83,6 +83,13 @@ footer p {
     <img src="/static/intro_nyc_logo.png" alt="">intro.nyc <span class="brand-sub">editor</span></a>
   <div class="brandbar-right">
     {{block "brandbar" .}}{{end}}
+    {{if .User.SignedIn}}
+    <a href="/">Bills</a>
+    <span class="brandbar-user">{{.User.Email}}</span>
+    <a href="/sign_out">Sign out</a>
+    {{else}}
+    <a href="/sign_in">Sign in</a>
+    {{end}}
     <a href="https://intro.nyc/"><i class="bi bi-box-arrow-up-right"></i> intro.nyc</a>
   </div>
 </nav>

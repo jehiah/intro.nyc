@@ -1,0 +1,59 @@
+{{template "base" .}}
+{{define "title"}}{{.Title}}{{end}}
+
+{{define "middle"}}
+<div class="new-bill">
+  <h1>New bill</h1>
+
+  <form method="POST" action="/new">
+    <div class="mb-4">
+      <label class="form-label" for="code">What does this bill do?</label>
+      <div class="type-options">
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="code" id="code-admin" value="administrative code" checked>
+          <label class="form-check-label" for="code-admin">
+            Amend the <strong>Administrative Code</strong>
+            <span class="rule-cite">To amend the administrative code of the city of New York, in relation to&hellip;</span>
+          </label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="code" id="code-charter" value="charter">
+          <label class="form-check-label" for="code-charter">
+            Amend the <strong>Charter</strong>
+            <span class="rule-cite">To amend the New York city charter, in relation to&hellip;</span>
+          </label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="code" id="code-both" value="both">
+          <label class="form-check-label" for="code-both">
+            Amend <strong>both</strong>
+            <span class="rule-cite">To amend the New York city charter and the administrative code of the city of New York, in relation to&hellip;</span>
+          </label>
+        </div>
+        <div class="form-check">
+          <input class="form-check-input" type="radio" name="code" id="code-unconsolidated" value="unconsolidated">
+          <label class="form-check-label" for="code-unconsolidated">
+            <strong>Unconsolidated</strong> local law
+            <span class="rule-cite">In relation to&hellip; &mdash; a wholly new law that does not name the Charter or Code (Rule 2.1)</span>
+          </label>
+        </div>
+      </div>
+    </div>
+
+    <div class="mb-4">
+      <label class="form-label" for="title">Subject</label>
+      <input type="text" class="form-control form-control-lg" id="title" name="title"
+             placeholder="the subject of this bill" autocomplete="off" autofocus>
+      <div class="rule-cite mt-1">
+        Completes &ldquo;in relation to &hellip;&rdquo;. A good title is short and
+        general (Rule 2.1); you can change it at any time.
+      </div>
+    </div>
+
+    <div class="text-end">
+      <a class="btn btn-outline-secondary" href="/">Cancel</a>
+      <button type="submit" class="btn btn-primary">Create and start drafting</button>
+    </div>
+  </form>
+</div>
+{{end}}

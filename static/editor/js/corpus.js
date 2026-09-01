@@ -24,21 +24,21 @@ export const CODES = {
 export async function searchLaw(query, datasets) {
   const params = new URLSearchParams({ q: query });
   (datasets || []).forEach((d) => params.append("dataset", d));
-  const response = await fetch(`api/law/search?${params}`);
+  const response = await fetch(`/api/law/search?${params}`);
   if (!response.ok) throw new Error("law search failed");
   return (await response.json()).results || [];
 }
 
 export async function fetchSection(ref) {
   const response = await fetch(
-    `api/law/section/${ref.dataset}/${ref.file}`
+    `/api/law/section/${ref.dataset}/${ref.file}`
   );
   if (!response.ok) throw new Error(`could not load section ${ref.cite}`);
   return response.json();
 }
 
 export async function loadDatasets() {
-  const response = await fetch("api/law/datasets");
+  const response = await fetch("/api/law/datasets");
   if (!response.ok) throw new Error("could not load law datasets");
   return (await response.json()).datasets || [];
 }

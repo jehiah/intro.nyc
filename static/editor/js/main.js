@@ -7,7 +7,7 @@ import { keymap } from "prosemirror-keymap";
 import { baseKeymap, toggleMark } from "prosemirror-commands";
 import { history, undo, redo } from "prosemirror-history";
 
-import { schema, designatorLabel, titleText } from "./schema.js";
+import { schema, designatorLabel } from "./schema.js";
 import {
   trackedChangesPlugin,
   trackedBackspace,
@@ -44,17 +44,18 @@ import {
   toHTMLDocument,
 } from "./serialize.js";
 import {
+  documentID,
+  canShare,
   loadLocal,
   saveLocal,
-  clearLocal,
-  loadHandle,
-  saveDraft,
-  fetchDraft,
-  readOnlyURL,
+  fetchDocument,
+  saveDocument,
+  saveSharing,
+  documentURL,
 } from "./drafts.js";
 
 let view;
-let handle = loadHandle();
+const docID = documentID();
 
 // The provision currently chosen in the picker, and its selectable blocks.
 let chosenSection = null;
@@ -104,7 +105,7 @@ function persistencePlugin() {
       return {
         update(v, prev) {
           if (v.state.doc.eq(prev.doc)) return;
-          saveLocal(v.state.doc.toJSON());
+          saveLocal(docID, v.state.doc.toJSON());
           clearTimeout(timer);
           timer = setTimeout(() => persist(v.state.doc), 900);
         },
@@ -114,13 +115,20 @@ function persistencePlugin() {
 }
 
 async function persist(doc) {
+  const attrs = doc.firstChild.attrs;
   setStatus("Saving\u2026");
   try {
-    handle = await saveDraft(handle, titleText(doc.firstChild.attrs), doc.toJSON());
+    await saveDocument(docID, {
+      title: attrs.subject,
+      code: attrs.code,
+      doc: doc.toJSON(),
+    });
     setStatus("Saved");
   } catch (e) {
     console.error(e);
-    setStatus("Saved in this browser only");
+    // The local copy is the only thing standing between a failed save and lost
+    // work, so say so plainly.
+    setStatus("Not saved \u2014 kept in this browser only");
   }
 }
 
@@ -610,21 +618,39 @@ const EXPORTS = {
 
 /* ---------------------------------------------------------------- UI: share */
 
-async function share() {
-  setStatus("Saving\u2026");
+function parseEmails(value) {
+  return value
+    .split(/[\s,;]+/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+async function openShare() {
+  document.getElementById("share-url").value = documentURL(docID);
   try {
-    await persist(view.state.doc);
+    const current = await fetchDocument(docID);
+    document.getElementById("share-editors").value = (current.editors || []).join("\n");
+    document.getElementById("share-viewers").value = (current.viewers || []).join("\n");
+    document.getElementById("share-public").checked = Boolean(current.public);
   } catch (e) {
-    /* persist reports its own status */
+    console.error(e);
   }
-  if (!handle) {
-    setStatus("Could not create a share link");
-    return;
-  }
-  const url = readOnlyURL(handle.id);
-  document.getElementById("share-url").value = url;
-  document.getElementById("share-open").href = url;
   openModal("modal-share");
+}
+
+async function submitShare() {
+  try {
+    await saveSharing(docID, {
+      editors: parseEmails(document.getElementById("share-editors").value),
+      viewers: parseEmails(document.getElementById("share-viewers").value),
+      isPublic: document.getElementById("share-public").checked,
+    });
+    setStatus("Sharing updated");
+    closeModal("modal-share");
+  } catch (e) {
+    console.error(e);
+    setStatus("Could not update sharing");
+  }
 }
 
 /* ----------------------------------------------------------------- bootstrap */
@@ -656,16 +682,6 @@ function wireUI() {
     redo(view.state, view.dispatch.bind(view));
     view.focus();
   });
-  document.getElementById("btn-new").addEventListener("click", () => {
-    if (!confirm("Start a new bill? The current draft link stays available.")) {
-      return;
-    }
-    clearLocal();
-    handle = null;
-    view.updateState(createState(emptyBill()));
-    syncTitleInputs();
-    setStatus("New bill");
-  });
 
   document
     .getElementById("title-code")
@@ -695,10 +711,15 @@ function wireUI() {
     EXPORTS[action]();
   });
 
-  document.getElementById("btn-share").addEventListener("click", share);
-  document.getElementById("btn-share-copy").addEventListener("click", () => {
-    copyText(document.getElementById("share-url").value, "Share link copied");
-  });
+  if (canShare()) {
+    document.getElementById("btn-share").addEventListener("click", openShare);
+    document
+      .getElementById("btn-share-save")
+      .addEventListener("click", submitShare);
+    document.getElementById("btn-share-copy").addEventListener("click", () => {
+      copyText(document.getElementById("share-url").value, "Link copied");
+    });
+  }
 
   document.querySelectorAll("[data-close]").forEach((el) => {
     el.addEventListener("click", () => closeModal(el.dataset.close));
@@ -733,29 +754,22 @@ function wireUI() {
   });
 }
 
-// A draft named in the URL wins; otherwise resume this browser's draft.
+// The stored document is authoritative; the local copy is a fallback for when
+// the last save did not reach the server.
 async function initialDoc() {
-  const requested = new URLSearchParams(location.search).get("d");
-  const id = requested || (handle && handle.id);
-  if (id) {
-    try {
-      const draft = await fetchDraft(id);
-      if (requested && (!handle || handle.id !== requested)) {
-        // Opened someone else's draft: it can be edited locally and saved as a
-        // new draft, but not written back over theirs.
-        handle = null;
-      }
-      return schema.nodeFromJSON(draft.doc);
-    } catch (e) {
-      console.warn(e);
-    }
+  try {
+    const stored = await fetchDocument(docID);
+    return schema.nodeFromJSON(stored.doc);
+  } catch (e) {
+    console.warn(e);
   }
-  const local = loadLocal();
+  const local = loadLocal(docID);
   if (local) {
     try {
+      setStatus("Loaded an unsaved local copy");
       return schema.nodeFromJSON(local);
-    } catch (e) {
-      console.warn("could not restore local draft", e);
+    } catch (err) {
+      console.warn("could not restore local copy", err);
     }
   }
   return emptyBill();

@@ -1,0 +1,33 @@
+{{template "base" .}}
+{{define "title"}}{{.Title}}{{end}}
+
+{{define "middle"}}
+<div class="documents">
+  <div class="documents-header">
+    <h1>Bills</h1>
+    <a class="btn btn-primary" href="/new"><i class="bi bi-plus-lg"></i> New bill</a>
+  </div>
+
+  {{if .Documents}}
+  <ul class="document-list">
+    {{range .Documents}}
+    <li>
+      <a href="/d/{{.ID}}">
+        <span class="document-title">{{.DisplayTitle}}</span>
+        <span class="document-meta">
+          Edited {{Time .LastModified}}
+          {{if .Shared}}&middot; shared by {{.Owner}}{{end}}
+          {{if .Public}}&middot; <span class="badge-public">public</span>{{end}}
+        </span>
+      </a>
+    </li>
+    {{end}}
+  </ul>
+  {{else}}
+  <p class="empty">
+    No bills yet. <a href="/new">Start one</a> &mdash; you will be asked for a
+    title and which bodies of law it amends.
+  </p>
+  {{end}}
+</div>
+{{end}}

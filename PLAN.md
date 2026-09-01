@@ -203,20 +203,59 @@ server-side in Go from the stored document (`renderBill` in `editor.go`) and
 reuses `static/editor/editor.css`, so a shared bill is byte-for-byte the bill
 being drafted and needs no JavaScript.
 
-## 8.1 Persistence
+## 8.1 Accounts, documents and sharing
 
-`POST /api/draft` creates or updates a draft; `GET /api/draft/{id}` reads one;
-`GET /d/{id}` is the read-only view. Storage is a single JSON file
-(`--draft-file`, default `drafts.json`) written atomically.
+Authentication and storage follow
+[legislation.support](https://github.com/jehiah/legislation.support): Firebase
+issues an ID token in the browser, `POST /data/session` exchanges it for a
+session cookie, and every request is identified by verifying that cookie. The
+cookie is HttpOnly and the client keeps no copy of the token
+(`firebase.auth.Auth.Persistence.NONE`). `/__/auth/` is reverse-proxied to the
+Firebase-hosted sign-in helpers so the flow stays first-party, which Safari
+requires.
 
-A draft has two identifiers: an unguessable `id`, which is the share link, and a
-`secret`, which is the edit token. The secret is returned only to the client
-that saved the draft and is never included in a read response, so possession of
-a share link grants reading and not writing. `localStorage` also keeps the last
-document, so a reload is instant and a failed save is not data loss.
+The editor home is the sign-in page when signed out and the document list when
+signed in. "New bill" asks for the two things a bill cannot be started without
+— which bodies of law it amends and its subject (Rule 2.1) — then opens the
+editor. Document ids are UUIDs.
 
-Accounts, per-user document browsing, and Firestore-backed storage are a later
-revision; the handler boundary is where that swap happens.
+Documents live in Firestore under `editor_documents`, with the ProseMirror
+document stored as JSON text; Firestore's field-name rules do not survive an
+arbitrary document tree.
+
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /` | sign-in, or the document list |
+| `GET|POST /new` | create a bill |
+| `GET /d/{uuid}` | the editor, or the read-only bill, by access |
+| `GET|POST /api/draft/{uuid}` | load and save |
+| `POST /api/share/{uuid}` | update sharing (owner only) |
+
+**Sharing is by email address**, because a drafter shares with colleagues before
+knowing whether they have signed in yet. A document carries `Editors` and
+`Viewers` lists plus a `Public` flag, and access resolves in one place
+(`Document.AccessFor`): owner, then editor, then viewer, then public-view, then
+nothing. Edit access supersedes view access, and only the owner may change
+sharing. `/d/{uuid}` is a single canonical URL that renders the editor or the
+read-only bill depending on what the reader may do.
+
+`localStorage` keeps a copy of the last state per document. It is a fallback for
+a save that did not reach the server, and the editor says so plainly rather than
+reporting success.
+
+## 8.2 Configuration
+
+`--firebase-project` (default `intro-nyc`) covers Auth and Firestore.
+`--firebase-api-key` and `--firebase-app-id` are the public web client config and
+also read from `FIREBASE_API_KEY` / `FIREBASE_APP_ID`; without them the sign-in
+page says so instead of failing silently.
+
+## 8.3 The read-only view
+
+**Share** opens the sharing dialog; the read-only bill at the same `/d/{uuid}`
+is rendered server-side in Go from the stored document (`renderBill` in
+`editor.go`) and reuses `static/editor/editor.css`, so a shared bill is
+byte-for-byte the bill being drafted and needs no JavaScript.
 
 ## 9. The law API
 
@@ -259,21 +298,26 @@ local law amends consolidated law and not agency rules (Rule 5.2).
    API, read-only view. *(done)*
 6. **The full law archive** — search and fetch over the Charter, Administrative
    Code and RCNY. *(done)*
-7. Accounts and a draft browser, with documents in Firestore; diffing a bill
-   against its prior version.
+7. **Accounts and documents** — Firebase auth, Firestore documents, a document
+   list, and sharing by email. *(done)*
 8. Whole-bill features: declarations of intent, short titles, sunset and
    severability clauses, reporting requirements (Rule 7); definitions helpers
    (Rule 9); the Rule 6 effective-date assistant.
-9. Resolutions (Rule 10) and Construction Code conventions (Appendix A).
+9. Diffing a bill against a prior version; comments and review.
+10. Resolutions (Rule 10) and Construction Code conventions (Appendix A).
 
 ## 11. Files
 
 | Path | Role |
 | --- | --- |
-| `editor.go` | page handlers, draft API, server-side bill rendering |
+| `editor.go` | page handlers, document API, server-side bill rendering |
+| `editor_auth.go` | Firebase session cookies |
+| `editor_docs.go` | the Firestore document model and access rules |
 | `editor_law.go` | the law API over nyc_code_archive |
-| `editor_draft.go` | the draft store |
 | `templates/editor_base.html` | the editor site's chrome |
+| `templates/editor_susi.html` | sign in |
+| `templates/editor_documents.html` | the document list |
+| `templates/editor_new.html` | new-bill prompt |
 | `templates/editor.html` | title nav, control bar, dialogs |
 | `templates/bill_readonly.html` | the shared read-only view |
 | `static/editor/editor.css` | printed-bill styling, shared by both views |
