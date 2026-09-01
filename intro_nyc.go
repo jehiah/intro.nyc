@@ -47,6 +47,12 @@ type App struct {
 	staticFS      fs.FS
 	drafts        *DraftStore
 
+	// Local checkout of the nyc_code_archive repository; empty means read from
+	// gs://intronyc/law/.
+	lawPath    string
+	lawIndexes map[string]*lawIndex
+	lawMutex   sync.RWMutex
+
 	cachedRedirects   map[IntroID]string
 	fileCache         map[string]CachedFile
 	cachedLegislation map[IntroID]*CachedLegislation
@@ -175,6 +181,7 @@ func main() {
 	devMode := flag.Bool("dev-mode", false, "development mode")
 	devFilePath := flag.String("file-path", "", "path to files normally retrieved from gs://intronyc/")
 	draftFile := flag.String("draft-file", "drafts.json", "path to the editor draft store")
+	lawPath := flag.String("law-path", "", "path to a local checkout of nyc_code_archive; defaults to gs://intronyc/law/")
 	flag.Parse()
 
 	log.Print("starting server...")
@@ -199,6 +206,8 @@ func main() {
 		templateFS:    content,
 		staticFS:      static,
 		drafts:        drafts,
+		lawPath:       *lawPath,
+		lawIndexes:    make(map[string]*lawIndex),
 
 		cachedRedirects:   make(map[IntroID]string),
 		cachedLegislation: make(map[IntroID]*CachedLegislation),
@@ -208,7 +217,16 @@ func main() {
 		app.templateFS = os.DirFS(".")
 		app.staticFS = os.DirFS(".")
 		app.staticHandler = http.StripPrefix("/static/", http.FileServer(http.Dir("static")))
+		if app.lawPath == "" {
+			if _, err := os.Stat("../nyc_code_archive"); err == nil {
+				app.lawPath = "../nyc_code_archive"
+			} else {
+				log.Fatalf("missing --law-path; default ../nyc_code_archive %s", err)
+			}
+
+		}
 	}
+	log.Printf("law archive: %s", lawArchiveSource(app.lawPath))
 	app.legistar.LookupURL, err = url.Parse("https://legistar.council.nyc.gov/gateway.aspx?m=l&id=")
 	if err != nil {
 		panic(err)
@@ -222,7 +240,9 @@ func main() {
 	// production and under /editor/ everywhere else.
 	editorRouter := http.NewServeMux()
 	editorRouter.HandleFunc("GET /{$}", app.Editor)
-	editorRouter.HandleFunc("GET /api/law", app.EditorLawCorpus)
+	editorRouter.HandleFunc("GET /api/law/datasets", app.EditorLawDatasets)
+	editorRouter.HandleFunc("GET /api/law/search", app.EditorLawSearch)
+	editorRouter.HandleFunc("GET /api/law/section/{dataset}/{path...}", app.EditorLawSection)
 	editorRouter.HandleFunc("POST /api/draft", app.EditorSaveDraft)
 	editorRouter.HandleFunc("GET /api/draft/{id}", app.EditorGetDraft)
 	editorRouter.HandleFunc("GET /d/{id}", app.EditorReadOnly)
@@ -231,8 +251,7 @@ func main() {
 	router := http.NewServeMux()
 
 	router.Handle("editor.intro.nyc/", editorRouter)
-	router.HandleFunc("GET /editor", redirect("/editor/"))
-	router.Handle("/editor/", http.StripPrefix("/editor", editorRouter))
+	router.Handle("editor.dev.intro.nyc/", editorRouter)
 
 	router.HandleFunc("GET /{$}", app.Search)
 	router.HandleFunc("GET /.well-known/atproto-did", func(w http.ResponseWriter, r *http.Request) {
@@ -285,7 +304,7 @@ func main() {
 		if _, err := os.Stat("dev/cert.pem"); os.IsNotExist(err) {
 			log.Printf("dev/cert.pem missing.")
 			os.Mkdir("dev", 0750)
-			cmd := exec.Command("mkcert", "-install", "-key-file=dev/key.pem", "-cert-file=dev/cert.pem", "dev.intro.nyc")
+			cmd := exec.Command("mkcert", "-install", "-key-file=dev/key.pem", "-cert-file=dev/cert.pem", "dev.intro.nyc", "editor.dev.intro.nyc")
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
 			log.Printf("%s %s", cmd.Path, strings.Join(cmd.Args[1:], " "))
@@ -294,7 +313,7 @@ func main() {
 				log.Fatal(err)
 			}
 		}
-		log.Printf("listening to HTTPS on port %s https://dev.intro.nyc", port)
+		log.Printf("listening to HTTPS on port %s https://dev.intro.nyc and https://editor.dev.intro.nyc", port)
 		if err := http.ListenAndServeTLS(":"+port, "dev/cert.pem", "dev/key.pem", h); err != nil {
 			log.Fatal(err)
 		}

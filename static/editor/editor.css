@@ -368,6 +368,45 @@
   font-family: "Times New Roman", Times, serif;
 }
 
+.picker-results {
+  max-height: 18rem;
+  overflow-y: auto;
+}
+
+.picker-result {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-bottom: 1px solid #e9ecef;
+  background: none;
+  padding: 0.45rem 0.5rem;
+  font-size: 0.9rem;
+}
+
+.picker-result:hover {
+  background: #eef2f9;
+}
+
+.picker-cite {
+  font-family: "Times New Roman", Times, serif;
+  font-weight: 500;
+  margin-right: 0.4rem;
+}
+
+.picker-path {
+  display: block;
+  font-size: 0.75rem;
+  color: #adb5bd;
+}
+
+.picker-chosen {
+  font-family: "Times New Roman", Times, serif;
+  font-size: 1rem;
+  border-left: 3px solid #2f56a6;
+  padding-left: 0.75rem;
+}
+
 .rule-cite {
   font-size: 0.8rem;
   color: #6c757d;

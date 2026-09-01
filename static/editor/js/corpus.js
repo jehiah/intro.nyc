@@ -1,8 +1,8 @@
-// The corpus of existing law available to the editor, and the composition of
-// the bill-section lead-in that must accompany any amendment (Rule 3.1).
+// Existing law, and the composition of the bill-section lead-in that must
+// accompany any amendment (Rule 3.1).
 //
-// Today this reads a fixture; the response shape is the contract with the
-// eventual legislation API. See PLAN.md section 9.
+// Law comes from the nyc_code_archive: /api/law/search finds a provision and
+// /api/law/section/{dataset}/{file} returns it.
 
 import { schema, designatorLabel } from "./schema.js";
 
@@ -15,20 +15,46 @@ export const CODES = {
     full: "New York city charter",
     short: "charter",
   },
+  rules: {
+    full: "rules of the city of New York",
+    short: "rules",
+  },
 };
 
-export async function loadCorpus() {
-  const response = await fetch("/editor/api/law");
-  if (!response.ok) throw new Error("could not load law corpus");
-  const data = await response.json();
-  return data.sections || [];
+export async function searchLaw(query, datasets) {
+  const params = new URLSearchParams({ q: query });
+  (datasets || []).forEach((d) => params.append("dataset", d));
+  const response = await fetch(`api/law/search?${params}`);
+  if (!response.ok) throw new Error("law search failed");
+  return (await response.json()).results || [];
+}
+
+export async function fetchSection(ref) {
+  const response = await fetch(
+    `api/law/section/${ref.dataset}/${ref.file}`
+  );
+  if (!response.ok) throw new Error(`could not load section ${ref.cite}`);
+  return response.json();
+}
+
+export async function loadDatasets() {
+  const response = await fetch("api/law/datasets");
+  if (!response.ok) throw new Error("could not load law datasets");
+  return (await response.json()).datasets || [];
+}
+
+// Only text carries into a bill; the archive also holds tables and publisher
+// apparatus.
+export function textBlocks(section) {
+  return (section.blocks || []).filter((b) => !b.type && b.text);
 }
 
 // Rule 3.1.1: state law is cited by chapter and year, local law by number and
 // year.
 function lawCitation(law) {
   if (!law) return "";
-  return law.state
+  const state = law.state || law.type === "state law";
+  return state
     ? `chapter ${law.number} of the laws of ${law.year}`
     : `local law number ${law.number} for the year ${law.year}`;
 }
@@ -72,6 +98,7 @@ export function describeTarget(section, block) {
     /\.$/,
     ""
   );
+  if (!label) return `section ${section.cite}`;
   return `${block.level} ${label} of section ${section.cite}`;
 }
 
@@ -109,16 +136,17 @@ function textNode(text, marked) {
 function lawBlockNode(section, block, marked) {
   const isSectionLevel = block.level === "section";
   const label = isSectionLevel
-    ? `§ ${section.cite}`
+    ? `\u00a7 ${section.cite}`
     : designatorLabel(block.level, block.designator);
-  const text = isSectionLevel && section.heading
-    ? `${section.heading} ${block.text}`
-    : block.text;
+  const text =
+    isSectionLevel && section.heading
+      ? `${section.heading} ${block.text}`
+      : block.text;
 
   return schema.nodes.law_block.create(
     {
       level: block.level,
-      designator: block.designator,
+      designator: block.designator || "",
       label: label,
     },
     text ? textNode(text, marked) : null
@@ -148,10 +176,7 @@ export function buildBillSection({
 
   return schema.nodes.bill_section.create(
     { kind: operation, cite: section.cite, code: section.code },
-    [
-      schema.nodes.section_lead.create(null, schema.text(lead)),
-      ...content,
-    ]
+    [schema.nodes.section_lead.create(null, schema.text(lead)), ...content]
   );
 }
 

@@ -22,7 +22,10 @@ import {
   TRACKED,
 } from "./track.js";
 import {
-  loadCorpus,
+  searchLaw,
+  fetchSection,
+  loadDatasets,
+  textBlocks,
   buildBillSection,
   emptyBill,
   describeTarget,
@@ -49,8 +52,11 @@ import {
 } from "./drafts.js";
 
 let view;
-let corpus = [];
 let handle = loadHandle();
+
+// The provision currently chosen in the picker, and its selectable blocks.
+let chosenSection = null;
+let chosenBlocks = [];
 
 /* ------------------------------------------------------------------ plugins */
 
@@ -224,14 +230,72 @@ function blockLabel(section, block) {
   return `${prefix} ${block.text.slice(0, 70)}\u2026`;
 }
 
-function renderPickerBlocks() {
-  const cite = document.getElementById("picker-section").value;
-  const section = corpus.find((s) => s.cite === cite);
+let searchTimer = null;
+
+function onSearchInput() {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(runSearch, 200);
+}
+
+async function runSearch() {
+  const query = document.getElementById("picker-query").value.trim();
+  const results = document.getElementById("picker-results");
+  if (query.length < 2) {
+    results.innerHTML = "";
+    return;
+  }
+  let hits;
+  try {
+    hits = await searchLaw(query);
+  } catch (e) {
+    console.error(e);
+    results.innerHTML =
+      '<p class="rule-cite mb-0">Could not search the law archive.</p>';
+    return;
+  }
+  if (!hits.length) {
+    results.innerHTML = '<p class="rule-cite mb-0">No sections found.</p>';
+    return;
+  }
+
+  results.innerHTML = "";
+  hits.forEach((hit) => {
+    const item = document.createElement("button");
+    item.type = "button";
+    item.className = "picker-result";
+    item.innerHTML = `<span class="picker-cite">\u00a7 ${escapeHTML(
+      hit.cite
+    )}</span> ${escapeHTML(hit.heading)}<span class="picker-path">${escapeHTML(
+      hit.path
+    )}</span>`;
+    item.addEventListener("click", () => chooseSection(hit));
+    results.appendChild(item);
+  });
+}
+
+async function chooseSection(ref) {
+  let section;
+  try {
+    section = await fetchSection(ref);
+  } catch (e) {
+    console.error(e);
+    return;
+  }
+  chosenSection = section;
+  chosenBlocks = textBlocks(section);
+
+  document.getElementById("picker-results").innerHTML = "";
+  document.getElementById("picker-query").value = "";
+  document.getElementById("picker-detail").hidden = false;
+  document.getElementById("btn-picker-insert").disabled = false;
+  document.getElementById("picker-chosen").textContent = `\u00a7 ${
+    section.cite
+  } ${section.heading} \u2014 ${ref.path}`;
+
+  const skipped = (section.blocks || []).length - chosenBlocks.length;
   const list = document.getElementById("picker-blocks");
   list.innerHTML = "";
-  if (!section) return;
-
-  section.blocks.forEach((block, i) => {
+  chosenBlocks.forEach((block, i) => {
     const id = `picker-block-${i}`;
     const row = document.createElement("div");
     row.className = "form-check";
@@ -244,33 +308,33 @@ function renderPickerBlocks() {
     )}</label>`;
     list.appendChild(row);
   });
+  if (skipped > 0) {
+    const note = document.createElement("p");
+    note.className = "rule-cite mb-0 mt-2";
+    note.textContent = `${skipped} table or non-text block not shown; add it by hand.`;
+    list.appendChild(note);
+  }
 
   renderPickerPreview();
 }
 
-function selectedBlocks(section) {
+function selectedBlocks() {
   const checked = [
     ...document.querySelectorAll("#picker-blocks input:checked"),
   ].map((el) => Number(el.value));
   const indices = checked.length ? checked : [0];
-  return indices.map((i) => section.blocks[i]).filter(Boolean);
+  return indices.map((i) => chosenBlocks[i]).filter(Boolean);
 }
 
 function renderPickerPreview() {
-  const cite = document.getElementById("picker-section").value;
+  if (!chosenSection) return;
   const operation = document.querySelector(
     'input[name="picker-operation"]:checked'
   ).value;
-  const section = corpus.find((s) => s.cite === cite);
-  const preview = document.getElementById("picker-preview");
-  if (!section) {
-    preview.textContent = "";
-    return;
-  }
-  const blocks = selectedBlocks(section);
-  const recital = historyRecital(section.history, operation);
-  const target = describeTarget(section, blocks[0]);
-  const code = CODES[section.code] || CODES["administrative code"];
+  const blocks = selectedBlocks();
+  const recital = historyRecital(chosenSection.history, operation);
+  const target = describeTarget(chosenSection, blocks[0]);
+  const code = CODES[chosenSection.code] || CODES["administrative code"];
 
   const verb =
     operation === "amend"
@@ -279,25 +343,30 @@ function renderPickerPreview() {
       ? "is REPEALED."
       : "is amended by adding a new provision to read as follows:";
 
-  preview.textContent = `${target[0].toUpperCase()}${target.slice(1)} of the ${
+  document.getElementById(
+    "picker-preview"
+  ).textContent = `${target[0].toUpperCase()}${target.slice(1)} of the ${
     code.full
   }${recital} ${verb}`;
 
-  document.getElementById("picker-history").textContent =
-    section.history && section.history.note
-      ? section.history.note
-      : "No amendment history recorded \u2014 no recital required (Rule 3.1.2).";
+  const history = chosenSection.history || {};
+  let note = history.note
+    ? history.note
+    : "No amendment history recorded \u2014 no recital required (Rule 3.1.2).";
+  if (history.repealed) {
+    note = "This provision is shown as repealed. " + note;
+  }
+  document.getElementById("picker-history").textContent = note;
 }
 
 function insertFromPicker() {
-  const cite = document.getElementById("picker-section").value;
-  const section = corpus.find((s) => s.cite === cite);
-  if (!section) return;
+  if (!chosenSection) return;
   const operation = document.querySelector(
     'input[name="picker-operation"]:checked'
   ).value;
   const separate = document.getElementById("picker-separate").checked;
-  const blocks = selectedBlocks(section);
+  const blocks = selectedBlocks();
+  const section = chosenSection;
 
   // Rule 3.4: non-consecutive provisions may go in one bill section with
   // intervening context, or in separate bill sections.
@@ -311,6 +380,16 @@ function insertFromPicker() {
     insertBillSection(buildBillSection({ section, blocks, operation }));
   }
   closeModal("modal-picker");
+  resetPicker();
+}
+
+function resetPicker() {
+  chosenSection = null;
+  chosenBlocks = [];
+  document.getElementById("picker-detail").hidden = true;
+  document.getElementById("btn-picker-insert").disabled = true;
+  document.getElementById("picker-results").innerHTML = "";
+  document.getElementById("picker-query").value = "";
 }
 
 /* ---------------------------------------------------- UI: reference builder */
@@ -459,7 +538,10 @@ async function share() {
 function wireUI() {
   document
     .getElementById("btn-insert-law")
-    .addEventListener("click", () => openModal("modal-picker"));
+    .addEventListener("click", () => {
+      openModal("modal-picker");
+      document.getElementById("picker-query").focus();
+    });
   document.getElementById("btn-insert-ref").addEventListener("click", () => {
     renderReferencePreview();
     openModal("modal-ref");
@@ -529,8 +611,8 @@ function wireUI() {
   });
 
   document
-    .getElementById("picker-section")
-    .addEventListener("change", renderPickerBlocks);
+    .getElementById("picker-query")
+    .addEventListener("input", onSearchInput);
   document
     .getElementById("picker-blocks")
     .addEventListener("change", renderPickerPreview);
@@ -598,20 +680,17 @@ async function main() {
   syncTitleInputs();
 
   try {
-    corpus = await loadCorpus();
-    document.getElementById("picker-section").innerHTML = corpus
-      .map(
-        (s) =>
-          `<option value="${escapeHTML(s.cite)}">\u00a7 ${escapeHTML(
-            s.cite
-          )} ${escapeHTML(s.heading)}</option>`
-      )
-      .join("");
-    renderPickerBlocks();
-    setStatus(`${corpus.length} sections of law available`);
+    const datasets = await loadDatasets();
+    // Provenance matters: a drafter needs to know how current the text is.
+    document.getElementById("picker-currency").textContent = datasets
+      .filter((d) => d.dataset !== "rules")
+      .map((d) => `${d.label}: ${d.current_through || "currency unknown"}`)
+      .join(" \u00b7 ");
+    const total = datasets.reduce((n, d) => n + (d.sections || 0), 0);
+    setStatus(`${total.toLocaleString()} sections of law available`);
   } catch (e) {
     console.error(e);
-    setStatus("Could not load the law corpus");
+    setStatus("Could not reach the law archive");
   }
 }
 

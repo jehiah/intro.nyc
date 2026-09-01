@@ -18,15 +18,11 @@ Third Edition (2022)* (`NYC-Bill-Drafting-Manual-2022-FINAL.pdf`, extracted to
 
 ## 1. Scope
 
-**In scope now (phase 1–4):** the editing surface. A drafter can start a bill,
-pull a section of existing law into it from a small hard-coded corpus, amend it
-with tracked bracket/underline semantics, insert well-formed cross-references,
-see style violations flagged live, and export bill text.
-
-**Deliberately deferred:** a real legislation API. Section 8 sketches it. Until
-then the corpus is a five-section JSON fixture generated from the American Legal
-Publishing XML export, so the editor's data contract is fixed early and the API
-can be swapped in behind it without touching editor code.
+**In scope now:** the editing surface. A drafter can start a bill, search the
+Charter, Administrative Code and RCNY for a provision, pull it into the bill,
+amend it with tracked bracket/underline semantics, insert well-formed
+cross-references, see style violations flagged live, share a read-only copy, and
+export bill text.
 
 ## 2. Why ProseMirror
 
@@ -204,37 +200,47 @@ document, so a reload is instant and a failed save is not data loss.
 Accounts, per-user document browsing, and Firestore-backed storage are a later
 revision; the handler boundary is where that swap happens.
 
-## 9. Deferred: the legislation API
+## 9. The law API
 
-The editor consumes one shape, defined by `static/editor/law_fixture.json` and
-produced today by `scripts/extract_law_fixture.py` from the ALP XML export:
+Law comes from [nyc_code_archive](https://github.com/jehiah/nyc_code_archive),
+which files every provision of the Charter (770 sections), the Administrative
+Code (26,731) and the RCNY (8,219) as one JSON document under the path its
+citation implies, alongside a per-dataset `index.json` and a `manifest.json`
+recording what the text is current through.
 
-```
-{ "sections": [ { "id", "cite", "code", "heading",
-                  "history": { "added", "amended", "redesignated", "repealed" },
-                  "blocks": [ { "level", "designator", "text" } ] } ] }
-```
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /api/law/datasets` | the bodies of law available, with the publisher's currency statement |
+| `GET /api/law/search?q=&dataset=` | find a provision by citation or heading |
+| `GET /api/law/section/{dataset}/{file}` | one provision, straight from the archive |
 
-When the corpus grows past a fixture, the same shape is served from
-`GET /api/law?q=` and `GET /api/law/{cite}`, backed by the full
-XML export in `gs://intronyc/` and fetched through the existing `App.getFile`
-cache. The editor's fetch layer already goes through those URLs, so the swap is
-a server-side change only.
+The archive is read from a local checkout in development (`--law-path`, which
+defaults to `../nyc_code_archive` when it exists) and from `gs://intronyc/law/`
+in production, through the same `App.getFile` cache the rest of the site uses.
+Search flattens each dataset's `index.json` once and keeps the result for an
+hour; the section endpoint is a straight file read.
+
+The archive's `history` object carries exactly what a Rule 3.1 recital needs:
+the law that last amended a provision, the adding law if it was never amended,
+and a redesignation that happened after the last amendment.
+
+Two shape details the editor has to respect: `blocks` may contain tables and
+other non-text entries, which are not selectable and must be added by hand; and
+search is offered over the Charter and Administrative Code by default, because a
+local law amends consolidated law and not agency rules (Rule 5.2).
 
 ## 10. Phases
 
 1. **Skeleton** — route, template, schema, ProseMirror mounting, bill
    scaffold, `ins`/`del` marks and their rendering. *(done)*
 2. **Tracked amendments** — the Rule 11.1 editing engine. *(done)*
-3. **Corpus + picker + references** — fixture loading, lead-in composition,
-   reference builder. *(done)*
+3. **Corpus + picker + references** — lead-in composition, reference builder.
+   *(done)*
 4. **Style checks + export.** *(done)*
 5. **Its own site, sharing and persistence** — editor chrome, title nav, draft
    API, read-only view. *(done)*
-6. Real legislation API over the full Administrative Code and Charter. Deriving
-   amendment history from the ALP annotations is a good approximation, but the
-   Rule 3.1.11 cases — a provision printed as part of a larger amendment
-   without itself being changed — need per-provision history.
+6. **The full law archive** — search and fetch over the Charter, Administrative
+   Code and RCNY. *(done)*
 7. Accounts and a draft browser, with documents in Firestore; diffing a bill
    against its prior version.
 8. Whole-bill features: declarations of intent, short titles, sunset and
@@ -247,6 +253,7 @@ a server-side change only.
 | Path | Role |
 | --- | --- |
 | `editor.go` | page handlers, draft API, server-side bill rendering |
+| `editor_law.go` | the law API over nyc_code_archive |
 | `editor_draft.go` | the draft store |
 | `templates/editor_base.html` | the editor site's chrome |
 | `templates/editor.html` | title nav, control bar, dialogs |
@@ -254,10 +261,9 @@ a server-side change only.
 | `static/editor/editor.css` | printed-bill styling, shared by both views |
 | `static/editor/js/schema.js` | document model |
 | `static/editor/js/track.js` | Rule 11.1 amendment engine |
-| `static/editor/js/corpus.js` | law corpus, lead-ins, history recitals |
+| `static/editor/js/corpus.js` | law search, lead-ins, history recitals |
 | `static/editor/js/refs.js` | Rule 5 cross-references |
 | `static/editor/js/lint.js` | style checks |
 | `static/editor/js/serialize.js` | export |
 | `static/editor/js/drafts.js` | persistence |
 | `static/editor/js/main.js` | wiring |
-| `scripts/extract_law_fixture.py` | ALP XML → fixture |
