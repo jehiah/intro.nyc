@@ -125,6 +125,24 @@ conforming bill section around it:
 A repeal produces `REPEALED` in capitals with no text and no history
 (Rules 3.1.10, 11.1.4).
 
+### Repeals (Rule 11.1.4, Appendix F)
+
+A repeal is a different act from an amendment, so the picker asks what is being
+repealed rather than inferring it: the whole section, or named subunits.
+
+* Several subunits of one level collapse to a plural with the verb agreeing —
+  "Subdivisions a and b of section 17-513 … **are** REPEALED." A single target
+  reads "… **is** REPEALED."
+* Rule 2.1.1 requires the title to identify and describe what is repealed, so
+  the editor offers to append the clause itself: "… and to repeal subdivisions a
+  and b of section 17-513 of such code, relating to rules". "Such code" is used
+  only when the title already names that body of law by itself.
+* No recital of legislative history accompanies a repeal (Rule 3.1.10), and the
+  bill section carries no law text — a repeal names the provision and stops.
+* The two Appendix F items the editor cannot verify are surfaced as standing
+  reminders: cross-references to the repealed provision must be found and dealt
+  with, and repealing a repeal does not revive the earlier provision.
+
 ## 6. Reference builder
 
 Cross-references are generated, not typed, so they cannot drift from the grammar

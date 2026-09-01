@@ -89,6 +89,81 @@ function capitalizeFirst(s) {
   return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
+const LEVEL_PLURALS = {
+  section: "sections",
+  subdivision: "subdivisions",
+  paragraph: "paragraphs",
+  subparagraph: "subparagraphs",
+  clause: "clauses",
+  item: "items",
+};
+
+// "a, b and c" — the manual lists repealed provisions without a serial comma
+// ("Sections 3, 4, 5, 6, 7, 8 and 9 ... are REPEALED").
+function joinList(parts) {
+  if (parts.length <= 1) return parts[0] || "";
+  if (parts.length === 2) return `${parts[0]} and ${parts[1]}`;
+  return `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
+}
+
+// Name the provisions being repealed (Rule 11.1.4). Repealing several subunits
+// of one level collapses to a plural — "subdivisions b and c of section 21-1013"
+// — and the caller needs to know whether the verb agrees as singular or plural.
+export function describeRepealTargets(section, blocks, wholeSection) {
+  const whole = { text: `section ${section.cite}`, plural: false };
+  if (wholeSection || !blocks || !blocks.length) return whole;
+
+  const units = blocks
+    .map((b) => ({
+      level: b.level,
+      label: designatorLabel(b.level, b.designator).replace(/\.$/, ""),
+    }))
+    .filter((u) => u.label && u.level !== "section");
+  if (!units.length) return whole;
+
+  const levels = new Set(units.map((u) => u.level));
+  if (levels.size === 1 && units.length > 1) {
+    const level = units[0].level;
+    return {
+      text: `${LEVEL_PLURALS[level] || level + "s"} ${joinList(
+        units.map((u) => u.label)
+      )} of section ${section.cite}`,
+      plural: true,
+    };
+  }
+  return {
+    text: `${joinList(units.map((u) => `${u.level} ${u.label}`))} of section ${
+      section.cite
+    }`,
+    plural: units.length > 1,
+  };
+}
+
+// Rule 2.1.1: the title of a bill that repeals must identify and describe the
+// provision being repealed.
+export function repealTitleClause({
+  section,
+  blocks,
+  wholeSection,
+  titleCode,
+}) {
+  const target = describeRepealTargets(section, blocks, wholeSection);
+  const code = CODES[section.code] || CODES["administrative code"];
+  // "such code" only reads correctly when the title already names that body of
+  // law by itself.
+  const body =
+    titleCode === section.code
+      ? section.code === "charter"
+        ? "such charter"
+        : "such code"
+      : `the ${code.full}`;
+  const heading = (section.heading || "").replace(/\.\s*$/, "");
+  const relating = heading
+    ? `, relating to ${heading.charAt(0).toLowerCase()}${heading.slice(1)}`
+    : "";
+  return `and to repeal ${target.text} of ${body}${relating}`;
+}
+
 // "Subdivision a of section 21-1013" / "Section 16-497"
 export function describeTarget(section, block) {
   if (!block || block.level === "section") {
@@ -103,8 +178,15 @@ export function describeTarget(section, block) {
 }
 
 // The unconsolidated text that introduces a bill section (Rule 3).
-export function composeLeadIn({ section, block, operation, newDesignator }) {
+export function composeLeadIn({
+  section,
+  blocks,
+  operation,
+  wholeSection,
+  newDesignator,
+}) {
   const code = CODES[section.code] || CODES["administrative code"];
+  const block = (blocks || [])[0];
   const target = describeTarget(section, block);
   const recital = historyRecital(section.history, operation);
 
@@ -120,9 +202,15 @@ export function composeLeadIn({ section, block, operation, newDesignator }) {
           newDesignator || "provision"
         } to read as follows:`
       );
-    case "repeal":
-      // Rules 3.1.10 and 11.1.4.
-      return capitalizeFirst(`${target} of the ${code.full} is REPEALED.`);
+    case "repeal": {
+      // Rules 3.1.10 and 11.1.4: no recital, and REPEALED in capitals.
+      const repealed = describeRepealTargets(section, blocks, wholeSection);
+      return capitalizeFirst(
+        `${repealed.text} of the ${code.full} ${
+          repealed.plural ? "are" : "is"
+        } REPEALED.`
+      );
+    }
     default:
       return "";
   }
@@ -158,17 +246,21 @@ export function buildBillSection({
   section,
   blocks,
   operation,
+  wholeSection,
   newDesignator,
 }) {
   const lead = composeLeadIn({
     section,
-    block: blocks[0],
+    blocks,
     operation,
+    wholeSection,
     newDesignator,
   });
 
   // Rule 11.1: text added to consolidated law is underlined in full.
   const marked = operation === "add";
+  // Rule 11.1.4: a repeal states the provision and stops; it does not set out
+  // the text being removed.
   const content =
     operation === "repeal"
       ? []

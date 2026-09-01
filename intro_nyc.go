@@ -176,6 +176,15 @@ func redirect(p string) http.HandlerFunc {
 	}
 }
 
+// noStore keeps the browser from serving stale assets while iterating. ES
+// module graphs in particular survive a reload, so a 304 is not enough.
+func noStore(h http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Cache-Control", "no-store")
+		h.ServeHTTP(w, r)
+	})
+}
+
 func main() {
 	logRequests := flag.Bool("log-requests", false, "log requests")
 	devMode := flag.Bool("dev-mode", false, "development mode")
@@ -216,7 +225,7 @@ func main() {
 	if *devMode {
 		app.templateFS = os.DirFS(".")
 		app.staticFS = os.DirFS(".")
-		app.staticHandler = http.StripPrefix("/static/", http.FileServer(http.Dir("static")))
+		app.staticHandler = noStore(http.StripPrefix("/static/", http.FileServer(http.Dir("static"))))
 		if app.lawPath == "" {
 			if _, err := os.Stat("../nyc_code_archive"); err == nil {
 				app.lawPath = "../nyc_code_archive"

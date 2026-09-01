@@ -29,6 +29,8 @@ import {
   buildBillSection,
   emptyBill,
   describeTarget,
+  describeRepealTargets,
+  repealTitleClause,
   historyRecital,
   CODES,
 } from "./corpus.js";
@@ -58,6 +60,11 @@ let handle = loadHandle();
 let chosenSection = null;
 let chosenBlocks = [];
 
+// Checks cite either a numbered rule or an appendix.
+function ruleLabel(rule) {
+  return /^\d/.test(rule) ? `Rule ${rule}` : rule;
+}
+
 /* ------------------------------------------------------------------ plugins */
 
 function lintPlugin(onUpdate) {
@@ -71,7 +78,7 @@ function lintPlugin(onUpdate) {
         .map((p) =>
           Decoration.inline(p.from, p.to, {
             class: "lint lint-" + p.severity,
-            title: `Rule ${p.rule}: ${p.message}`,
+            title: `${ruleLabel(p.rule)}: ${p.message}`,
           })
         )
     );
@@ -292,22 +299,58 @@ async function chooseSection(ref) {
     section.cite
   } ${section.heading} \u2014 ${ref.path}`;
 
-  const skipped = (section.blocks || []).length - chosenBlocks.length;
+  renderPickerBlocks();
+}
+
+function currentOperation() {
+  return document.querySelector('input[name="picker-operation"]:checked').value;
+}
+
+// The provision list, the options beside it and the preview all depend on the
+// operation, so they are rendered together.
+function renderPickerBlocks() {
+  const section = chosenSection;
+  if (!section) return;
+  const operation = currentOperation();
+  const repealing = operation === "repeal";
+
+  document.getElementById("picker-blocks-label").textContent = repealing
+    ? "Provisions to repeal"
+    : "Provisions to bring into the bill";
+  document.getElementById("picker-separate-row").hidden = repealing;
+  document.getElementById("picker-title-row").hidden = !repealing;
+  document.getElementById("picker-title-preview").hidden = !repealing;
+
   const list = document.getElementById("picker-blocks");
   list.innerHTML = "";
+
+  if (repealing) {
+    // Rule 11.1.4: a repeal names what it removes, so the whole section and a
+    // single subunit are different acts and have to be chosen explicitly.
+    const row = document.createElement("div");
+    row.className = "form-check";
+    row.innerHTML = `
+      <input class="form-check-input" type="checkbox" id="picker-whole" checked>
+      <label class="form-check-label" for="picker-whole">
+        The entire section (\u00a7 ${escapeHTML(section.cite)})</label>`;
+    list.appendChild(row);
+  }
+
   chosenBlocks.forEach((block, i) => {
     const id = `picker-block-${i}`;
     const row = document.createElement("div");
     row.className = "form-check";
     row.innerHTML = `
       <input class="form-check-input" type="checkbox" value="${i}" id="${id}" ${
-      i === 0 ? "checked" : ""
+      !repealing && i === 0 ? "checked" : ""
     }>
       <label class="form-check-label" for="${id}">${escapeHTML(
       blockLabel(section, block)
     )}</label>`;
     list.appendChild(row);
   });
+
+  const skipped = (section.blocks || []).length - chosenBlocks.length;
   if (skipped > 0) {
     const note = document.createElement("p");
     note.className = "rule-cite mb-0 mt-2";
@@ -318,67 +361,118 @@ async function chooseSection(ref) {
   renderPickerPreview();
 }
 
+function wholeSectionSelected() {
+  const whole = document.getElementById("picker-whole");
+  return Boolean(whole && whole.checked);
+}
+
 function selectedBlocks() {
   const checked = [
-    ...document.querySelectorAll("#picker-blocks input:checked"),
+    ...document.querySelectorAll("#picker-blocks input[value]:checked"),
   ].map((el) => Number(el.value));
+  if (currentOperation() === "repeal") {
+    return checked.map((i) => chosenBlocks[i]).filter(Boolean);
+  }
   const indices = checked.length ? checked : [0];
   return indices.map((i) => chosenBlocks[i]).filter(Boolean);
 }
 
 function renderPickerPreview() {
   if (!chosenSection) return;
-  const operation = document.querySelector(
-    'input[name="picker-operation"]:checked'
-  ).value;
+  const operation = currentOperation();
   const blocks = selectedBlocks();
+  const wholeSection = wholeSectionSelected();
   const recital = historyRecital(chosenSection.history, operation);
-  const target = describeTarget(chosenSection, blocks[0]);
   const code = CODES[chosenSection.code] || CODES["administrative code"];
 
-  const verb =
-    operation === "amend"
-      ? "is amended to read as follows:"
-      : operation === "repeal"
-      ? "is REPEALED."
-      : "is amended by adding a new provision to read as follows:";
+  let text;
+  if (operation === "repeal") {
+    const target = describeRepealTargets(chosenSection, blocks, wholeSection);
+    text = `${target.text} of the ${code.full} ${
+      target.plural ? "are" : "is"
+    } REPEALED.`;
+  } else {
+    const target = describeTarget(chosenSection, blocks[0]);
+    const verb =
+      operation === "amend"
+        ? "is amended to read as follows:"
+        : "is amended by adding a new provision to read as follows:";
+    text = `${target} of the ${code.full}${recital} ${verb}`;
+  }
+  document.getElementById("picker-preview").textContent =
+    text.charAt(0).toUpperCase() + text.slice(1);
 
-  document.getElementById(
-    "picker-preview"
-  ).textContent = `${target[0].toUpperCase()}${target.slice(1)} of the ${
-    code.full
-  }${recital} ${verb}`;
+  if (operation === "repeal") {
+    document.getElementById("picker-title-preview").textContent =
+      "Title: \u2026 " +
+      repealTitleClause({
+        section: chosenSection,
+        blocks,
+        wholeSection,
+        titleCode: view.state.doc.firstChild.attrs.code,
+      });
+  }
 
   const history = chosenSection.history || {};
   let note = history.note
     ? history.note
     : "No amendment history recorded \u2014 no recital required (Rule 3.1.2).";
-  if (history.repealed) {
+  if (operation === "repeal") {
+    note = "No recital of legislative history for a repeal (Rule 3.1.10). " + note;
+  } else if (history.repealed) {
     note = "This provision is shown as repealed. " + note;
   }
   document.getElementById("picker-history").textContent = note;
 }
 
+// Rule 2.1.1: append the repeal to the title rather than leaving the drafter to
+// remember it.
+function addRepealToTitle(clause) {
+  const attrs = view.state.doc.firstChild.attrs;
+  if (attrs.subject.includes(clause)) return;
+  const subject = attrs.subject.trim();
+  setTitleAttrs({
+    subject: subject ? `${subject}, ${clause}` : clause,
+  });
+  syncTitleInputs();
+}
+
 function insertFromPicker() {
   if (!chosenSection) return;
-  const operation = document.querySelector(
-    'input[name="picker-operation"]:checked'
-  ).value;
+  const operation = currentOperation();
   const separate = document.getElementById("picker-separate").checked;
   const blocks = selectedBlocks();
+  const wholeSection = wholeSectionSelected();
   const section = chosenSection;
 
-  // Rule 3.4: non-consecutive provisions may go in one bill section with
-  // intervening context, or in separate bill sections.
-  if (separate && blocks.length > 1) {
+  if (operation === "repeal") {
+    if (
+      document.getElementById("picker-title-clause").checked
+    ) {
+      addRepealToTitle(
+        repealTitleClause({
+          section,
+          blocks,
+          wholeSection,
+          titleCode: view.state.doc.firstChild.attrs.code,
+        })
+      );
+    }
+    insertBillSection(
+      buildBillSection({ section, blocks, operation, wholeSection })
+    );
+  } else if (separate && blocks.length > 1) {
+    // Rule 3.4.2: non-consecutive provisions may go in separate bill sections.
     blocks.forEach((block) =>
       insertBillSection(
         buildBillSection({ section, blocks: [block], operation })
       )
     );
   } else {
+    // Rule 3.4.1: one bill section carrying the intervening text.
     insertBillSection(buildBillSection({ section, blocks, operation }));
   }
+
   closeModal("modal-picker");
   resetPicker();
 }
@@ -436,8 +530,8 @@ function renderProblems(list) {
     const item = document.createElement("button");
     item.type = "button";
     item.className = "issue " + (SEVERITY_CLASS[problem.severity] || "");
-    item.innerHTML = `<span class="issue-rule">Rule ${escapeHTML(
-      problem.rule
+    item.innerHTML = `<span class="issue-rule">${escapeHTML(
+      ruleLabel(problem.rule)
     )}</span> ${escapeHTML(problem.message)}${
       problem.excerpt
         ? ` <span class="issue-excerpt">${escapeHTML(problem.excerpt)}</span>`
@@ -618,7 +712,7 @@ function wireUI() {
     .addEventListener("change", renderPickerPreview);
   document
     .querySelectorAll('input[name="picker-operation"]')
-    .forEach((el) => el.addEventListener("change", renderPickerPreview));
+    .forEach((el) => el.addEventListener("change", renderPickerBlocks));
   document
     .getElementById("btn-picker-insert")
     .addEventListener("click", insertFromPicker);

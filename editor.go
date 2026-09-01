@@ -13,15 +13,6 @@ import (
 
 const maxDraftBytes = 1 << 20
 
-// editorRoot is where the editor is mounted for this request. The editor is its
-// own site at editor.intro.nyc and lives under /editor/ everywhere else.
-func editorRoot(r *http.Request) string {
-	if strings.HasPrefix(r.Host, "editor.") {
-		return "/"
-	}
-	return "/editor/"
-}
-
 // Editor renders the drafting editor.
 func (a *App) Editor(w http.ResponseWriter, r *http.Request) {
 	T := Printer(r.Context())
@@ -32,12 +23,10 @@ func (a *App) Editor(w http.ResponseWriter, r *http.Request) {
 	type Page struct {
 		Page  string
 		Title string
-		Root  string
 	}
 	body := Page{
 		Page:  "editor",
 		Title: T.Sprintf("Legislation Editor"),
-		Root:  editorRoot(r),
 	}
 	if err := t.ExecuteTemplate(w, templateName, body); err != nil {
 		log.Print(err)
@@ -119,7 +108,6 @@ func (a *App) EditorReadOnly(w http.ResponseWriter, r *http.Request) {
 	type Page struct {
 		Page    string
 		Title   string
-		Root    string
 		ID      string
 		Updated time.Time
 		Bill    template.HTML
@@ -127,7 +115,6 @@ func (a *App) EditorReadOnly(w http.ResponseWriter, r *http.Request) {
 	body := Page{
 		Page:    "editor",
 		Title:   draft.Title,
-		Root:    editorRoot(r),
 		ID:      draft.ID,
 		Updated: draft.Updated,
 		Bill:    renderBill(&doc),

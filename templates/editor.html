@@ -94,6 +94,24 @@
     <h5>Insert a section of existing law</h5>
 
     <div class="mb-3">
+      <label class="form-label">Operation</label>
+      <div>
+        <div class="form-check form-check-inline">
+          <input class="form-check-input" type="radio" name="picker-operation" id="op-amend" value="amend" checked>
+          <label class="form-check-label" for="op-amend">Amend</label>
+        </div>
+        <div class="form-check form-check-inline">
+          <input class="form-check-input" type="radio" name="picker-operation" id="op-add" value="add">
+          <label class="form-check-label" for="op-add">Add new provision</label>
+        </div>
+        <div class="form-check form-check-inline">
+          <input class="form-check-input" type="radio" name="picker-operation" id="op-repeal" value="repeal">
+          <label class="form-check-label" for="op-repeal">Repeal</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="mb-3">
       <label class="form-label" for="picker-query">Find a section</label>
       <input type="search" class="form-control" id="picker-query" autocomplete="off"
              placeholder="16-497, or words from the heading">
@@ -108,31 +126,22 @@
       </div>
 
       <div class="mb-3">
-        <label class="form-label">Operation</label>
-        <div>
-          <div class="form-check form-check-inline">
-            <input class="form-check-input" type="radio" name="picker-operation" id="op-amend" value="amend" checked>
-            <label class="form-check-label" for="op-amend">Amend</label>
-          </div>
-          <div class="form-check form-check-inline">
-            <input class="form-check-input" type="radio" name="picker-operation" id="op-add" value="add">
-            <label class="form-check-label" for="op-add">Add new provision</label>
-          </div>
-          <div class="form-check form-check-inline">
-            <input class="form-check-input" type="radio" name="picker-operation" id="op-repeal" value="repeal">
-            <label class="form-check-label" for="op-repeal">Repeal</label>
-          </div>
-        </div>
-      </div>
-
-      <div class="mb-3">
-        <label class="form-label">Provisions to bring into the bill</label>
+        <label class="form-label" id="picker-blocks-label">Provisions to bring into the bill</label>
         <div id="picker-blocks"></div>
-        <div class="form-check mt-2">
+
+        <div class="form-check mt-2" id="picker-separate-row">
           <input class="form-check-input" type="checkbox" id="picker-separate">
           <label class="form-check-label" for="picker-separate">
             Put each provision in its own bill section
             <span class="rule-cite">(Rule 3.4.2; otherwise intervening text is included, Rule 3.4.1)</span>
+          </label>
+        </div>
+
+        <div class="form-check mt-2" id="picker-title-row" hidden>
+          <input class="form-check-input" type="checkbox" id="picker-title-clause" checked>
+          <label class="form-check-label" for="picker-title-clause">
+            Describe the repeal in the bill title
+            <span class="rule-cite">(Rule 2.1.1 requires it)</span>
           </label>
         </div>
       </div>
@@ -140,6 +149,7 @@
       <div class="mb-3">
         <label class="form-label">Bill section lead-in <span class="rule-cite">(Rule 3.1)</span></label>
         <div class="preview-box" id="picker-preview"></div>
+        <div class="preview-box mt-2" id="picker-title-preview" hidden></div>
       </div>
     </div>
 

@@ -151,6 +151,26 @@ function structuralChecks(doc) {
         "A bill that repeals a provision must identify the repeal in its title.",
     });
   }
+  if (repeals) {
+    // Appendix F, and the two items on that checklist the editor cannot check
+    // for the drafter.
+    problems.push({
+      from: 0,
+      to: 0,
+      rule: "Appendix F",
+      severity: "info",
+      message:
+        "Search the charter and administrative code for cross-references to the repealed provision; they must be repealed or amended too.",
+    });
+    problems.push({
+      from: 0,
+      to: 0,
+      rule: "Appendix F",
+      severity: "info",
+      message:
+        "Repealing a repeal does not revive the earlier provision; text to be revived must be added as new.",
+    });
+  }
   if (/\.\s*$/.test(titleString)) {
     problems.push({
       from: 0,
