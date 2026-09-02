@@ -1,0 +1,1560 @@
+{{template "base" .}}
+{{define "title"}}{{.Title}}{{end}}
+
+{{define "middle"}}
+<div class="manual">
+
+  <h1>Bill Drafting Manual</h1>
+
+  <p class="manual-note">
+    The following are excerpts from the <em>New York City Council Bill Drafting Manual, Third Edition (2022)</em>,
+    reproduced here because they are the rules this editor applies when it formats, numbers, and lints bill text.
+    This is <strong>not</strong> the complete manual — only the portions the editor implements. The New York City
+    Council is the source and the sole authority for these rules; where anything here differs from the Council&rsquo;s
+    manual, the Council&rsquo;s manual controls. The full document, along with the Council&rsquo;s legislation, is
+    available from <a href="https://council.nyc.gov/legislation/">the Council&rsquo;s legislation page</a>.
+  </p>
+
+  <nav class="manual-toc">
+    <ul>
+      <li><a href="#rule-2">Rule 2 &mdash; The Formal Parts of a Bill</a>
+        <ul>
+          <li><a href="#rule-2-1">2.1 The Title</a></li>
+          <li><a href="#rule-2-1-1">2.1.1 Referring to Repeals in a Bill Title</a></li>
+          <li><a href="#rule-2-2">2.2 The Enacting Clause</a></li>
+          <li><a href="#rule-2-3">2.3 The Body</a></li>
+        </ul>
+      </li>
+      <li><a href="#rule-3">Rule 3 &mdash; Bill Sections</a>
+        <ul>
+          <li><a href="#rule-3-1">3.1 Legislative History in Bill Sections</a></li>
+          <li><a href="#rule-3-1-1">3.1.1 General Guidance for Legislative History</a></li>
+          <li><a href="#rule-3-1-2">3.1.2 Provision Was in 1963 Charter or 1985 Administrative Code</a></li>
+          <li><a href="#rule-3-1-3">3.1.3 Provision to Be Amended Was Added</a></li>
+          <li><a href="#rule-3-1-4">3.1.4 Added Then Amended</a></li>
+          <li><a href="#rule-3-1-5">3.1.5 Added Then Redesignated</a></li>
+          <li><a href="#rule-3-1-6">3.1.6 Amended Then Redesignated</a></li>
+          <li><a href="#rule-3-1-7">3.1.7 Redesignated Then Amended</a></li>
+          <li><a href="#rule-3-1-8">3.1.8 Provision Is to Be Added Only</a></li>
+          <li><a href="#rule-3-1-9">3.1.9 Provision Is to Be Redesignated Only</a></li>
+          <li><a href="#rule-3-1-10">3.1.10 Provision Is to Be Repealed</a></li>
+          <li><a href="#rule-3-1-11">3.1.11 Referring to Unamended Provisions in Previously Amended Text</a></li>
+          <li><a href="#rule-3-4">3.4 Distributing Amendments Among Bill Sections</a></li>
+          <li><a href="#rule-3-4-1">3.4.1 Non-Consecutive Provisions in a Single Bill Section</a></li>
+          <li><a href="#rule-3-4-2">3.4.2 Non-Consecutive Provisions in Separate Bill Sections</a></li>
+        </ul>
+      </li>
+      <li><a href="#rule-4-2">Rule 4.2 &mdash; Sections</a>
+        <ul>
+          <li><a href="#rule-4-2-1">4.2.1 Section Heading</a></li>
+          <li><a href="#rule-4-2-2">4.2.2 Period After Section Number</a></li>
+          <li><a href="#rule-4-2-3">4.2.3 Section Number</a></li>
+          <li><a href="#rule-4-3">4.3 Subdivisions of Sections (and Below)</a></li>
+          <li><a href="#rule-4-3-2">4.3.2 Special Rule for Lists</a></li>
+          <li><a href="#rule-4-3-4">4.3.4 Referring to Subunits</a></li>
+        </ul>
+      </li>
+      <li><a href="#rule-5">Rule 5 &mdash; Referring to Other Laws</a>
+        <ul>
+          <li><a href="#rule-5-1-1">5.1.1 A Section in the Same Body of Consolidated Law</a></li>
+          <li><a href="#rule-5-1-2">5.1.2 A Section in a Different Body of Consolidated Law</a></li>
+          <li><a href="#rule-5-1-3">5.1.3 Provisions below the Section Level</a></li>
+          <li><a href="#rule-5-1-4">5.1.4 Charter or Administrative Code in Unconsolidated Law</a></li>
+          <li><a href="#rule-5-1-5">5.1.5 Referring to a Defined Term</a></li>
+          <li><a href="#rule-5-2">5.2 New York City Rules</a></li>
+          <li><a href="#rule-5-3">5.3 State Statutes</a></li>
+          <li><a href="#rule-5-4">5.4 State Rules and Regulations</a></li>
+          <li><a href="#rule-5-5">5.5 Federal Statutes</a></li>
+          <li><a href="#rule-5-6">5.6 Federal Regulations</a></li>
+        </ul>
+      </li>
+      <li><a href="#rule-6">Rule 6 &mdash; The Effective Date</a>
+        <ul>
+          <li><a href="#rule-6-1">6.1 How to Phrase an Effective Date</a></li>
+          <li><a href="#rule-6-2">6.2 Effective ___ Days after It Becomes Law</a></li>
+          <li><a href="#rule-6-3">6.3 Effective On a Date Certain</a></li>
+          <li><a href="#rule-6-4">6.4 Effective Immediately</a></li>
+        </ul>
+      </li>
+      <li><a href="#rule-8">Rule 8 &mdash; Numbers</a>
+        <ul>
+          <li><a href="#rule-8-1">8.1 Summary: Using Numerals or Spelling Out Numbers</a></li>
+          <li><a href="#rule-8-2">8.2 Use Numerals by Default</a></li>
+          <li><a href="#rule-8-3-2">8.3.2 Spell Out Ordinals</a></li>
+          <li><a href="#rule-8-3-4">8.3.4 Spell Out References to Bill Sections in the Same Bill</a></li>
+        </ul>
+      </li>
+      <li><a href="#rule-11-1">Rule 11.1 &mdash; Indicating Deletions and Additions</a>
+        <ul>
+          <li><a href="#rule-11-1-1">11.1.1 Deleting Part of a Word</a></li>
+          <li><a href="#rule-11-1-2">11.1.2 Spacing around Additions and Deletions</a></li>
+          <li><a href="#rule-11-1-3">11.1.3 Deleting Punctuation</a></li>
+          <li><a href="#rule-11-1-4">11.1.4 &ldquo;REPEALED&rdquo; in All Capital Letters</a></li>
+        </ul>
+      </li>
+      <li><a href="#rule-11-2">Rule 11.2 &mdash; Capitalization</a></li>
+      <li>Other style rules
+        <ul>
+          <li><a href="#rule-11-3">11.3 Single Space after Periods</a></li>
+          <li><a href="#rule-11-4">11.4 Space after Section Symbol</a></li>
+          <li><a href="#rule-11-6">11.6 The Present Tense</a></li>
+          <li><a href="#rule-11-12">11.12 Outdated or Offensive Terminology</a></li>
+          <li><a href="#rule-11-16">11.16 &ldquo;Shall&rdquo; Versus &ldquo;May&rdquo;</a></li>
+          <li><a href="#rule-11-19-1">11.19.1 Serial Comma</a></li>
+          <li><a href="#rule-11-21-1">11.21.1 &ldquo;Which&rdquo; Versus &ldquo;That&rdquo;</a></li>
+          <li><a href="#rule-11-22">11.22 Contractions</a></li>
+        </ul>
+      </li>
+      <li><a href="#rule-appendix-f">Appendix F &mdash; Repeal Checklist</a></li>
+    </ul>
+  </nav>
+
+  <section class="manual-rule" id="rule-2">
+    <h2><span class="rule-number">Rule 2</span> The Formal Parts of a Bill</h2>
+    <p>
+      A bill consists of a title, an enacting clause, and a body. The body receives special consideration
+      because it is the most complex.
+    </p>
+  </section>
+
+  <section class="manual-rule" id="rule-2-1">
+    <h2><span class="rule-number">Rule 2.1</span> The Title</h2>
+    <p>
+      Every bill and resolution has a title. The title of a bill must &ldquo;briefly refer to the subject
+      matter,&rdquo; and both the title and the bill must cover only a single subject. A good title is short and
+      general and need not summarize each incidental provision. It should, however, capture the general purpose of
+      the bill and key mechanisms that will help fulfill the purpose. If the bill repeals any provisions of law, the
+      title must refer to and describe those provisions.
+    </p>
+    <p>
+      Wait to draft the title until after finishing the rest of the bill, or check the title carefully after
+      completing the bill to make sure that it is complete and not misleading. Double space between &ldquo;A LOCAL
+      LAW&rdquo; and the rest of the title, and single space the rest of the title. Do not place a period at the end.
+    </p>
+    <div class="manual-example">
+      <p>A LOCAL LAW</p>
+      <p>To amend the New York city charter, in relation to door alarms in school buildings</p>
+      <p>A LOCAL LAW</p>
+      <p>To amend the administrative code of the city of New York, in relation to creating an animal abuse registry</p>
+      <p>A LOCAL LAW</p>
+      <p>In relation to establishing a temporary task force on post-incarceration reentry for adolescents</p>
+    </div>
+    <p>
+      When drafting a new, wholly unconsolidated law, do not refer to the Charter or the Administrative Code in the
+      bill title. Also do not underline text beyond the words &ldquo;Be it enacted by the Council as follows:&rdquo;
+      except as otherwise specifically provided in the manual.
+    </p>
+  </section>
+
+  <section class="manual-rule" id="rule-2-1-1">
+    <h2><span class="rule-number">Rule 2.1.1</span> Referring to Repeals in a Bill Title</h2>
+    <p>
+      The title of a bill that repeals a provision of law must identify and describe the provision being repealed.
+    </p>
+    <div class="manual-example">
+      <p>A LOCAL LAW</p>
+      <p>
+        To amend the New York city charter, in relation to the creation of the department of early childhood
+        development, and to repeal paragraph 4 of subdivision a of section 617 of such charter in relation thereto
+      </p>
+      <p>A LOCAL LAW</p>
+      <p>
+        To amend the administrative code of the city of New York, in relation to prohibiting smoking in pedestrian
+        plazas and public parks except for smoking areas within public parks, and to repeal subdivision b of section
+        17-513 of such code, relating to requiring a study regarding the prevention of second-hand smoke circulation
+        in restaurants
+      </p>
+    </div>
+    <p>
+      This rule also applies where a bill includes a sunset clause or expiration date for one of its own provisions.
+    </p>
+    <div class="manual-example">
+      <p>A LOCAL LAW</p>
+      <p>
+        To amend the administrative code of the city of New York, in relation to the establishment of a task force to
+        study the impact of COVID-19 on small businesses, and to repeal such amendments upon the expiration thereof
+      </p>
+      <p>A LOCAL LAW</p>
+      <p>
+        To amend the administrative code of the city of New York, in relation to the open streets program, and to
+        repeal subdivision b of section 19-9901 of such code relating to a report on the open streets program upon
+        the expiration thereof
+      </p>
+    </div>
+  </section>
+
+  <section class="manual-rule" id="rule-2-2">
+    <h2><span class="rule-number">Rule 2.2</span> The Enacting Clause</h2>
+    <p>
+      All bills must begin with the statement &ldquo;Be it enacted by the Council as follows,&rdquo; which must be
+      underlined and followed by a colon (also underlined) and a paragraph break. This provision distinguishes bills
+      from resolutions and other forms of legislative expression. The enacting clause should immediately follow the
+      bill title. It should not be included in line numbering. Material immediately following the enacting clause is
+      not underlined.
+    </p>
+    <div class="manual-example">
+      <p><u class="ins">Be it enacted by the Council as follows:</u></p>
+      <p>
+        Section 1. Subdivision (e) of section 2203 of the New York city charter, as added by local law number 46 for
+        the year 2013, is amended to read as follows:
+      </p>
+    </div>
+  </section>
+
+  <section class="manual-rule" id="rule-2-3">
+    <h2><span class="rule-number">Rule 2.3</span> The Body</h2>
+    <p>
+      The &ldquo;body&rdquo; of a bill refers to all of the bill text other than the title and the enacting clause.
+      It also excludes the sponsorship byline, as well as version information at the end of some drafts (i.e., the
+      drafter&rsquo;s initials, LS request number, and version date). This means the body includes bill sections,
+      bill text, and the effective date.
+    </p>
+  </section>
+
+  <section class="manual-rule" id="rule-3">
+    <h2><span class="rule-number">Rule 3</span> Bill Sections</h2>
+    <p>
+      The body of every bill consists of one or more &ldquo;bill sections,&rdquo; which are a type of unconsolidated
+      law. The phrase &ldquo;bill section&rdquo; is a term of art: it refers to the unconsolidated portions of a
+      bill &mdash; usually the introductory portions that explain which parts of the Charter or Administrative Code
+      are to be amended or supplemented with new provisions. The phrase does not refer to the consolidated text
+      being added or amended by the bill.
+    </p>
+    <p>
+      Number bill sections consecutively using the section symbol (&sect;), followed by a space, followed by a
+      numeral (1, 2, 3, etc.), followed by a period. Spell out the word &ldquo;Section&rdquo; for the first bill
+      section only. The unconsolidated text in bill sections should not be underlined.
+    </p>
+    <div class="manual-example">
+      <p>Section 1. ___</p>
+      <p>&sect; 2. ___</p>
+      <p>&sect; 3. ___</p>
+    </div>
+    <p>
+      Following the bill section number, any proposal to amend, repeal, or redesignate any part of the Charter or
+      Administrative Code must cite the full title of the body of law being amended, repealed, or redesignated,
+      using the capitalization conventions discussed in Rule 11.2.
+    </p>
+    <div class="manual-example">
+      <p>Section 1. Section 5 of the New York city charter is amended to read as follows:</p>
+      <p>Section 1. Section 1-102 of the administrative code of the city of New York is amended to read as follows:</p>
+    </div>
+    <p>
+      If a bill seeks to amend or repeal an unconsolidated law, it should refer to the law by its local law number
+      and year of adoption, using the phrasing &ldquo;local law number __ for the year ____.&rdquo;
+    </p>
+    <div class="manual-example">
+      <p>Section 1. Sections 3, 4, 5, 6, 7, 8 and 9 of local law number 141 for the year 2013 are REPEALED.</p>
+      <p>&sect; 2. Section 3 of local law number 41 for the year 2012 is amended to read as follows:</p>
+    </div>
+    <p>
+      Note the difference in phrasing when the bill would amend existing provisions as opposed to when it would add
+      new provisions without amending existing text.
+    </p>
+    <div class="manual-example">
+      <p>
+        Section 1. Paragraph 2 of subdivision m of section 27-2115 of the administrative code of the city of New
+        York, as amended by local law number 47 for the year 2014, is amended to read as follows:
+      </p>
+      <p>
+        Section 1. Chapter 2 of title 4 of the administrative code of the city of New York is amended by adding a new
+        section 4-207.2 to read as follows:
+      </p>
+    </div>
+  </section>
+
+  <section class="manual-rule" id="rule-3-1">
+    <h2><span class="rule-number">Rule 3.1</span> Legislative History in Bill Sections</h2>
+    <p>
+      Whenever a bill section amends an existing provision of law, it should include a reference to the last law that
+      amended that provision. This reference is known as the recital of legislative history, or simply the
+      legislative history. As used in this manual, the phrase refers to the amendment history of a specified
+      provision of law &mdash; not to committee reports, hearing transcripts, or other documents.
+    </p>
+    <p>
+      The legislative history set forth in bill sections serves important institutional functions and should not be
+      ignored. It helps lawyers, courts, legislatures, and researchers trace the history of a particular provision,
+      and it helps publishers make sure that any new amendments are correctly applied to the most recent version of a
+      provision.
+    </p>
+  </section>
+
+  <section class="manual-rule" id="rule-3-1-1">
+    <h2><span class="rule-number">Rule 3.1.1</span> General Guidance for Legislative History</h2>
+    <p>
+      The Administrative Code was recodified by the State Legislature in chapter 907 of the Laws of 1985. When citing
+      legislative history in a bill section amending the Administrative Code, it is unnecessary to cite to chapter
+      907 or any history that precedes chapter 907. Similarly, when citing legislative history in a bill section
+      amending the Charter, it is unnecessary to cite to any history that precedes the 1963 Charter.
+    </p>
+    <p>
+      In general, if a provision of consolidated law to be amended has been added to the Charter or Administrative
+      Code or has been redesignated or amended, the bill section should state the local law number and year of the
+      last local law adding, redesignating, or amending it, as the case may be.
+    </p>
+    <p>
+      Carefully trace the legislative history of each provision being amended. In some cases the State Legislature
+      might have added, redesignated, or amended the text directly. In those situations, first conduct legal research
+      to make sure the City has authority to amend, redesignate, or repeal the law, and make sure to specify the
+      chapter and year of the state law in the recital of legislative history.
+    </p>
+    <div class="manual-example">
+      <p>
+        Section 27-2018.1 of the administrative code of the city of New York, as added by chapter 477 of the laws of
+        2010, is amended to read as follows:
+      </p>
+      <p>
+        Section 13-351 of the administrative code of the city of New York, as amended by chapter 712 of the laws of
+        2006, is amended to read as follows:
+      </p>
+    </div>
+  </section>
+
+  <section class="manual-rule" id="rule-3-1-2">
+    <h2><span class="rule-number">Rule 3.1.2</span> Provision to Be Amended Was in 1963 Charter or in 1985 Administrative Code</h2>
+    <p>
+      If the provision to be amended is part of the Charter of 1963 or the Administrative Code of 1985 and has not
+      subsequently been redesignated or amended, state only the identifying number or letter of that provision
+      without including a recital of legislative history.
+    </p>
+    <div class="manual-example">
+      <p>Section 1-103 of the administrative code of the city of New York is amended to read as follows:</p>
+      <p>The administrative code of the city of New York is amended by adding a new title 30 to read as follows:</p>
+    </div>
+  </section>
+
+  <section class="manual-rule" id="rule-3-1-3">
+    <h2><span class="rule-number">Rule 3.1.3</span> Provision to Be Amended Was Added</h2>
+    <p>
+      If the provision to be amended was added after the Charter of 1963 or the Administrative Code of 1985 and has
+      not been amended or redesignated since its addition, state the number and year of the local law or the chapter
+      and year of the state law by which it was added.
+    </p>
+    <div class="manual-example">
+      <p>
+        Section 24-908 of the administrative code of the city of New York, as added by local law number 27 for the
+        year 2009, is amended to read as follows:
+      </p>
+      <p>
+        Paragraph 7 of subdivision b of section 556 of the New York city charter, as added by a vote of the electors
+        on November 6, 2001, is amended to read as follows:
+      </p>
+    </div>
+  </section>
+
+  <section class="manual-rule" id="rule-3-1-4">
+    <h2><span class="rule-number">Rule 3.1.4</span> Provision to Be Amended Was Added Then Amended</h2>
+    <p>
+      If the provision to be amended has been amended already, include only the number and year of the local law or
+      the chapter and year of the state law that last amended that portion, but do not include the law that added
+      that provision.
+    </p>
+    <div class="manual-example">
+      <p>
+        Paragraph 4 of subdivision a of section 27-2004 of the administrative code of the city of New York, as
+        amended by local law number 8 for the year 2008, is amended to read as follows:
+      </p>
+    </div>
+  </section>
+
+  <section class="manual-rule" id="rule-3-1-5">
+    <h2><span class="rule-number">Rule 3.1.5</span> Provision to Be Amended Was Added Then Redesignated</h2>
+    <p>
+      If the provision to be amended was added after the Charter of 1963 or the Administrative Code of 1985, and it
+      subsequently was redesignated without amendment, state not only the number and year of the local law or the
+      chapter and year of the state law that added the provision, but also the number and year of the local law or
+      the chapter and year of the state law that redesignated the provision. This scenario is atypical because two
+      different laws must be listed in the legislative history.
+    </p>
+    <div class="manual-example">
+      <p>
+        Section 10-168 of the administrative code of the city of New York, as added by local law number 20 for the
+        year 2007 and redesignated by local law number 30 for the year 2013, is amended to read as follows:
+      </p>
+      <p>
+        Subparagraph (b) of paragraph 1 of subdivision d of section 1049-a of the New York city charter, as added by
+        chapter 944 of the laws of 1984 and redesignated by local law number 35 for the year 2008, is amended to read
+        as follows:
+      </p>
+    </div>
+  </section>
+
+  <section class="manual-rule" id="rule-3-1-6">
+    <h2><span class="rule-number">Rule 3.1.6</span> Provision to Be Amended Was Amended Then Redesignated</h2>
+    <p>
+      If the provision to be amended was previously amended and then later redesignated without substantive
+      amendment, state not only the number and year of the local law or the chapter and year of the state law that
+      last amended the portion, but also the number and year of the local law or the chapter and year of the state
+      law that redesignated the provision. As with the previous scenario, this scenario is atypical because two
+      different laws must be listed in the legislative history.
+    </p>
+    <div class="manual-example">
+      <p>
+        Section 21-310 of the administrative code of the city of New York, as amended by local law number 75 for the
+        year 1995 and redesignated by local law number 19 for the year 1999, is amended to read as follows:
+      </p>
+    </div>
+  </section>
+
+  <section class="manual-rule" id="rule-3-1-7">
+    <h2><span class="rule-number">Rule 3.1.7</span> Provision to Be Amended Was Redesignated Then Amended</h2>
+    <p>
+      If the provision to be amended was redesignated and subsequently amended, state only the number and year of the
+      local law or the chapter and year of the state law that amended the relevant portion. Do not refer to the
+      earlier law that redesignated it.
+    </p>
+    <div class="manual-example">
+      <p>
+        Subdivision e of section 21-312 of the administrative code of the city of New York, as amended by local law
+        number 22 for the year 2002, is amended to read as follows:
+      </p>
+    </div>
+  </section>
+
+  <section class="manual-rule" id="rule-3-1-8">
+    <h2><span class="rule-number">Rule 3.1.8</span> Provision Is to Be Added Only</h2>
+    <p>
+      If new provisions are to be added to existing law without further amending the existing law, do not include
+      legislative history. This rule is frequently applicable, as many bills simply involve adding a new provision to
+      a section, chapter, etc.
+    </p>
+    <div class="manual-example">
+      <p>
+        Subdivision c of section 16-119 of the administrative code of the city of New York is amended by adding a new
+        paragraph 4 to read as follows:
+      </p>
+    </div>
+  </section>
+
+  <section class="manual-rule" id="rule-3-1-9">
+    <h2><span class="rule-number">Rule 3.1.9</span> Provision Is to Be Redesignated Only</h2>
+    <p>
+      If a provision of existing law is to be redesignated without amendment and without setting forth the text of
+      the provision to be redesignated, do not include legislative history.
+    </p>
+    <div class="manual-example">
+      <p>Section 10-165 of the administrative code of the city of New York is redesignated section 10-169.</p>
+    </div>
+    <p>
+      If a provision is redesignated and also amended at the same time, treat the change as an amendment rather than
+      a redesignation and apply the applicable rules for amendments above.
+    </p>
+    <p>
+      <strong>Exception:</strong> If a provision to be redesignated has the same section number as another provision
+      (i.e., the two are duplicative), it may be necessary to include a recital of legislative history in order to
+      distinguish between them. The same principle applies in cases of duplicative subdivision letters, chapter
+      numbers, etc.
+    </p>
+    <div class="manual-example">
+      <p>
+        &sect; 2. Section 45-1032, as added by local law number 342 for the year 2021, is redesignated section
+        45-1033.
+      </p>
+    </div>
+  </section>
+
+  <section class="manual-rule" id="rule-3-1-10">
+    <h2><span class="rule-number">Rule 3.1.10</span> Provision Is to Be Repealed</h2>
+    <p>If a provision of existing law is being repealed, do not include legislative history.</p>
+    <div class="manual-example">
+      <p>&sect; 3. Section 35-2101 of the administrative code of the city of New York is REPEALED.</p>
+    </div>
+  </section>
+
+  <section class="manual-rule" id="rule-3-1-11">
+    <h2><span class="rule-number">Rule 3.1.11</span> Referring to Unamended Provisions in Previously Amended Text</h2>
+    <p>
+      Treat a provision as having been amended if it was printed in a law as part of a larger amendment, even if no
+      change was made to the specific provision itself. For example, if Local Law 1 includes the text of an entire
+      section, which has three subdivisions, but the law amends only subdivisions a and c and not subdivision b, and
+      Local Law 2 later amends subdivision b, then Local Law 2 should state in its legislative history that
+      subdivision b was amended by Local Law 1 even though Local Law 1 did not change the text of subdivision b.
+    </p>
+    <p>
+      Similarly, provide the legislative history for each provision printed in the bill text that has a unique
+      legislative history. In other words, note when the legislative history for a provision differs from the
+      legislative history for other provisions. Doing so will provide an unbroken chain of amendments over time.
+    </p>
+    <p>
+      In the first example below, the bill amends paragraph 2 of subdivision a and the drafter has also printed
+      paragraph 1 for context, even though paragraph 1 is not being modified. Each paragraph has a unique legislative
+      history, so the legislative history for each is included.
+    </p>
+    <div class="manual-example">
+      <p>
+        &sect; 2. Subdivision a of section 57-198 of the administrative code of the city of New York, subdivision a
+        and paragraph 1 of such subdivision as amended by local law number 82 for the year 2004 and paragraph 2 of
+        such subdivision as amended by local law number 14 for the year 2012, is amended to read as follows:
+      </p>
+      <p>a. It is unlawful for any person to:</p>
+      <p>1. Park a motor vehicle in a crosswalk; or</p>
+      <p>2. Park a motor vehicle within <span class="del">five</span> <u class="ins">10</u> feet of a crosswalk.</p>
+    </div>
+    <p>
+      In the second example, only subdivision b has a legislative history distinct from the rest of the section. As
+      such, the legislative history for the section is provided, and subdivision-specific legislative history is
+      provided only for subdivision b.
+    </p>
+    <div class="manual-example">
+      <p>
+        &sect; 2. Section 41-114 of the administrative code of the city of New York, as amended by local law number
+        21 for the year 2009 and subdivision b of such section as amended by local law number 69 for the year 2015,
+        is amended to read as follows:
+      </p>
+    </div>
+    <p>
+      To give yet another example, if amending paragraphs 6 and 8 of a subdivision and including paragraph 7 in the
+      bill for context, include paragraph 7&rsquo;s legislative history in the bill section as well.
+    </p>
+  </section>
+
+  <section class="manual-rule" id="rule-3-4">
+    <h2><span class="rule-number">Rule 3.4</span> Distributing Amendments Among Bill Sections</h2>
+    <p>
+      A drafter has significant discretion when deciding whether to amend non-consecutive provisions of the Charter
+      or Administrative Code within the same bill section or in separate bill sections. The following rules lay out
+      available options.
+    </p>
+  </section>
+
+  <section class="manual-rule" id="rule-3-4-1">
+    <h2><span class="rule-number">Rule 3.4.1</span> Amending Non-Consecutive Provisions in a Single Bill Section by Including Intervening Material</h2>
+    <p>
+      A drafter may amend non-consecutive provisions in a single bill section by also including the text of
+      intervening provisions that are not being amended. This option might be appropriate when the intervening
+      material is brief and provides valuable context. In the example that follows, subdivision b is included for
+      clarity, even though the only changes are to subdivisions a and c.
+    </p>
+    <div class="manual-example">
+      <p>
+        &sect; 2. Section 44-232 of the administrative code of the city of New York, as amended by local law number
+        733 for the year 1992, is amended to read as follows:
+      </p>
+      <p>
+        &sect; 44-232 Construction. a. This <span class="del">subchapter</span> <u class="ins">article</u> does not
+        affect the rights, powers or duties of the commissioner pursuant to any other provision of law.
+      </p>
+      <p>
+        b. This article does not require payment of salary to an employee who has been terminated, suspended or
+        otherwise separated from service by reason of death, retirement or any other cause.
+      </p>
+      <p>
+        c. A decision as to eligibility for benefits pursuant to this section <span class="del">shall not be</span>
+        <u class="ins">is not</u> binding on the medical board or the board of trustees of any pension fund in the
+        determination of eligibility for an accident disability or accidental death benefit.
+      </p>
+    </div>
+  </section>
+
+  <section class="manual-rule" id="rule-3-4-2">
+    <h2><span class="rule-number">Rule 3.4.2</span> Amending Non-Consecutive Provisions in Separate Bill Sections</h2>
+    <p>
+      A drafter may amend non-consecutive provisions by putting them in separate bill sections. This method may be
+      more appropriate than the method in Rule 3.4.1 when the provisions being amended are unrelated or when
+      intervening material is lengthy or irrelevant. The following example amends section 44-1234 by setting forth
+      amendments to subdivisions a and c in separate bill sections, omitting subdivision b, which will not be
+      amended.
+    </p>
+    <div class="manual-example">
+      <p>
+        &sect; 2. Subdivision a of section 44-1234 of the administrative code of the city of New York, as added by
+        local law number 519 for the year 2013, is amended to read as follows:
+      </p>
+      <p>a. Vehicle use is prohibited in parks on Wednesdays.</p>
+      <p>
+        &sect; 3. Subdivision c of section 44-1234 of the administrative code of the city of New York, as added by
+        local law number 519 for the year 2013, is amended to read as follows:
+      </p>
+      <p>
+        c. The <span class="del">department</span> <u class="ins">commissioner</u> shall submit an annual report to
+        the council and to the mayor that <span class="del">it</span> <u class="ins">the commissioner</u> shall also
+        post on <span class="del">its</span> <u class="ins">the department&rsquo;s</u> website. . . .
+      </p>
+    </div>
+  </section>
+
+  <section class="manual-rule" id="rule-4-2">
+    <h2><span class="rule-number">Rule 4.2</span> Sections</h2>
+    <p>
+      The section is the basic organizational unit of both the Charter and the Administrative Code. Sections should
+      conform to the rules set forth below.
+    </p>
+  </section>
+
+  <section class="manual-rule" id="rule-4-2-1">
+    <h2><span class="rule-number">Rule 4.2.1</span> Section Heading</h2>
+    <p>
+      In both the Charter and the Administrative Code, provide a heading for each section. The heading should follow
+      the section number and should be succinct but descriptive of the section&rsquo;s function.
+    </p>
+    <div class="manual-compare">
+      <div class="do">
+        <h4>Write this</h4>
+        <p>
+          &sect; 6-116.2 Data control. a. The comptroller and the mayor shall jointly maintain, at the financial
+          information services industry, a computerized database.
+        </p>
+      </div>
+      <div class="dont">
+        <h4>Not this</h4>
+        <p>
+          &sect; 6-116.2 a. The comptroller and the mayor shall jointly maintain, at the financial information
+          services industry, a computerized database.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="manual-rule" id="rule-4-2-2">
+    <h2><span class="rule-number">Rule 4.2.2</span> Period After Section Number</h2>
+    <p>
+      Due to style differences in the original Charter and Administrative Code, the rule concerning periods after
+      section numbers differs depending on which is being amended.
+    </p>
+    <p>In the Charter, put a period after both the section number and the section heading.</p>
+    <div class="manual-example">
+      <p>&sect; 5. Annual statement to council.</p>
+      <p>&sect; 102. Expense budget borough allocations.</p>
+    </div>
+    <p>
+      In the Administrative Code, put a period only after the section heading. Do not put a period between the
+      section number and the section heading.
+    </p>
+    <div class="manual-example">
+      <p>&sect; 20-291 Definition.</p>
+      <p>&sect; 9-104 Transfer of incarcerated persons by commissioner of correction.</p>
+    </div>
+  </section>
+
+  <section class="manual-rule" id="rule-4-2-3">
+    <h2><span class="rule-number">Rule 4.2.3</span> Section Number</h2>
+    <p>
+      The Administrative Code uses a compound section numbering system. The digits to the left of the hyphen indicate
+      the number of the title in which the section appears (e.g., title 24), and the digits to the right indicate the
+      section number within that title (e.g., 105). When referring to a section number of the Administrative Code,
+      use the entire designation, including the title number (e.g., &sect; 24-105). The Charter does not contain
+      multiple titles and does not use a compound section numbering system. Include the section number but not the
+      chapter number (e.g., &sect; 28).
+    </p>
+    <p>
+      When adding sections between existing consecutively numbered sections in the Administrative Code, use decimals
+      to avoid having to redesignate the sections that follow.
+    </p>
+    <div class="manual-example">
+      <p>&sect; 25-105 (existing section)</p>
+      <p>&sect; 25-105.1 (new section)</p>
+      <p>&sect; 25-105.2 (new section)</p>
+      <p>. . .</p>
+      <p>&sect; 25-105.11 (new section)</p>
+      <p>&sect; 25-106 (existing section)</p>
+    </div>
+    <p>
+      In contrast, when adding sections between existing consecutively numbered sections in the Charter, use a
+      hyphenated letter to avoid having to redesignate the sections that follow.
+    </p>
+    <div class="manual-example">
+      <p>&sect; 28. (existing section)</p>
+      <p>&sect; 28-a. (new section)</p>
+      <p>&sect; 28-b. (new section)</p>
+      <p>&sect; 29. (existing section)</p>
+    </div>
+    <p>
+      Particularly in the Administrative Code, when beginning a new chapter, subchapter, article, or other major
+      division, the general rule is to make the first section in the division end in a one (1) rather than a zero
+      (0). For example, the first section in a new chapter 5 of title 77 ideally would be section 77-5001 rather than
+      section 77-5000. Another consideration is to leave some space at the end of the previous division so that more
+      sections can be added there at a future date if necessary &mdash; ideally by starting at the next &ldquo;01&rdquo;
+      or &ldquo;51.&rdquo;
+    </p>
+  </section>
+
+  <section class="manual-rule" id="rule-4-3">
+    <h2><span class="rule-number">Rule 4.3</span> Subdivisions of Sections (and Below)</h2>
+    <p>
+      Over time, the use of numbers and letters, as well as periods and parentheses, has been inconsistent when
+      designating divisions within sections in both the Charter and the Administrative Code. In most cases, when
+      amending existing sections, conform the bill to the original designations used in the section to avoid
+      confusion, even if they differ from the approach laid out in this rule.
+    </p>
+    <p>When adding new sections, however, or recodifying sections, use the following subunit designators:</p>
+    <div class="manual-example">
+      <p>Section</p>
+      <p>a. Subdivision (lowercase letter followed by a period)</p>
+      <p>1. Paragraph (numeral followed by a period)</p>
+      <p>(a) Subparagraph (lowercase letter in parentheses)</p>
+      <p>(1) Clause (numeral in parentheses)</p>
+      <p>(A) Item (capital letter in parentheses)</p>
+    </div>
+    <p>
+      Avoid drafting below the item level. If adding a new section to a chapter, subchapter, or article that has an
+      internally consistent designation system different from the outline above, consider adhering to that
+      preexisting structure for the new section to maintain internal consistency.
+    </p>
+    <p>
+      Headings may also be appropriate below the section level. Headings help readers make sense of longer sections,
+      particularly those with many subdivisions. When employed, headings should be used consistently for all
+      subdivisions in the same section. Do not divide a unit into subunits unless there are at least two subunits:
+      to have a subdivision a, there also must be a subdivision b.
+    </p>
+    <div class="manual-example">
+      <p>
+        &sect; 39-504 Vehicles in parks prohibited. a. Definition. For purposes of this section, the term
+        &ldquo;vehicle&rdquo; does not include a personal mobility device when operated by a person with a
+        disability.
+      </p>
+      <p>b. Prohibition. No person shall operate a vehicle in a park.</p>
+      <p>c. Violation. A violation of this section is a misdemeanor.</p>
+    </div>
+  </section>
+
+  <section class="manual-rule" id="rule-4-3-2">
+    <h2><span class="rule-number">Rule 4.3.2</span> Special Rule for Lists</h2>
+    <p>
+      When enumerating a list that follows lead-in language, a drafter has two primary options for designating the
+      list items. In the first option, if the lead-in language does not have its own designation (for example, if
+      there will not be multiple subdivisions in the section), skip a level in designating the list items in order to
+      allow for amendment later without requiring renumbering.
+    </p>
+    <div class="manual-compare">
+      <div class="do">
+        <h4>Write this</h4>
+        <p>
+          &sect; 36-1984 Prohibited plants. The following species of plant are prohibited for any purpose set forth
+          in section 36-1983:
+        </p>
+        <p>1. Acer pseudoplatanus;</p>
+        <p>2. Cirsium arvense;</p>
+        <p>3. Cynanchum louiseae . . . .</p>
+      </div>
+      <div class="dont">
+        <h4>Not this</h4>
+        <p>
+          &sect; 36-1984 Prohibited plants. The following species of plant are prohibited for any purpose set forth
+          in section 36-1983:
+        </p>
+        <p>a. Acer pseudoplatanus;</p>
+        <p>b. Cirsium arvense;</p>
+        <p>c. Cynanchum louiseae . . . .</p>
+      </div>
+    </div>
+    <p>
+      In the second option, the drafter can ensure that there are two or more subdivisions at the same level as the
+      lead-in language. Simply having a subdivision a without a subdivision b should be avoided, as it can cause
+      confusion about whether additional provisions are missing.
+    </p>
+    <div class="manual-compare">
+      <div class="do">
+        <h4>Write this</h4>
+        <p>&sect; 36-1984 Prohibited plants. a. The following species of plant are prohibited:</p>
+        <p>1. Acer pseudoplatanus;</p>
+        <p>2. Cirsium arvense;</p>
+        <p>3. Cynanchum louiseae . . . .</p>
+        <p>
+          b. A species of plant set forth in subdivision a of this section is prohibited for any purpose set forth in
+          section 36-1983.
+        </p>
+      </div>
+      <div class="dont">
+        <h4>Not this</h4>
+        <p>&sect; 36-1984 Prohibited plants. a. The following species of plant are prohibited:</p>
+        <p>1. Acer pseudoplatanus;</p>
+        <p>2. Cirsium arvense;</p>
+        <p>3. Cynanchum louiseae . . . .</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="manual-rule" id="rule-4-3-4">
+    <h2><span class="rule-number">Rule 4.3.4</span> Referring to Subunits in Bill Sections and Bill Text</h2>
+    <p>
+      When referring to subunits in bill sections and bill text, use parentheses if the subunit designator itself is
+      in parentheses in the text being referred to. However, if the designator is followed by a period (e.g.,
+      &ldquo;3.&rdquo;), do not include the period in the reference.
+    </p>
+    <div class="manual-example">
+      <p>subparagraph (b) of paragraph 3 of subdivision a of this section</p>
+      <p>item (A) of clause (1) of subparagraph (a) of paragraph 1 of subdivision a of section 21-2430</p>
+    </div>
+  </section>
+
+  <section class="manual-rule" id="rule-5">
+    <h2><span class="rule-number">Rule 5</span> Referring to Other Laws</h2>
+    <p>
+      The following are rules for cross-referencing provisions outside the portion of law being amended.
+    </p>
+  </section>
+
+  <section class="manual-rule" id="rule-5-1-1">
+    <h2><span class="rule-number">Rule 5.1.1</span> Referring to a Section in the Same Body of Consolidated Law</h2>
+    <p>
+      When referring to a different section of the same body of law, refer to the section number without further
+      elaboration. It is usually unnecessary to include references to higher-level divisions, such as &ldquo;of this
+      chapter&rdquo; or &ldquo;of this code,&rdquo; because each section number is unique.
+    </p>
+    <div class="manual-example">
+      <p>A complaint filed pursuant to section 8-109 may be withdrawn . . .</p>
+    </div>
+  </section>
+
+  <section class="manual-rule" id="rule-5-1-2">
+    <h2><span class="rule-number">Rule 5.1.2</span> Referring to a Section in a Different Body of Consolidated Law</h2>
+    <p>
+      When a provision to be added to the Administrative Code refers to a provision of the Charter, include the
+      Charter section number and the words &ldquo;of the charter.&rdquo; Do not use the full title (&ldquo;New York
+      city charter&rdquo;) in such a cross-reference, as &ldquo;charter&rdquo; is a defined term that applies
+      throughout the Administrative Code. Likewise, when a provision to be added to the Charter refers to a provision
+      in the Administrative Code, include the entire hyphenated section number and the words &ldquo;of the
+      administrative code.&rdquo;
+    </p>
+    <div class="manual-example">
+      <p>. . . subject to section 197-c of the charter.</p>
+      <p>. . . as provided in section 20-291 of the administrative code.</p>
+    </div>
+  </section>
+
+  <section class="manual-rule" id="rule-5-1-3">
+    <h2><span class="rule-number">Rule 5.1.3</span> Referring to Provisions below the Section Level</h2>
+    <p>
+      When referring to a provision on a lower hierarchical level than a section (i.e., a subdivision, paragraph,
+      subparagraph, clause, or item), include enough information to establish the location of that provision in
+      relation to the referencing provision. Do so either by including references up the hierarchical chain to the
+      section number (e.g., &ldquo;subparagraph (b) of paragraph 1 of subdivision b of this section&rdquo;) or by
+      establishing a common location for the referencing unit (e.g., &ldquo;subparagraph (b) of this
+      paragraph&rdquo;). When referring to a subunit of a different section, the chain of references ends with the
+      section number.
+    </p>
+    <div class="manual-example">
+      <p>
+        1. An owner who complies with the requirements of this paragraph is not subject to the penalty set forth in
+        paragraph 2 of this subdivision.
+      </p>
+      <p>
+        b. Any such person shall pay into an annuity savings fund in the manner provided in clause (2) of
+        subparagraph (a) of paragraph 2 of subdivision a of this section.
+      </p>
+    </div>
+    <div class="manual-compare">
+      <div class="do">
+        <h4>Write this</h4>
+        <p>
+          It is unlawful for any person to fail to make a good faith effort to comply with subdivision c of section
+          17-507.
+        </p>
+      </div>
+      <div class="dont">
+        <h4>Not this</h4>
+        <p>
+          It is unlawful for any person to fail to make a good faith effort to comply with section 17-507(c).
+        </p>
+        <p>
+          It is unlawful for any person to fail to make a good faith effort to comply with subdivision c of section
+          17-507 of this chapter.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="manual-rule" id="rule-5-1-4">
+    <h2><span class="rule-number">Rule 5.1.4</span> Referring to Charter or Administrative Code in Unconsolidated Law</h2>
+    <p>
+      When drafting an unconsolidated law that refers to a provision of the Charter or the Administrative Code,
+      include the entire title of the body of law. This rule is in contrast to Rule 5.1.2 because the terms
+      &ldquo;charter&rdquo; and &ldquo;administrative code&rdquo; are not specially defined as standalone terms for
+      unconsolidated law.
+    </p>
+    <div class="manual-example">
+      <p>. . . as defined in section 17-101 of the administrative code of the city of New York.</p>
+      <p>. . . subject to the requirements of section 1049-a of the New York city charter.</p>
+    </div>
+  </section>
+
+  <section class="manual-rule" id="rule-5-1-5">
+    <h2><span class="rule-number">Rule 5.1.5</span> Referring to a Defined Term</h2>
+    <p>
+      Referring to an undesignated definition is usually a matter of referring to the section or other designated
+      provision that contains the definition.
+    </p>
+    <div class="manual-example">
+      <p>
+        The definition of &ldquo;customer satisfaction survey&rdquo; in subdivision a of section 23-306 of the
+        administrative code of the city of New York, as added by local law number 26 for the year 2021, is amended to
+        read as follows:
+      </p>
+    </div>
+  </section>
+
+  <section class="manual-rule" id="rule-5-2">
+    <h2><span class="rule-number">Rule 5.2</span> Referring to New York City Rules</h2>
+    <p>
+      If referring to the Rules of the City of New York, bear in mind that agencies may redesignate rules, rendering
+      references in the Charter or Administrative Code obsolete and potentially misleading. To mitigate this effect,
+      briefly describe the topic of the rules and expressly include successor rules.
+    </p>
+    <div class="manual-example">
+      <p>
+        section 5-04 of title 24 of the rules of the city of New York, regarding dog licenses, or a successor
+        provision
+      </p>
+      <p>
+        chapter 12 of title 15 of the rules of the city of New York, regarding dry cleaning facilities, or a
+        successor provision
+      </p>
+    </div>
+  </section>
+
+  <section class="manual-rule" id="rule-5-3">
+    <h2><span class="rule-number">Rule 5.3</span> Referring to State Statutes</h2>
+    <p>
+      When referring to state statutes, follow the general rules described in Rule 5.1.2 and include the title of the
+      body of state law in which the section number being referred to appears. Note the rules on capitalization in
+      Rule 11.2.
+    </p>
+    <div class="manual-example">
+      <p>section 33-1005 of the environmental conservation law</p>
+      <p>paragraph (g) of subdivision 18 of section 2575 of the education law</p>
+      <p>subdivision 3 of section 235.00 of the penal law</p>
+    </div>
+    <p>
+      When referring to a state bill in a local law &mdash; a rare occurrence and perhaps only likely to occur in an
+      effective date section &mdash; write it as follows: A.9182/S.7337 (note the period and the absence of spaces
+      around the slash). Insert a hyphen after the bill number and before the letter to indicate an amended version
+      (e.g., A.1215-A).
+    </p>
+  </section>
+
+  <section class="manual-rule" id="rule-5-4">
+    <h2><span class="rule-number">Rule 5.4</span> Referring to State Rules and Regulations</h2>
+    <p>
+      As with local rules, mitigate the effects of amendments to state regulations by referencing the subject of the
+      regulation being cited and including successor language.
+    </p>
+    <div class="manual-example">
+      <p>
+        section 10.1 of title 8 of the New York codes, rules and regulations, regarding the state library and state
+        museum, or a successor provision
+      </p>
+      <p>
+        chapter I of title 8 of the New York codes, rules and regulations, regarding the board of regents, or a
+        successor provision
+      </p>
+    </div>
+  </section>
+
+  <section class="manual-rule" id="rule-5-5">
+    <h2><span class="rule-number">Rule 5.5</span> Referring to Federal Statutes</h2>
+    <p>
+      When referring to federal statutes, provide the U.S. Code citation if one is available. References to subunits
+      of federal law are slightly different from those used for New York state and local laws (section, (a)
+      subsection, (1) paragraph, (A) subparagraph, (i) clause, (I) subclause). If a provision has not been codified
+      in the U.S. Code, refer to the short title if the law has a short title, or if not, to the public law number.
+    </p>
+    <div class="manual-example">
+      <p>subsection (b) of section 505 of title 10 of the United States code</p>
+      <p>paragraph (1) of subsection (a) of section 1028 of title 18 of the United States code</p>
+    </div>
+  </section>
+
+  <section class="manual-rule" id="rule-5-6">
+    <h2><span class="rule-number">Rule 5.6</span> Referring to Federal Regulations</h2>
+    <p>The following examples demonstrate how to cite to the Code of Federal Regulations (&ldquo;CFR&rdquo;).</p>
+    <div class="manual-example">
+      <p>
+        section 417.109 of title 14 of the code of federal regulations, regarding ground safety for aircraft, or a
+        successor provision
+      </p>
+      <p>
+        subtitle B of title 29 of the code of federal regulations, regarding regulation of labor, or a successor
+        provision
+      </p>
+    </div>
+  </section>
+
+  <section class="manual-rule" id="rule-6">
+    <h2><span class="rule-number">Rule 6</span> The Effective Date</h2>
+    <p>
+      Local laws include a provision explicitly stating when they will take effect. The effective date provision is
+      part of the body of the bill: it is the last bill section and is unconsolidated. Choose the effective date
+      carefully. In some instances, state law requires a certain delay. In other cases, delay should be built in even
+      if it is not mandatory &mdash; for example, if a bill would impose new duties on a city agency, the effective
+      date should give the agency time to prepare to administer the new law or to perform the new duties.
+    </p>
+  </section>
+
+  <section class="manual-rule" id="rule-6-1">
+    <h2><span class="rule-number">Rule 6.1</span> How to Phrase an Effective Date</h2>
+    <p>
+      When drafting an effective date, use the standard phrasing in the example below. Use &ldquo;takes effect&rdquo;
+      rather than &ldquo;shall take effect,&rdquo; and use &ldquo;after it becomes law&rdquo; instead of &ldquo;after
+      its enactment&rdquo; or &ldquo;after its enactment into law.&rdquo;
+    </p>
+    <div class="manual-compare">
+      <div class="do">
+        <h4>Write this</h4>
+        <p>This local law takes effect 120 days after it becomes law.</p>
+      </div>
+      <div class="dont">
+        <h4>Not this</h4>
+        <p>This local law shall take effect in 120 days.</p>
+        <p>This local law shall take effect 120 days after its enactment.</p>
+        <p>This local law shall take effect 120 days after its enactment into law.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="manual-rule" id="rule-6-2">
+    <h2><span class="rule-number">Rule 6.2</span> Effective ___ Days after It Becomes Law</h2>
+    <p>
+      A common way of phrasing an effective date is to make the bill take effect a specified number of days after it
+      becomes law.
+    </p>
+    <div class="manual-example">
+      <p>&sect; 2. This local law takes effect 30 days after it becomes law.</p>
+    </div>
+    <p>
+      <strong>Where rulemaking is required (6.2.1):</strong> if a bill will require or benefit from agency
+      rulemaking, allow at least 120 days before the bill takes effect. This timeframe generally allows sufficient
+      time for the agency to satisfy the requirements of the City Administrative Procedure Act (CAPA), although
+      additional time may be needed if the bill has complex requirements. Pursuant to Charter section 1043(a)(2),
+      agencies have authorization to begin the rulemaking process for a law that has been adopted even before its
+      effective date, so it is unnecessary to include language authorizing such pre-effective date actions. If the
+      intent is to require pre-effective date rulemaking or to prohibit it, special language should be included to
+      that effect along with the effective date.
+    </p>
+    <div class="manual-example">
+      <p>
+        &sect; 2. This local law takes effect 180 days after it becomes law, except that the administering agency, as
+        defined in section 3-115 of the administrative code of the city of New York as added by section one of this
+        local law, shall take such measures as are necessary for the implementation of this local law, including the
+        promulgation of rules, before such date.
+      </p>
+    </div>
+    <p>
+      <strong>Where rulemaking is not required (6.2.2):</strong> choose an effective date that makes sense for the
+      particular bill &mdash; for example, 30 days, 60 days, 90 days, 180 days, 1 year, 2 years, etc., from the date
+      the bill becomes law.
+    </p>
+    <div class="manual-example">
+      <p>&sect; 2. This local law takes effect 1 year after it becomes law.</p>
+    </div>
+  </section>
+
+  <section class="manual-rule" id="rule-6-3">
+    <h2><span class="rule-number">Rule 6.3</span> Effective On a Date Certain</h2>
+    <p>
+      Making a local law effective on a specified date certain provides clarity, but it can be hard to choose an
+      appropriate date early in the drafting process. Consequently, it is usually better to use a relative date
+      (e.g., &ldquo;30 days after it becomes law&rdquo;) for initial drafts instead, converting to a date certain
+      when making final amendments to a bill for passage. If using a date certain, monitor the likely date the bill
+      will be adopted and update the effective date if necessary.
+    </p>
+    <div class="manual-example">
+      <p>&sect; 3. This local law takes effect March 1, 2016.</p>
+      <p>
+        &sect; 2. This local law takes effect on the first of November next succeeding the date on which it becomes
+        law.
+      </p>
+    </div>
+  </section>
+
+  <section class="manual-rule" id="rule-6-4">
+    <h2><span class="rule-number">Rule 6.4</span> Effective Immediately</h2>
+    <p>
+      A bill may be made effective immediately if none of the above considerations applies and there are no
+      rulemaking requirements, due process considerations, or other actions required to implement the new law.
+    </p>
+    <div class="manual-example">
+      <p>&sect; 7. This local law takes effect immediately.</p>
+    </div>
+    <p>
+      Note that even if a local law states that it takes effect immediately, per state law it cannot become effective
+      until it has become law and has been filed with the Secretary of State. When this disparity may cause confusion
+      &mdash; for example, if the effective date affects when arrests may be made or penalties may be imposed &mdash;
+      it may be better to have the bill take effect after some minimal amount of time that is clear on its face (for
+      example, &ldquo;30 days after it becomes law&rdquo;).
+    </p>
+  </section>
+
+  <section class="manual-rule" id="rule-8">
+    <h2><span class="rule-number">Rule 8</span> Numbers</h2>
+    <p>
+      Notwithstanding the rules in this chapter, amendments generally should follow the style and form already in use
+      in the section to be amended.
+    </p>
+  </section>
+
+  <section class="manual-rule" id="rule-8-1">
+    <h2><span class="rule-number">Rule 8.1</span> Summary: Using Numerals or Spelling Out Numbers</h2>
+    <p>
+      <strong>Use numerals (1, 2, etc.)</strong> by default in all consolidated and unconsolidated law, unless an
+      exception applies.
+    </p>
+    <p><strong>Spell out numbers (one, two, etc.):</strong></p>
+    <ul>
+      <li>At the beginning of a sentence</li>
+      <li>Used as ordinals (first, second, etc.)</li>
+      <li>In fractions and mixed numbers, except in technical tables</li>
+      <li>When enumerating in a bill section how many provisions a bill is adding</li>
+      <li>When cross-referencing unconsolidated bill sections in the same bill</li>
+      <li>Optional: the number zero and very large numbers (1 million, etc.)</li>
+    </ul>
+  </section>
+
+  <section class="manual-rule" id="rule-8-2">
+    <h2><span class="rule-number">Rule 8.2</span> Use Numerals by Default</h2>
+    <p>
+      Unless an exception applies, use numerals by default to express numbers in all consolidated law, unconsolidated
+      law, and bill titles. Use numerals for all dates, including dates certain in effective dates, and for
+      cross-references to other provisions (except cross-references to bill sections within the same bill).
+    </p>
+    <div class="manual-example">
+      <p>3 little kittens</p>
+      <p>9 lives</p>
+      <p>10 feet long</p>
+      <p>101 Dalmatians</p>
+      <p>1,000 feet</p>
+      <p>section 344-c of the education law</p>
+      <p>chapter 1 of title 17 of the administrative code of the city of New York</p>
+      <p>paragraph 1 of subdivision a of section 43 of the New York city charter</p>
+    </div>
+    <div class="manual-compare">
+      <div class="do">
+        <h4>Write this</h4>
+        <p>This local law takes effect on October 1, 2024.</p>
+      </div>
+      <div class="dont">
+        <h4>Not this</h4>
+        <p>This local law takes effect on October first, two thousand twenty-four.</p>
+        <p>This local law takes effect on October first, 2024.</p>
+        <p>This local law takes effect on October 1st, 2024.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="manual-rule" id="rule-8-3-2">
+    <h2><span class="rule-number">Rule 8.3.2</span> Spell Out Ordinals</h2>
+    <p>
+      Spell out ordinals (e.g., first, second, third). Remember, pursuant to Rule 8.2.1, not to use ordinals in
+      dates.
+    </p>
+    <div class="manual-compare">
+      <div class="do">
+        <h4>Write this</h4>
+        <p>The fourth council district is defined as follows:</p>
+        <p>The second unnumbered paragraph . . .</p>
+      </div>
+      <div class="dont">
+        <h4>Not this</h4>
+        <p>The 4th council district is defined as follows:</p>
+        <p>The 2nd unnumbered paragraph . . .</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="manual-rule" id="rule-8-3-4">
+    <h2><span class="rule-number">Rule 8.3.4</span> Spell Out References to Bill Sections in the Same Bill</h2>
+    <p>
+      Spell out numbers in cross-references to unconsolidated bill sections in the same bill. Do not spell out
+      numbers in cross-references to unconsolidated bill sections in a different bill or law.
+    </p>
+    <div class="manual-compare">
+      <div class="do">
+        <h4>Write this</h4>
+        <p>
+          This local law takes effect 90 days after it becomes law, except that section 99-1234 of the administrative
+          code of the city of New York, as amended by section four of this local law, takes effect immediately.
+        </p>
+      </div>
+      <div class="dont">
+        <h4>Not this</h4>
+        <p>
+          This local law takes effect 90 days after it becomes law, except that section 99-1234 of the administrative
+          code of the city of New York, as amended by section 4 of this local law, takes effect immediately.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="manual-rule" id="rule-11-1">
+    <h2><span class="rule-number">Rule 11.1</span> Indicating Deletions and Additions</h2>
+    <p>
+      When amending existing law, place brackets around the language to be deleted and underline the language to be
+      added. Do not omit text that is deleted; keep it in, but surround it with brackets. Similarly, do not add new
+      language without underlining it. When a deletion and an addition appear next to each other, the deleted
+      material always precedes the added material (i.e., the deleted material appears to the left of the added
+      material).
+    </p>
+    <div class="manual-example">
+      <p>Apples, giraffes, oranges, and polar bears are included</p>
+      <p>Apples, oranges, <span class="del">and</span> polar bears<u class="ins">, and giraffes</u> are included</p>
+    </div>
+    <p>
+      The same rule applies to amending unconsolidated laws. When amending an existing unconsolidated law, bracket
+      material to be deleted, and underline new material (as you would with a consolidated law). However, do not
+      underline text in a completely &ldquo;new&rdquo; unconsolidated law.
+    </p>
+    <div class="manual-example">
+      <p>&sect; 3. Section 9 of local law number 50 for the year 2015 is amended to read as follows:</p>
+      <p>
+        &sect; 9. This local law takes effect immediately, and expires and is deemed repealed
+        <span class="del">two years after its effective date</span> <u class="ins">June 2, 2019</u>.
+      </p>
+      <p>&sect; 4. This local law takes effect immediately.</p>
+    </div>
+  </section>
+
+  <section class="manual-rule" id="rule-11-1-1">
+    <h2><span class="rule-number">Rule 11.1.1</span> Deleting Part of a Word</h2>
+    <p>
+      When only a part of a word or hyphenated word is being amended, enclose the entire existing word or hyphenated
+      word in brackets, and underline the new word or hyphenated word.
+    </p>
+    <div class="manual-compare">
+      <div class="do">
+        <h4>Write this</h4>
+        <p>Any <span class="del">workman</span> <u class="ins">worker</u> who fails to comply . . .</p>
+      </div>
+      <div class="dont">
+        <h4>Not this</h4>
+        <p>Any work<span class="del">man</span><u class="ins">er</u> who fails to comply . . .</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="manual-rule" id="rule-11-1-2">
+    <h2><span class="rule-number">Rule 11.1.2</span> Spacing around Additions and Deletions</h2>
+    <p>
+      When amending existing law using brackets and underlining, place a space between the brackets of a deletion and
+      any adjacent underlined addition. Deletion of punctuation is the major exception to this rule, as explained in
+      Rule 11.1.3.
+    </p>
+    <div class="manual-example">
+      <p>
+        1. <span class="del">Any</span> <u class="ins">Except as otherwise provided in this subdivision, any</u>
+        place<span class="del">, which is</span> used for the purpose of <span class="del">washing, drying,
+        starching or ironing, for the general public, wearing apparel, household linens, or other washable
+        fabrics</span> <u class="ins">laundering fabrics for a fee</u>, or a place used or maintained for the
+        storage, temporary holding, collection, or delivery of <span class="del">such articles</span>
+        <u class="ins">fabrics</u> for such service<span class="del">, or</span><u class="ins">.</u>
+      </p>
+    </div>
+    <p>
+      Do not underline spaces preceding or following an addition, but do underline spaces that occur between words
+      that are being added.
+    </p>
+    <div class="manual-example">
+      <p>
+        A place used or maintained for the storage, <u class="ins">temporary holding,</u> collection or delivery
+      </p>
+    </div>
+  </section>
+
+  <section class="manual-rule" id="rule-11-1-3">
+    <h2><span class="rule-number">Rule 11.1.3</span> Deleting Punctuation</h2>
+    <p>
+      Treat punctuation as a special case. If deleting punctuation that follows a word but not deleting the word
+      itself, insert a bracket between the word and the punctuation, but no space.
+    </p>
+    <div class="manual-example">
+      <p>Any place<span class="del">, which is</span> used for the purpose of washing</p>
+    </div>
+    <p>
+      If deleting punctuation and nothing else, place brackets around the punctuation mark only, even if there is no
+      space between the mark and the preceding or succeeding word.
+    </p>
+    <div class="manual-compare">
+      <div class="do">
+        <h4>Write this</h4>
+        <p>
+          The commissioner of consumer and worker protection<span class="del">,</span> shall promulgate rules . . .
+        </p>
+      </div>
+      <div class="dont">
+        <h4>Not this</h4>
+        <p>
+          The commissioner of consumer and worker <span class="del">protection,</span> <u class="ins">protection</u>
+          shall promulgate rules . . .
+        </p>
+      </div>
+    </div>
+    <p>
+      However, if deleting punctuation that occurs in the middle of a word or between two words without spaces,
+      bracket out the entire word or phrase and replace it using underlined text without the middle punctuation. Do
+      not merely bracket the punctuation mark in this case.
+    </p>
+    <div class="manual-compare">
+      <div class="do">
+        <h4>Write this</h4>
+        <p><span class="del">comparably-worded</span> <u class="ins">comparably worded</u></p>
+        <p><span class="del">inter-group</span> <u class="ins">intergroup</u></p>
+      </div>
+      <div class="dont">
+        <h4>Not this</h4>
+        <p>comparably<span class="del">-</span>worded</p>
+        <p>inter<span class="del">-</span>group</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="manual-rule" id="rule-11-1-4">
+    <h2><span class="rule-number">Rule 11.1.4</span> &ldquo;REPEALED&rdquo; in All Capital Letters</h2>
+    <p>
+      When an existing law or part thereof is to be repealed by referring to the provision and stating its repeal
+      without setting forth the actual text (as opposed to deleting it by strikethrough and enclosure in brackets),
+      the word &ldquo;REPEALED&rdquo; should appear in capital letters in a bill section.
+    </p>
+    <div class="manual-example">
+      <p>
+        &sect; 2. Sections 27-2038 and 27-2039 of the administrative code of the city of New York are REPEALED and a
+        new section 27-2038 is added to read as follows:
+      </p>
+      <p>
+        &sect; 27-2038 Electric lighting fixtures required in certain public parts of dwellings. a. Subject to any
+        stricter minimum lighting requirement that may be applicable pursuant to the multiple dwelling law, . . .
+      </p>
+    </div>
+  </section>
+
+  <section class="manual-rule" id="rule-11-2">
+    <h2><span class="rule-number">Rule 11.2</span> Capitalization</h2>
+    <p>
+      The Council generally follows the State Legislative Bill Drafting Commission&rsquo;s guidelines on
+      capitalization of words in bills, which reflect a strong preference for avoiding capitalization in many
+      instances. These guidelines often differ from capitalization standards used in other contexts. For example,
+      write &ldquo;New York city charter&rdquo; in a local law, not &ldquo;New York City Charter.&rdquo;
+    </p>
+    <p>
+      The general rule is to limit capitalization to proper nouns unless consistency with the form and style of the
+      provision being amended requires otherwise. Capitalization conventions apply to bill titles as well as bill
+      text.
+    </p>
+    <div class="manual-example">
+      <p>
+        <strong>Proper names, places, or designations:</strong> Central Park; Great Lakes; Lake George; Long Island;
+        Mohawk river; state of New York; city of New York; Pacific ocean; Schenectady county; World War II
+      </p>
+      <p>
+        <strong>City and state departments, institutions and offices:</strong> department of state; city university
+        of New York; public service commission; department of housing preservation and development; council
+      </p>
+      <p>
+        <strong>Federal departments and agencies:</strong> federal department of health and human services; federal
+        housing administration; national park service
+      </p>
+      <p>
+        <strong>Nations, nationalities or ethnic groups:</strong> English language; Native American; pro-British;
+        Spanish-American war; African-American
+      </p>
+      <p><strong>Political parties:</strong> Conservative party; Democratic party; Republican party; Green party</p>
+      <p><strong>Banks and funds:</strong> federal reserve bank; postwar rehabilitation trust fund</p>
+      <p>
+        <strong>Acts, laws and codes:</strong> internal revenue code; New York city charter; administrative code of
+        the city of New York; New York city building code; United States code
+      </p>
+      <p><strong>Legal holidays:</strong> Christmas day; Good Friday; Independence day; Memorial day</p>
+      <p><strong>Newspapers:</strong> The New York Times; The Wall Street Journal; the City Record</p>
+      <p>
+        <strong>Titles in provisions:</strong> mayor; members of the council; council member; speaker of the council;
+        attorney general; congress; constitution; speaker of the assembly; governor; president of the United States;
+        state comptroller
+      </p>
+    </div>
+    <p>
+      The word &ldquo;Council&rdquo; is capitalized in a bill&rsquo;s enacting clause only. Use &ldquo;council
+      member&rdquo; (lowercase) in bill text, but &ldquo;Council Member&rdquo; (initial capitals) when naming bill
+      sponsors in legislative items and in resolutions. Likewise use &ldquo;the speaker&rdquo; (lowercase) in bill
+      text, but &ldquo;the Speaker&rdquo; (initial capital) when naming the Speaker as a sponsor in the byline.
+    </p>
+  </section>
+
+  <section class="manual-rule" id="rule-11-3">
+    <h2><span class="rule-number">Rule 11.3</span> Single Space after Periods</h2>
+    <p>Insert only a single space after a period at the end of a sentence.</p>
+  </section>
+
+  <section class="manual-rule" id="rule-11-4">
+    <h2><span class="rule-number">Rule 11.4</span> Space after Section Symbol</h2>
+    <p>Place a space after a section symbol (e.g., &sect; 2, not &sect;2).</p>
+  </section>
+
+  <section class="manual-rule" id="rule-11-6">
+    <h2><span class="rule-number">Rule 11.6</span> The Present Tense</h2>
+    <p>
+      Laws operate in a continuing present and should be written as if they are operative now, as that is how they
+      will appear to readers. This usually means drafting in the present tense.
+    </p>
+    <div class="manual-compare">
+      <div class="do">
+        <h4>Write this</h4>
+        <p>A violation of any provision of this section is a misdemeanor.</p>
+      </div>
+      <div class="dont">
+        <h4>Not this</h4>
+        <p>A violation of any provision of this section shall be a misdemeanor.</p>
+      </div>
+    </div>
+    <p>
+      Occasionally it might be necessary to refer to events that, relative to the central event described in a bill
+      provision, occurred in the past or will occur in the future. But the main event should still be thought of as
+      occurring in the present.
+    </p>
+  </section>
+
+  <section class="manual-rule" id="rule-11-12">
+    <h2><span class="rule-number">Rule 11.12</span> Outdated or Offensive Terminology</h2>
+    <p>
+      Most outdated or offensive terms have been removed from the Charter and Administrative Code, but some still
+      remain. The lists of terms to avoid will never be complete; in general, follow norms of respectful and
+      inclusive professional communication.
+    </p>
+    <p>
+      <strong>Prohibited terms (11.12.1).</strong> Do not use these terms or their variants, even though they might
+      still be encountered in statutory text: alien, almshouse, asylum, beggar, crippled, deformity, drug abuse,
+      feeble-minded, handicapped, idiot, illegal immigrant, illegal migrant, inmate, insane, mendicant, mental
+      retardation, mentally deficient, senile.
+    </p>
+    <p>
+      <strong>Physical or mental condition (11.12.2).</strong> Avoid using any terminology that equates a person with
+      a physical or mental condition or that has a negative connotation. For example, use phrases such as
+      &ldquo;individuals with disabilities,&rdquo; &ldquo;persons experiencing homelessness,&rdquo; and &ldquo;a
+      person with mental illness,&rdquo; rather than &ldquo;the disabled,&rdquo; &ldquo;the homeless,&rdquo;
+      &ldquo;the mentally ill,&rdquo; or &ldquo;person suffering from autism.&rdquo;
+    </p>
+    <p>
+      <strong>Gender (11.12.3).</strong> The preferred standard is gender-silent drafting, in which gendered terms
+      &mdash; even in balanced usage &mdash; are avoided altogether.
+    </p>
+    <div class="manual-example">
+      <p>
+        Use the, a, an, such, that, or any in place of a personal pronoun: An applicant shall submit with
+        <span class="del">his</span> <u class="ins">an</u> application any fee required by the commissioner.
+      </p>
+      <p>
+        Use a possessive noun in place of a possessive pronoun: The commissioner or <span class="del">his</span>
+        <u class="ins">the commissioner&rsquo;s</u> designee shall provide . . . .
+      </p>
+      <p>
+        Repeat the antecedent: No person may provide commercial laundry services unless <span class="del">he</span>
+        <u class="ins">the person</u> first obtains a license.
+      </p>
+    </div>
+  </section>
+
+  <section class="manual-rule" id="rule-11-16">
+    <h2><span class="rule-number">Rule 11.16</span> &ldquo;Shall&rdquo; Versus &ldquo;May&rdquo;</h2>
+    <p id="rule-11-16-1">
+      Use &ldquo;shall&rdquo; to express a duty, mandate, obligation, prohibition, requirement, or condition
+      precedent. Use &ldquo;shall not&rdquo; or a variation such as &ldquo;no person shall&rdquo; to express a
+      prohibition. Use &ldquo;may&rdquo; to confer a power, privilege, right, or discretion.
+    </p>
+    <p>
+      Avoid using &ldquo;shall&rdquo; to state a legal fact or result where nothing is being required or prohibited.
+      This usage is known as a &ldquo;false imperative.&rdquo; Do not use the word &ldquo;shall&rdquo; in definitions
+      sections to state the meaning of a term, and avoid using &ldquo;shall&rdquo; to confer a legal right without
+      stating an obligation.
+    </p>
+    <div class="manual-compare">
+      <div class="do">
+        <h4>Write this</h4>
+        <p>This section does not apply to offenses committed . . .</p>
+        <p>A person is liable if . . .</p>
+        <p>Commission. The term &ldquo;commission&rdquo; means . . .</p>
+        <p>A licensee is eligible . . .</p>
+        <p>A person may appeal by filing a written notice with the director.</p>
+        <p>The board may promulgate rules in furtherance of the purposes of this chapter.</p>
+      </div>
+      <div class="dont">
+        <h4>Not this</h4>
+        <p>This section shall not apply to offenses committed . . .</p>
+        <p>A person shall be liable if . . .</p>
+        <p>Commission. The term &ldquo;commission&rdquo; shall mean . . .</p>
+        <p>A licensee shall be eligible . . .</p>
+        <p>A person shall have the right to appeal by filing a written notice with the director.</p>
+        <p>The board shall be authorized to promulgate rules in furtherance of the purposes of this chapter.</p>
+      </div>
+    </div>
+    <p>
+      While some legislative bodies use &ldquo;may not&rdquo; to indicate that something is prohibited, the Council
+      generally uses &ldquo;shall not,&rdquo; which is understood as prohibiting a behavior.
+    </p>
+  </section>
+
+  <section class="manual-rule" id="rule-11-19-1">
+    <h2><span class="rule-number">Rule 11.19.1</span> Serial Comma</h2>
+    <p>
+      Include a serial comma before <em>and</em> or <em>or</em> in a series. Where a list is punctuated using
+      semicolons, include a serial semicolon before <em>and</em> or <em>or</em>. If using the serial comma or
+      semicolon would introduce an ambiguity, rephrase the sentence to avoid the ambiguity.
+    </p>
+    <div class="manual-example">
+      <p>Notwithstanding any law, rule, or regulation to the contrary, . . .</p>
+    </div>
+  </section>
+
+  <section class="manual-rule" id="rule-11-21-1">
+    <h2><span class="rule-number">Rule 11.21.1</span> &ldquo;Which&rdquo; Versus &ldquo;That&rdquo;</h2>
+    <p>
+      Use &ldquo;that&rdquo; to introduce a restrictive clause, i.e., a clause that limits the possible meaning of
+      the subject. Use &ldquo;which&rdquo; to introduce a nonrestrictive clause, i.e., a clause that gives
+      information about the subject but does not limit its meaning. In general, a comma separates
+      &ldquo;which&rdquo; from the clause that precedes it, while no comma separates &ldquo;that&rdquo; from the
+      preceding clause.
+    </p>
+    <div class="manual-example">
+      <p>The commissioner must honor those applications that are less than 60 days old.</p>
+      <p>The commissioner must honor those applications, which are less than 60 days old.</p>
+    </div>
+    <p>
+      In the first example, the clause limits &ldquo;those applications,&rdquo; such that the commissioner only must
+      honor applications if they are less than 60 days old. In the second example, the clause merely gives incidental
+      information about the applications &mdash; the commissioner must honor all of them.
+    </p>
+  </section>
+
+  <section class="manual-rule" id="rule-11-22">
+    <h2><span class="rule-number">Rule 11.22</span> Contractions</h2>
+    <p>Do not use contractions in legislative text.</p>
+    <div class="manual-compare">
+      <div class="do">
+        <h4>Write this</h4>
+        <p>
+          The commissioner may provide for additional time, not to exceed 30 days, in which to file a renewal
+          application.
+        </p>
+      </div>
+      <div class="dont">
+        <h4>Not this</h4>
+        <p>
+          The commissioner may provide for additional time in which to file a renewal application, provided that the
+          additional time doesn&rsquo;t exceed 30 days.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section class="manual-rule" id="rule-appendix-f">
+    <h2><span class="rule-number">Appendix F</span> Repeal Checklist</h2>
+    <p>
+      Special rules apply where a bill would expressly repeal an existing law. Although those rules are described
+      throughout the manual, this appendix collects them in one place to assist a drafter in preparing a repeal bill.
+    </p>
+    <ul>
+      <li>Identify and describe the provision being repealed in the bill title. See Rule 2.1.1.</li>
+      <li>If the bill includes a sunset clause, note the expiration and repeal in the bill title. See Rules 2.1.1 and 7.4.</li>
+      <li>Omit the recital of legislative history for the provision being repealed. See Rule 3.1.10.</li>
+      <li>
+        In the bill section text, state specifically the provision of law to be repealed and write REPEALED in all
+        capital letters. See Rule 11.1.4.
+      </li>
+      <li>
+        Search the Charter and Administrative Code for cross-references to the repealed provision. Any such
+        cross-references will also need to be repealed or amended.
+      </li>
+      <li>
+        Remember that to revive a previously repealed provision, it is not sufficient simply to repeal the prior
+        repeal. The provision to be revived must be added as new text.
+      </li>
+    </ul>
+  </section>
+
+</div>
+{{end}}

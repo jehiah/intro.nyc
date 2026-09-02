@@ -78,6 +78,13 @@ func (a *App) EditorIndex(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// EditorDraftingManual is a public reference for the rules this editor applies.
+func (a *App) EditorDraftingManual(w http.ResponseWriter, r *http.Request) {
+	a.renderEditor(w, r, "drafting_manual.html", map[string]any{
+		"Title": "Bill Drafting Manual",
+	})
+}
+
 // EditorProfile shows the drafter's account settings.
 func (a *App) EditorProfile(w http.ResponseWriter, r *http.Request) {
 	user := a.User(r)

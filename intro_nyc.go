@@ -294,6 +294,7 @@ func main() {
 	editorRouter.HandleFunc("POST /new", app.EditorNewPost)
 	editorRouter.HandleFunc("GET /profile", app.EditorProfile)
 	editorRouter.HandleFunc("POST /profile", app.EditorProfilePost)
+	editorRouter.HandleFunc("GET /drafting-manual", app.EditorDraftingManual)
 	editorRouter.HandleFunc("GET /d/{id}", app.EditorDocument)
 	editorRouter.HandleFunc("GET /api/draft/{id}", app.EditorGetDraft)
 	editorRouter.HandleFunc("POST /api/draft/{id}", app.EditorSaveDraft)

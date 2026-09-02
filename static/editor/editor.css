@@ -312,10 +312,26 @@
   background: #eef2f9;
 }
 
+.issue-message {
+  display: inline;
+  border: 0;
+  background: none;
+  padding: 0;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+}
+
 .issue-rule {
   font-weight: 500;
   color: #2f56a6;
   margin-right: 0.25rem;
+  text-decoration: none;
+  border-bottom: 1px dotted #2f56a6;
+}
+
+.issue-rule:hover {
+  border-bottom-style: solid;
 }
 
 .issue-excerpt {
@@ -552,6 +568,187 @@
   padding: 0.5rem 0.85rem;
   margin-bottom: 1.25rem;
   font-size: 0.9rem;
+}
+
+/* ------------------------------------------------------- the drafting manual */
+
+.manual {
+  max-width: 48rem;
+  margin: 2rem auto 4rem;
+}
+
+.manual h1 {
+  font-size: 1.6rem;
+}
+
+.manual-note {
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-left: 3px solid #2f56a6;
+  border-radius: 3px;
+  padding: 0.85rem 1.15rem;
+  font-size: 0.9rem;
+  color: #495057;
+}
+
+.manual-toc {
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  padding: 1rem 1.25rem;
+  margin: 1.5rem 0 2.5rem;
+}
+
+.manual-toc ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  columns: 2;
+  column-gap: 2rem;
+}
+
+@media (max-width: 700px) {
+  .manual-toc ul {
+    columns: 1;
+  }
+}
+
+.manual-toc li {
+  break-inside: avoid;
+  padding: 0.15rem 0;
+  font-size: 0.9rem;
+}
+
+.manual-rule {
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1rem;
+  scroll-margin-top: 1rem;
+}
+
+.manual-rule:target {
+  border-color: #2f56a6;
+  box-shadow: 0 0 0 3px rgba(47, 86, 166, 0.12);
+}
+
+.manual-rule h2 {
+  font-size: 1.05rem;
+  font-weight: 500;
+  margin-bottom: 0.75rem;
+}
+
+.manual-rule h3 {
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.manual-rule .rule-number {
+  display: inline-block;
+  color: #2f56a6;
+  font-weight: 400;
+  margin-right: 0.5rem;
+}
+
+.manual-rule p {
+  font-size: 0.925rem;
+  line-height: 1.6;
+}
+
+/* Examples are set as bill text so the conventions read the way they will in a
+   bill. */
+.manual-example {
+  font-family: "Times New Roman", Times, serif;
+  font-size: 12pt;
+  line-height: 1.7;
+  background: #f8f9fa;
+  border-left: 3px solid #ced4da;
+  padding: 0.75rem 1rem;
+  margin: 0.75rem 0;
+}
+
+.manual-example p {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  margin-bottom: 0.5rem;
+}
+
+.manual-example p:last-child {
+  margin-bottom: 0;
+}
+
+.manual-example u.ins {
+  text-decoration: underline;
+  text-decoration-skip-ink: none;
+}
+
+.manual-example span.del::before {
+  content: "[";
+}
+.manual-example span.del::after {
+  content: "]";
+}
+.manual-example span.del {
+  color: #8b0000;
+}
+
+.manual-compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin: 0.75rem 0;
+}
+
+@media (max-width: 700px) {
+  .manual-compare {
+    grid-template-columns: 1fr;
+  }
+}
+
+.manual-compare h4 {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #6c757d;
+  margin-bottom: 0.35rem;
+}
+
+.manual-compare .do,
+.manual-compare .dont {
+  font-family: "Times New Roman", Times, serif;
+  font-size: 12pt;
+  line-height: 1.6;
+  padding: 0.75rem 1rem;
+  border-radius: 3px;
+}
+
+.manual-compare .do {
+  background: #f2f8f4;
+  border-left: 3px solid #4a9d6a;
+}
+
+.manual-compare .dont {
+  background: #fdf4f4;
+  border-left: 3px solid #c96a6a;
+}
+
+.manual-compare h4 {
+  font-family: "Be Vietnam Pro", sans-serif;
+}
+
+.manual-compare u.ins {
+  text-decoration: underline;
+}
+.manual-compare span.del::before {
+  content: "[";
+}
+.manual-compare span.del::after {
+  content: "]";
+}
+.manual-compare span.del {
+  color: #8b0000;
 }
 
 .susi .lead {

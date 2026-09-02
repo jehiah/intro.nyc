@@ -318,6 +318,8 @@ local law amends consolidated law and not agency rules (Rule 5.2).
 | `templates/editor_susi.html` | sign in |
 | `templates/editor_documents.html` | the document list |
 | `templates/editor_new.html` | new-bill prompt |
+| `templates/editor_profile.html` | display name |
+| `templates/drafting_manual.html` | the rules, excerpted from the 2022 manual |
 | `templates/editor.html` | title nav, control bar, dialogs |
 | `templates/bill_readonly.html` | the shared read-only view |
 | `static/editor/editor.css` | printed-bill styling, shared by both views |

@@ -66,6 +66,11 @@ function ruleLabel(rule) {
   return /^\d/.test(rule) ? `Rule ${rule}` : rule;
 }
 
+// Anchors in /drafting-manual, which reproduces the rules the checks enforce.
+function ruleHref(rule) {
+  return "/drafting-manual#rule-" + rule.toLowerCase().replace(/[\s.]+/g, "-");
+}
+
 /* ------------------------------------------------------------------ plugins */
 
 function lintPlugin(onUpdate) {
@@ -535,17 +540,20 @@ function renderProblems(list) {
 
   panel.innerHTML = "";
   list.forEach((problem) => {
-    const item = document.createElement("button");
-    item.type = "button";
+    const item = document.createElement("div");
     item.className = "issue " + (SEVERITY_CLASS[problem.severity] || "");
-    item.innerHTML = `<span class="issue-rule">${escapeHTML(
+    item.innerHTML = `<a class="issue-rule" href="${escapeHTML(
+      ruleHref(problem.rule)
+    )}" target="_blank" rel="noopener">${escapeHTML(
       ruleLabel(problem.rule)
-    )}</span> ${escapeHTML(problem.message)}${
+    )}</a> <button type="button" class="issue-message">${escapeHTML(
+      problem.message
+    )}${
       problem.excerpt
         ? ` <span class="issue-excerpt">${escapeHTML(problem.excerpt)}</span>`
         : ""
-    }`;
-    item.addEventListener("click", () => {
+    }</button>`;
+    item.querySelector(".issue-message").addEventListener("click", () => {
       if (problem.to === 0) {
         document.getElementById("title-subject").focus();
         return;
