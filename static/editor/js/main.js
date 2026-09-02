@@ -758,14 +758,6 @@ function wireUI() {
     restoreDeleted(view.state, view.dispatch.bind(view));
     view.focus();
   });
-  document.getElementById("btn-undo").addEventListener("click", () => {
-    undo(view.state, view.dispatch.bind(view));
-    view.focus();
-  });
-  document.getElementById("btn-redo").addEventListener("click", () => {
-    redo(view.state, view.dispatch.bind(view));
-    view.focus();
-  });
 
   document
     .getElementById("title-code")
