@@ -619,7 +619,7 @@ const EXPORTS = {
 /* ---------------------------------------------------------------- UI: share */
 
 // The dialog saves on every change, so it holds the current sharing state.
-let sharing = { editors: [], viewers: [], public: false };
+let sharing = { owner: "", editors: [], viewers: [], public: false };
 
 function shareError(message) {
   const el = document.getElementById("share-error");
@@ -630,20 +630,22 @@ function shareError(message) {
 function renderShare() {
   document.getElementById("share-public").checked = Boolean(sharing.public);
 
+  const list = document.getElementById("share-people");
+  list.innerHTML = "";
+
+  // The owner is always listed and cannot be changed or removed.
+  if (sharing.owner) {
+    const row = document.createElement("li");
+    row.innerHTML = `
+      <span class="share-person">${escapeHTML(sharing.owner)}</span>
+      <span class="share-role">Owner</span>`;
+    list.appendChild(row);
+  }
+
   const people = [
     ...sharing.editors.map((email) => ({ email, role: "editor" })),
     ...sharing.viewers.map((email) => ({ email, role: "viewer" })),
   ].sort((a, b) => a.email.localeCompare(b.email));
-
-  const list = document.getElementById("share-people");
-  list.innerHTML = "";
-  if (!people.length) {
-    const empty = document.createElement("li");
-    empty.className = "share-empty rule-cite";
-    empty.textContent = "Not shared with anyone yet.";
-    list.appendChild(empty);
-    return;
-  }
 
   people.forEach((person) => {
     const row = document.createElement("li");
@@ -684,6 +686,7 @@ async function commitSharing() {
     // The server normalizes addresses and resolves duplicates, so its answer
     // is what the dialog shows.
     sharing = {
+      owner: sharing.owner,
       editors: saved.editors || [],
       viewers: saved.viewers || [],
       public: Boolean(saved.public),
@@ -705,6 +708,10 @@ function addPerson(event) {
     shareError(`${email} is not an email address.`);
     return;
   }
+  if (email === sharing.owner) {
+    shareError("You already own this draft.");
+    return;
+  }
   shareError("");
   input.value = "";
   setRole(email, document.getElementById("share-role").value);
@@ -716,6 +723,7 @@ async function openShare() {
   try {
     const current = await fetchDocument(docID);
     sharing = {
+      owner: current.owner || "",
       editors: current.editors || [],
       viewers: current.viewers || [],
       public: Boolean(current.public),
@@ -882,16 +890,20 @@ async function main() {
 
   try {
     const datasets = await loadDatasets();
-    // Provenance matters: a drafter needs to know how current the text is.
-    document.getElementById("picker-currency").textContent = datasets
-      .filter((d) => d.dataset !== "rules")
-      .map((d) => `${d.label}: ${d.current_through || "currency unknown"}`)
-      .join(" \u00b7 ");
-    const total = datasets.reduce((n, d) => n + (d.sections || 0), 0);
-    setStatus(`${total.toLocaleString()} sections of law available`);
+    // Provenance belongs next to the search that uses it: how much law is
+    // searchable, and how current it is. The RCNY is excluded because a local
+    // law does not amend agency rules (Rule 5.2).
+    const searchable = datasets.filter((d) => d.dataset !== "rules");
+    const total = searchable.reduce((n, d) => n + (d.sections || 0), 0);
+    document.getElementById("picker-currency").textContent =
+      `${total.toLocaleString()} sections searchable \u00b7 ` +
+      searchable
+        .map((d) => `${d.label}: ${d.current_through || "currency unknown"}`)
+        .join(" \u00b7 ");
   } catch (e) {
     console.error(e);
-    setStatus("Could not reach the law archive");
+    document.getElementById("picker-currency").textContent =
+      "Could not reach the law archive.";
   }
 }
 

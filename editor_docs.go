@@ -110,6 +110,20 @@ func normalizeEmails(raw []string) []string {
 	return out
 }
 
+// withoutOwner drops the owner's own address; ownership is not a share.
+func withoutOwner(emails []string, owner string) []string {
+	if owner == "" {
+		return emails
+	}
+	out := make([]string, 0, len(emails))
+	for _, email := range emails {
+		if !strings.EqualFold(email, owner) {
+			out = append(out, email)
+		}
+	}
+	return out
+}
+
 var errDocumentNotFound = errors.New("document not found")
 
 func isNotFound(err error) bool {

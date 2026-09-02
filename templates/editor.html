@@ -40,8 +40,6 @@
 
     <span class="sep"></span>
 
-    <a class="btn btn-sm btn-outline-secondary" href="/">Bills</a>
-
     <div class="control-right">
       {{if .IsOwner}}
       <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-share">
@@ -226,15 +224,14 @@
       <button type="submit" class="btn btn-primary">Add</button>
     </form>
     <div class="share-error" id="share-error" hidden></div>
+    <p class="rule-cite share-note">
+      No notification is sent.</p>
 
     <ul class="share-people" id="share-people"></ul>
 
     <div class="form-check share-public">
       <input class="form-check-input" type="checkbox" id="share-public">
-      <label class="form-check-label" for="share-public">
-        Anyone with the link can view
-        <span class="rule-cite">An unintroduced bill is usually not public.</span>
-      </label>
+      <label class="form-check-label" for="share-public">Anyone with the link can view</label>
     </div>
 
     <div class="share-footer">

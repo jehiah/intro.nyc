@@ -36,7 +36,6 @@ body {
   font-weight: 500;
   display: flex;
   align-items: center;
-  gap: .4rem;
 }
 .brandbar .brand img {
   width: 28px;
@@ -53,6 +52,20 @@ body {
   display: flex;
   align-items: center;
   gap: 1rem;
+}
+.brandbar-account {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.25;
+}
+.brandbar-links {
+  font-size: .75rem;
+  opacity: .8;
+}
+.brandbar-links .sep {
+  opacity: .5;
+  margin: 0 .15rem;
 }
 
 .btn-primary {
@@ -80,17 +93,19 @@ footer p {
 
 <nav class="brandbar">
   <a class="brand" href="/">
-    <img src="/static/intro_nyc_logo.png" alt="">intro.nyc <span class="brand-sub">editor</span></a>
+    <img src="/static/intro_nyc_logo.png" alt=""><span class="brand-sub">editor.</span>intro.nyc</a>
   <div class="brandbar-right">
     {{block "brandbar" .}}{{end}}
     {{if .User.SignedIn}}
-    <a href="/">Bills</a>
-    <span class="brandbar-user">{{.User.Email}}</span>
-    <a href="/sign_out">Sign out</a>
+    <div class="brandbar-account">
+      <span class="brandbar-user">{{.User.Email}}</span>
+      <span class="brandbar-links">
+        <a href="/">Drafts</a> <span class="sep">|</span> <a href="/sign_out">Sign out</a>
+      </span>
+    </div>
     {{else}}
     <a href="/sign_in">Sign in</a>
     {{end}}
-    <a href="https://intro.nyc/"><i class="bi bi-box-arrow-up-right"></i> intro.nyc</a>
   </div>
 </nav>
 
@@ -101,9 +116,9 @@ footer p {
 </main>
 
 <footer>
-<p>A drafting environment for New York City Council legislation, following the
+<p>An editor for drafting New York City Council legislation following the
 <a href="https://council.nyc.gov/legislation/">NYC Bill Drafting Manual</a>.</p>
-<p>Made with ❤️ by <a href="https://jehiah.cz/">@jehiah</a>. Code on <a href="https://github.com/jehiah/intro.nyc/">GitHub</a>.</p>
+<p>Made with ❤️ by <a href="https://jehiah.cz/">@jehiah</a>. <a href="https://intro.nyc/">intro.nyc <i class="bi bi-box-arrow-up-right"></i></a></p>
 </footer>
 
 {{ block "javascript" .}}{{end}}

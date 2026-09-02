@@ -57,7 +57,7 @@ func TestEditorTemplatesRender(t *testing.T) {
 		},
 		{
 			name: "editor_new.html",
-			body: map[string]any{"Title": "New bill", "User": user},
+			body: map[string]any{"Title": "New Draft Bill", "User": user},
 			want: []string{"Amend the", "Unconsolidated"},
 		},
 		{

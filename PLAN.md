@@ -215,7 +215,7 @@ Firebase-hosted sign-in helpers so the flow stays first-party, which Safari
 requires.
 
 The editor home is the sign-in page when signed out and the document list when
-signed in. "New bill" asks for the two things a bill cannot be started without
+signed in. "New draft" asks for the two things a bill cannot be started without
 — which bodies of law it amends and its subject (Rule 2.1) — then opens the
 editor. Document ids are UUIDs.
 

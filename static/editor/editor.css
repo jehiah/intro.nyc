@@ -374,6 +374,10 @@
   margin-bottom: 0.5rem;
 }
 
+.share-note {
+  margin-bottom: 0.75rem;
+}
+
 .share-people {
   list-style: none;
   margin: 0 0 1rem;
@@ -401,14 +405,32 @@
   width: auto;
 }
 
-.share-empty {
-  padding: 0.5rem 0;
-  border: 0 !important;
+/* Sits where the role dropdown sits, so the column lines up. */
+.share-role {
+  flex: 0 0 auto;
+  color: #6c757d;
+  font-size: 0.875rem;
+  padding: 0.25rem 0.75rem;
 }
 
 .share-public {
-  padding: 0.75rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0.85rem 0;
+  padding-left: 0;
   border-top: 1px solid #f1f3f5;
+}
+
+.share-public .form-check-input {
+  float: none;
+  flex: 0 0 auto;
+  margin: 0;
+}
+
+.share-public .form-check-label {
+  margin: 0;
 }
 
 .share-footer {
@@ -611,5 +633,5 @@
 }
 
 .brandbar-user {
-  opacity: 0.85;
+  white-space: nowrap;
 }

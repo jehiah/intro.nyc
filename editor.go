@@ -65,7 +65,7 @@ func (a *App) EditorIndex(w http.ResponseWriter, r *http.Request) {
 	}
 
 	a.renderEditor(w, r, "editor_documents.html", map[string]any{
-		"Title":     "Bills",
+		"Title":     "Drafts",
 		"User":      user,
 		"Documents": rows,
 	})
@@ -79,7 +79,7 @@ func (a *App) EditorNewForm(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.renderEditor(w, r, "editor_new.html", map[string]any{
-		"Title": "New bill",
+		"Title": "New draft",
 		"User":  user,
 	})
 }
@@ -172,6 +172,7 @@ func (a *App) EditorGetDraft(w http.ResponseWriter, r *http.Request) {
 		"id":      document.ID,
 		"title":   document.Title,
 		"code":    document.Code,
+		"owner":   document.Owner,
 		"doc":     json.RawMessage(document.Doc),
 		"canEdit": access.CanEdit(),
 		"updated": document.LastModified,
@@ -252,10 +253,10 @@ func (a *App) EditorShare(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	document.Editors = normalizeEmails(req.Editors)
+	document.Editors = withoutOwner(normalizeEmails(req.Editors), document.Owner)
 	// An address with edit access does not also need view access.
 	var viewers []string
-	for _, email := range normalizeEmails(req.Viewers) {
+	for _, email := range withoutOwner(normalizeEmails(req.Viewers), document.Owner) {
 		if !contains(document.Editors, email) {
 			viewers = append(viewers, email)
 		}
@@ -293,7 +294,9 @@ func (a *App) EditorDeleteDocument(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Internal Server Error", 500)
 		return
 	}
-	w.WriteHeader(204)
+	// A bodyless 204 is reported as a failed request by Chromium's network log.
+	w.Header().Set("content-type", "application/json")
+	w.Write([]byte(`{"deleted": true}`))
 }
 
 // documentFor loads the document named in the path and checks read access.
