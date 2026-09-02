@@ -619,12 +619,26 @@ const EXPORTS = {
 /* ---------------------------------------------------------------- UI: share */
 
 // The dialog saves on every change, so it holds the current sharing state.
-let sharing = { owner: "", editors: [], viewers: [], public: false };
+let sharing = { owner: "", editors: [], viewers: [], public: false, names: {} };
 
 function shareError(message) {
   const el = document.getElementById("share-error");
   el.textContent = message || "";
   el.hidden = !message;
+}
+
+// A person reads as their name over their address, or just the address when no
+// profile name is known.
+function personHTML(email) {
+  const name = sharing.names[email];
+  if (!name) {
+    return `<span class="share-person"><span class="share-email">${escapeHTML(
+      email
+    )}</span></span>`;
+  }
+  return `<span class="share-person"><span class="share-name">${escapeHTML(
+    name
+  )}</span><span class="share-email">${escapeHTML(email)}</span></span>`;
 }
 
 function renderShare() {
@@ -636,9 +650,7 @@ function renderShare() {
   // The owner is always listed and cannot be changed or removed.
   if (sharing.owner) {
     const row = document.createElement("li");
-    row.innerHTML = `
-      <span class="share-person">${escapeHTML(sharing.owner)}</span>
-      <span class="share-role">Owner</span>`;
+    row.innerHTML = `${personHTML(sharing.owner)}<span class="share-role">Owner</span>`;
     list.appendChild(row);
   }
 
@@ -650,7 +662,7 @@ function renderShare() {
   people.forEach((person) => {
     const row = document.createElement("li");
     row.innerHTML = `
-      <span class="share-person">${escapeHTML(person.email)}</span>
+      ${personHTML(person.email)}
       <select class="form-select form-select-sm" aria-label="Access for ${escapeHTML(
         person.email
       )}">
@@ -690,6 +702,7 @@ async function commitSharing() {
       editors: saved.editors || [],
       viewers: saved.viewers || [],
       public: Boolean(saved.public),
+      names: saved.names || {},
     };
     renderShare();
     setStatus("Sharing updated");
@@ -727,6 +740,7 @@ async function openShare() {
       editors: current.editors || [],
       viewers: current.viewers || [],
       public: Boolean(current.public),
+      names: current.names || {},
     };
   } catch (e) {
     console.error(e);

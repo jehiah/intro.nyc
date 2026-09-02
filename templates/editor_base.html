@@ -85,6 +85,15 @@ footer a:link, footer a:visited {
 footer p {
   margin-bottom: .5rem;
 }
+.beta {
+    background: #ff0;
+    color: #000;
+    font-weight: 500;
+    padding: 0 .25rem;
+    border-radius: .25rem;
+    font-size: .65rem;
+    text-transform: uppercase;
+}
 </style>
 {{block "head" .}}{{end}}
 
@@ -94,11 +103,12 @@ footer p {
 <nav class="brandbar">
   <a class="brand" href="/">
     <img src="/static/intro_nyc_logo.png" alt=""><span class="brand-sub">editor.</span>intro.nyc</a>
+    <span class="beta">beta</span>
   <div class="brandbar-right">
     {{block "brandbar" .}}{{end}}
     {{if .User.SignedIn}}
     <div class="brandbar-account">
-      <span class="brandbar-user">{{.User.Email}}</span>
+      <a class="brandbar-user" href="/profile">{{.Profile.DisplayName}}</a>
       <span class="brandbar-links">
         <a href="/">Drafts</a> <span class="sep">|</span> <a href="/sign_out">Sign out</a>
       </span>

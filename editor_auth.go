@@ -18,10 +18,11 @@ const sessionTTL = time.Hour * 24 * 13
 type UID string
 
 // SessionUser is the signed-in identity. Email is carried because documents are
-// shared by email address rather than by UID.
+// shared by email address rather than by UID; Name seeds a new profile.
 type SessionUser struct {
 	UID   UID
 	Email string
+	Name  string
 }
 
 func (u *SessionUser) SignedIn() bool { return u != nil && u.UID != "" }
@@ -42,7 +43,12 @@ func (a *App) User(r *http.Request) *SessionUser {
 		return nil
 	}
 	email, _ := decoded.Claims["email"].(string)
-	return &SessionUser{UID: UID(decoded.UID), Email: strings.ToLower(email)}
+	name, _ := decoded.Claims["name"].(string)
+	return &SessionUser{
+		UID:   UID(decoded.UID),
+		Email: strings.ToLower(email),
+		Name:  name,
+	}
 }
 
 // EditorSignIn renders the sign-in page.

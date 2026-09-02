@@ -396,8 +396,24 @@
 
 .share-people .share-person {
   flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  line-height: 1.3;
+  overflow: hidden;
+}
+
+.share-name {
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.share-email {
+  font-size: 0.8rem;
+  color: #868e96;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .share-people .form-select {
@@ -516,15 +532,26 @@
 
 .susi,
 .documents,
-.new-bill {
+.new-bill,
+.profile {
   max-width: 44rem;
   margin: 2rem auto;
 }
 
 .susi h1,
 .documents h1,
-.new-bill h1 {
+.new-bill h1,
+.profile h1 {
   font-size: 1.6rem;
+}
+
+.profile-saved {
+  background: #e7f3ea;
+  border: 1px solid #cfe6d6;
+  border-radius: 4px;
+  padding: 0.5rem 0.85rem;
+  margin-bottom: 1.25rem;
+  font-size: 0.9rem;
 }
 
 .susi .lead {

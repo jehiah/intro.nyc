@@ -74,6 +74,16 @@ func (d *Document) AccessFor(u *SessionUser) Access {
 	return AccessNone
 }
 
+// People is every address associated with the document, for name lookup.
+func (d *Document) People() []string {
+	out := make([]string, 0, len(d.Editors)+len(d.Viewers)+1)
+	if d.Owner != "" {
+		out = append(out, d.Owner)
+	}
+	out = append(out, d.Editors...)
+	return append(out, d.Viewers...)
+}
+
 // DisplayTitle is what the document list shows.
 func (d *Document) DisplayTitle() string {
 	if strings.TrimSpace(d.Title) != "" {

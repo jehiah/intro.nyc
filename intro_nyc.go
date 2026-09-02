@@ -62,6 +62,9 @@ type App struct {
 	firestore       *firestore.Client
 	firebaseProject string
 
+	profiles     map[UID]*cachedProfile
+	profileMutex sync.RWMutex
+
 	cachedRedirects   map[IntroID]string
 	fileCache         map[string]CachedFile
 	cachedLegislation map[IntroID]*CachedLegislation
@@ -256,6 +259,7 @@ func main() {
 		cachedRedirects:   make(map[IntroID]string),
 		cachedLegislation: make(map[IntroID]*CachedLegislation),
 		fileCache:         make(map[string]CachedFile),
+		profiles:          make(map[UID]*cachedProfile),
 	}
 	if *devMode {
 		app.templateFS = os.DirFS(".")
@@ -288,6 +292,8 @@ func main() {
 	editorRouter.HandleFunc("POST /data/session", app.EditorNewSession)
 	editorRouter.HandleFunc("GET /new", app.EditorNewForm)
 	editorRouter.HandleFunc("POST /new", app.EditorNewPost)
+	editorRouter.HandleFunc("GET /profile", app.EditorProfile)
+	editorRouter.HandleFunc("POST /profile", app.EditorProfilePost)
 	editorRouter.HandleFunc("GET /d/{id}", app.EditorDocument)
 	editorRouter.HandleFunc("GET /api/draft/{id}", app.EditorGetDraft)
 	editorRouter.HandleFunc("POST /api/draft/{id}", app.EditorSaveDraft)

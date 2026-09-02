@@ -25,6 +25,13 @@ func (a *App) renderEditorStatus(w http.ResponseWriter, r *http.Request, status 
 	if _, ok := body["User"]; !ok {
 		body["User"] = a.User(r)
 	}
+	if user, ok := body["User"].(*SessionUser); ok && user.SignedIn() {
+		profile, err := a.profileFor(r.Context(), user)
+		if err != nil {
+			log.Printf("editor profile: %s", err)
+		}
+		body["Profile"] = profile
+	}
 	body["AuthDomain"] = a.authDomain(r)
 
 	t := newTemplateWithBase(a.templateFS, "editor_base.html", name)
@@ -69,6 +76,39 @@ func (a *App) EditorIndex(w http.ResponseWriter, r *http.Request) {
 		"User":      user,
 		"Documents": rows,
 	})
+}
+
+// EditorProfile shows the drafter's account settings.
+func (a *App) EditorProfile(w http.ResponseWriter, r *http.Request) {
+	user := a.User(r)
+	if !user.SignedIn() {
+		http.Redirect(w, r, "/", 302)
+		return
+	}
+	a.renderEditor(w, r, "editor_profile.html", map[string]any{
+		"Title": "Profile",
+		"User":  user,
+		"Saved": r.URL.Query().Has("saved"),
+	})
+}
+
+// EditorProfilePost saves the display name.
+func (a *App) EditorProfilePost(w http.ResponseWriter, r *http.Request) {
+	user := a.User(r)
+	if !user.SignedIn() {
+		http.Redirect(w, r, "/", 302)
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Bad Request", 400)
+		return
+	}
+	if _, err := a.saveProfileName(r.Context(), user, r.PostForm.Get("name")); err != nil {
+		log.Printf("editor profile: %s", err)
+		http.Error(w, "Internal Server Error", 500)
+		return
+	}
+	http.Redirect(w, r, "/profile?saved", 302)
 }
 
 // EditorNewForm asks for the title and type of a new bill (Rule 2.1).
@@ -182,6 +222,7 @@ func (a *App) EditorGetDraft(w http.ResponseWriter, r *http.Request) {
 		body["editors"] = document.Editors
 		body["viewers"] = document.Viewers
 		body["public"] = document.Public
+		body["names"] = a.namesFor(r.Context(), document.People())
 	}
 	w.Header().Set("content-type", "application/json")
 	w.Header().Set("cache-control", "no-store")
@@ -276,6 +317,7 @@ func (a *App) EditorShare(w http.ResponseWriter, r *http.Request) {
 		"editors": document.Editors,
 		"viewers": document.Viewers,
 		"public":  document.Public,
+		"names":   a.namesFor(r.Context(), document.People()),
 	})
 }
 

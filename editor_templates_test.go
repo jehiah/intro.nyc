@@ -14,6 +14,7 @@ import (
 func TestEditorTemplatesRender(t *testing.T) {
 	fs := os.DirFS(".")
 	user := &SessionUser{UID: "uid", Email: "drafter@example.com"}
+	profile := &Profile{UID: "uid", Email: "drafter@example.com", Name: "Ada Drafter"}
 	document := &Document{
 		ID:           "11111111-2222-3333-4444-555555555555",
 		UID:          "uid",
@@ -41,8 +42,9 @@ func TestEditorTemplatesRender(t *testing.T) {
 		{
 			name: "editor_documents.html",
 			body: map[string]any{
-				"Title": "Drafts",
-				"User":  user,
+				"Title":   "Drafts",
+				"User":    user,
+				"Profile": profile,
 				"Documents": []row{
 					{Document: *document},
 					{Document: Document{ID: "other", Owner: "someone@example.com"}, Shared: true},
@@ -53,11 +55,25 @@ func TestEditorTemplatesRender(t *testing.T) {
 				`data-delete="11111111-2222-3333-4444-555555555555"`,
 				"bi-trash",
 				"modal-delete",
+				// the brandbar shows the display name and links to the profile
+				"Ada Drafter",
+				`href="/profile"`,
+			},
+		},
+		{
+			name: "editor_profile.html",
+			body: map[string]any{
+				"Title": "Profile", "User": user, "Profile": profile, "Saved": true,
+			},
+			want: []string{
+				`value="Ada Drafter"`,
+				"drafter@example.com",
+				"Saved.",
 			},
 		},
 		{
 			name: "editor_new.html",
-			body: map[string]any{"Title": "New Draft Bill", "User": user},
+			body: map[string]any{"Title": "New bill", "User": user, "Profile": profile},
 			want: []string{"Amend the", "Unconsolidated"},
 		},
 		{
@@ -72,7 +88,8 @@ func TestEditorTemplatesRender(t *testing.T) {
 		{
 			name: "editor.html",
 			body: map[string]any{
-				"Title": "a bill", "User": user, "Document": document, "IsOwner": true,
+				"Title": "a bill", "User": user, "Profile": profile,
+				"Document": document, "IsOwner": true,
 			},
 			want: []string{
 				"A Draft Local Law",
@@ -86,7 +103,7 @@ func TestEditorTemplatesRender(t *testing.T) {
 		{
 			name: "bill_readonly.html",
 			body: map[string]any{
-				"Title": "a bill", "User": user, "Document": document,
+				"Title": "a bill", "User": user, "Profile": profile, "Document": document,
 				"Bill": template.HTML(`<div class="bill-doc"></div>`),
 			},
 			want: []string{"Read only"},

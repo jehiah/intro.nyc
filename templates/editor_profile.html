@@ -1,0 +1,37 @@
+{{template "base" .}}
+{{define "title"}}{{.Title}}{{end}}
+
+{{define "middle"}}
+<div class="profile">
+  <h1>Profile</h1>
+
+  {{if .Saved}}
+  <div class="profile-saved">Saved.</div>
+  {{end}}
+
+  <form method="POST" action="/profile">
+    <div class="mb-4">
+      <label class="form-label" for="name">Display name</label>
+      <input type="text" class="form-control form-control-lg" id="name" name="name"
+             value="{{.Profile.Name}}" autocomplete="name" autofocus>
+      <div class="rule-cite mt-1">
+        Used to identify your account along with your email address.
+      </div>
+    </div>
+
+    <div class="mb-4">
+      <label class="form-label" for="email">Email address</label>
+      <input type="text" class="form-control" id="email" value="{{.Profile.Email}}" disabled>
+      <div class="rule-cite mt-1">
+        Email address can not be changed.
+      </div>
+    </div>
+
+    <div class="text-end">
+      <button type="submit" class="btn btn-primary">Save</button>
+    </div>
+
+    <p>See your <a href="/">Drafts</a></p>
+  </form>
+</div>
+{{end}}
