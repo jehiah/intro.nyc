@@ -618,39 +618,115 @@ const EXPORTS = {
 
 /* ---------------------------------------------------------------- UI: share */
 
-function parseEmails(value) {
-  return value
-    .split(/[\s,;]+/)
-    .map((s) => s.trim())
-    .filter(Boolean);
+// The dialog saves on every change, so it holds the current sharing state.
+let sharing = { editors: [], viewers: [], public: false };
+
+function shareError(message) {
+  const el = document.getElementById("share-error");
+  el.textContent = message || "";
+  el.hidden = !message;
+}
+
+function renderShare() {
+  document.getElementById("share-public").checked = Boolean(sharing.public);
+
+  const people = [
+    ...sharing.editors.map((email) => ({ email, role: "editor" })),
+    ...sharing.viewers.map((email) => ({ email, role: "viewer" })),
+  ].sort((a, b) => a.email.localeCompare(b.email));
+
+  const list = document.getElementById("share-people");
+  list.innerHTML = "";
+  if (!people.length) {
+    const empty = document.createElement("li");
+    empty.className = "share-empty rule-cite";
+    empty.textContent = "Not shared with anyone yet.";
+    list.appendChild(empty);
+    return;
+  }
+
+  people.forEach((person) => {
+    const row = document.createElement("li");
+    row.innerHTML = `
+      <span class="share-person">${escapeHTML(person.email)}</span>
+      <select class="form-select form-select-sm" aria-label="Access for ${escapeHTML(
+        person.email
+      )}">
+        <option value="viewer">Viewer</option>
+        <option value="editor">Editor</option>
+        <option value="remove">Remove</option>
+      </select>`;
+    const select = row.querySelector("select");
+    select.value = person.role;
+    select.addEventListener("change", () => {
+      setRole(person.email, select.value);
+    });
+    list.appendChild(row);
+  });
+}
+
+function setRole(email, role) {
+  sharing.editors = sharing.editors.filter((e) => e !== email);
+  sharing.viewers = sharing.viewers.filter((e) => e !== email);
+  if (role === "editor") sharing.editors.push(email);
+  if (role === "viewer") sharing.viewers.push(email);
+  renderShare();
+  commitSharing();
+}
+
+async function commitSharing() {
+  try {
+    const saved = await saveSharing(docID, {
+      editors: sharing.editors,
+      viewers: sharing.viewers,
+      isPublic: sharing.public,
+    });
+    // The server normalizes addresses and resolves duplicates, so its answer
+    // is what the dialog shows.
+    sharing = {
+      editors: saved.editors || [],
+      viewers: saved.viewers || [],
+      public: Boolean(saved.public),
+    };
+    renderShare();
+    setStatus("Sharing updated");
+  } catch (e) {
+    console.error(e);
+    shareError("Could not update sharing.");
+  }
+}
+
+function addPerson(event) {
+  event.preventDefault();
+  const input = document.getElementById("share-email");
+  const email = input.value.trim().toLowerCase();
+  if (!email) return;
+  if (!email.includes("@")) {
+    shareError(`${email} is not an email address.`);
+    return;
+  }
+  shareError("");
+  input.value = "";
+  setRole(email, document.getElementById("share-role").value);
 }
 
 async function openShare() {
   document.getElementById("share-url").value = documentURL(docID);
+  shareError("");
   try {
     const current = await fetchDocument(docID);
-    document.getElementById("share-editors").value = (current.editors || []).join("\n");
-    document.getElementById("share-viewers").value = (current.viewers || []).join("\n");
-    document.getElementById("share-public").checked = Boolean(current.public);
+    sharing = {
+      editors: current.editors || [],
+      viewers: current.viewers || [],
+      public: Boolean(current.public),
+    };
   } catch (e) {
     console.error(e);
+    shareError("Could not load the current sharing settings.");
   }
+  renderShare();
   openModal("modal-share");
-}
-
-async function submitShare() {
-  try {
-    await saveSharing(docID, {
-      editors: parseEmails(document.getElementById("share-editors").value),
-      viewers: parseEmails(document.getElementById("share-viewers").value),
-      isPublic: document.getElementById("share-public").checked,
-    });
-    setStatus("Sharing updated");
-    closeModal("modal-share");
-  } catch (e) {
-    console.error(e);
-    setStatus("Could not update sharing");
-  }
+  document.getElementById("share-email").focus();
 }
 
 /* ----------------------------------------------------------------- bootstrap */
@@ -713,13 +789,30 @@ function wireUI() {
 
   if (canShare()) {
     document.getElementById("btn-share").addEventListener("click", openShare);
-    document
-      .getElementById("btn-share-save")
-      .addEventListener("click", submitShare);
+    document.getElementById("share-add").addEventListener("submit", addPerson);
+    document.getElementById("share-public").addEventListener("change", (e) => {
+      sharing.public = e.target.checked;
+      commitSharing();
+    });
     document.getElementById("btn-share-copy").addEventListener("click", () => {
       copyText(document.getElementById("share-url").value, "Link copied");
     });
   }
+
+  // Dialogs save as they go, so dismissing one is never destructive.
+  document.querySelectorAll(".editor-modal").forEach((modal) => {
+    modal.addEventListener("mousedown", (e) => {
+      if (e.target === modal) closeModal(modal.id);
+    });
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Escape") return;
+    const open = document.querySelector(".editor-modal.open");
+    if (open) {
+      e.preventDefault();
+      closeModal(open.id);
+    }
+  });
 
   document.querySelectorAll("[data-close]").forEach((el) => {
     el.addEventListener("click", () => closeModal(el.dataset.close));

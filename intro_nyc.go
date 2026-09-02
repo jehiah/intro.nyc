@@ -291,6 +291,7 @@ func main() {
 	editorRouter.HandleFunc("GET /d/{id}", app.EditorDocument)
 	editorRouter.HandleFunc("GET /api/draft/{id}", app.EditorGetDraft)
 	editorRouter.HandleFunc("POST /api/draft/{id}", app.EditorSaveDraft)
+	editorRouter.HandleFunc("DELETE /api/draft/{id}", app.EditorDeleteDocument)
 	editorRouter.HandleFunc("POST /api/share/{id}", app.EditorShare)
 	editorRouter.HandleFunc("GET /api/law/datasets", app.EditorLawDatasets)
 	editorRouter.HandleFunc("GET /api/law/search", app.EditorLawSearch)

@@ -192,7 +192,7 @@
 }
 
 .bill-title::before {
-  content: "A LOCAL LAW";
+  content: "A DRAFT LOCAL LAW";
   display: block;
   text-align: center;
   letter-spacing: 0.05em;
@@ -347,6 +347,84 @@
   padding: 1.5rem;
 }
 
+.editor-modal .panel-narrow {
+  max-width: 26rem;
+}
+
+/* Share dialog */
+
+.share-add {
+  display: flex;
+  gap: 0.5rem;
+  margin: 1rem 0 0.5rem;
+}
+
+.share-add .form-control {
+  flex: 1 1 auto;
+}
+
+.share-add .form-select {
+  flex: 0 0 auto;
+  width: auto;
+}
+
+.share-error {
+  color: #dc3545;
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+}
+
+.share-people {
+  list-style: none;
+  margin: 0 0 1rem;
+  padding: 0;
+  max-height: 15rem;
+  overflow-y: auto;
+}
+
+.share-people li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid #f1f3f5;
+}
+
+.share-people .share-person {
+  flex: 1 1 auto;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.share-people .form-select {
+  flex: 0 0 auto;
+  width: auto;
+}
+
+.share-empty {
+  padding: 0.5rem 0;
+  border: 0 !important;
+}
+
+.share-public {
+  padding: 0.75rem 0;
+  border-top: 1px solid #f1f3f5;
+}
+
+.share-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding-top: 1rem;
+}
+
+.delete-title {
+  font-family: "Times New Roman", Times, serif;
+  font-size: 1.05rem;
+  margin-bottom: 0.25rem;
+}
+
 .preview-box {
   font-family: "Times New Roman", Times, serif;
   font-size: 12pt;
@@ -456,15 +534,45 @@
   border-top: 1px solid #eef0f3;
 }
 
+.document-list li {
+  display: flex;
+  align-items: center;
+}
+
 .document-list a {
   display: block;
+  flex: 1 1 auto;
   padding: 0.85rem 1.15rem;
   text-decoration: none;
   color: inherit;
+  min-width: 0;
 }
 
 .document-list a:hover {
   background: #eef2f9;
+}
+
+.document-delete {
+  flex: 0 0 auto;
+  border: 0;
+  background: none;
+  color: #adb5bd;
+  padding: 0.85rem 1.15rem;
+  align-self: stretch;
+}
+
+.document-delete:hover {
+  color: #dc3545;
+  background: #fdf2f3;
+}
+
+.editor-error {
+  max-width: 40rem;
+  margin: 3rem auto;
+}
+
+.editor-error h1 {
+  font-size: 1.6rem;
 }
 
 .document-title {

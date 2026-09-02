@@ -4,7 +4,7 @@
 {{define "middle"}}
 <div class="documents">
   <div class="documents-header">
-    <h1>Bills</h1>
+    <h1>Drafts</h1>
     <a class="btn btn-primary" href="/new"><i class="bi bi-plus-lg"></i> New bill</a>
   </div>
 
@@ -20,14 +20,40 @@
           {{if .Public}}&middot; <span class="badge-public">public</span>{{end}}
         </span>
       </a>
+      {{if not .Shared}}
+      <button type="button" class="document-delete" title="Delete this draft"
+              data-delete="{{.ID}}" data-title="{{.DisplayTitle}}"
+              aria-label="Delete {{.DisplayTitle}}">
+        <i class="bi bi-trash"></i>
+      </button>
+      {{end}}
     </li>
     {{end}}
   </ul>
   {{else}}
   <p class="empty">
-    No bills yet. <a href="/new">Start one</a> &mdash; you will be asked for a
+    No drafts yet. <a href="/new">Start one</a> &mdash; you will be asked for a
     title and which bodies of law it amends.
   </p>
   {{end}}
 </div>
+
+<div class="editor-modal" id="modal-delete">
+  <div class="panel panel-narrow">
+    <h5>Delete this draft?</h5>
+    <p class="delete-title" id="delete-title"></p>
+    <p class="rule-cite">This cannot be undone.</p>
+    <div class="share-footer">
+      <span></span>
+      <span>
+        <button type="button" class="btn btn-outline-secondary" data-close="modal-delete">Cancel</button>
+        <button type="button" class="btn btn-danger" id="btn-delete-confirm">Delete</button>
+      </span>
+    </div>
+  </div>
+</div>
+{{end}}
+
+{{define "javascript"}}
+<script type="module" src="/static/editor/js/documents.js"></script>
 {{end}}

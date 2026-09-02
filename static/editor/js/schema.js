@@ -58,8 +58,8 @@ export function titleText(attrs) {
 const nodes = {
   doc: { content: "bill_title enacting_clause bill_section+" },
 
-  // Rendered beneath a centered "A LOCAL LAW". Edited from the toolbar rather
-  // than in the document, so the required prefix cannot be mangled.
+  // Rendered beneath a centered "A DRAFT LOCAL LAW". Edited from the toolbar
+  // rather than in the document, so the required prefix cannot be mangled.
   bill_title: {
     atom: true,
     selectable: false,

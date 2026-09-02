@@ -9,7 +9,7 @@
 <nav class="editor-nav">
 
   <div class="title-row">
-    <span class="title-stamp">A Local Law</span>
+    <span class="title-stamp">A Draft Local Law</span>
     <select id="title-code" class="title-code" aria-label="Bodies of law this bill amends"
             title="Which bodies of law this bill amends (Rule 2.1)">
       <option value="administrative code">To amend the administrative code&hellip;</option>
@@ -216,20 +216,20 @@
   <div class="panel">
     <h5>Share</h5>
 
-    <div class="mb-3">
-      <label class="form-label" for="share-editors">Can edit</label>
-      <textarea class="form-control" id="share-editors" rows="2"
-                placeholder="colleague@council.nyc.gov, another@council.nyc.gov"></textarea>
-      <div class="rule-cite mt-1">Email addresses, one per line or comma separated.</div>
-    </div>
+    <form class="share-add" id="share-add">
+      <input type="email" class="form-control" id="share-email" autocomplete="off"
+             placeholder="Add people by email address" aria-label="Email address">
+      <select class="form-select" id="share-role" aria-label="Access level">
+        <option value="viewer">Viewer</option>
+        <option value="editor">Editor</option>
+      </select>
+      <button type="submit" class="btn btn-primary">Add</button>
+    </form>
+    <div class="share-error" id="share-error" hidden></div>
 
-    <div class="mb-3">
-      <label class="form-label" for="share-viewers">Can view</label>
-      <textarea class="form-control" id="share-viewers" rows="2"
-                placeholder="reviewer@council.nyc.gov"></textarea>
-    </div>
+    <ul class="share-people" id="share-people"></ul>
 
-    <div class="form-check mb-3">
+    <div class="form-check share-public">
       <input class="form-check-input" type="checkbox" id="share-public">
       <label class="form-check-label" for="share-public">
         Anyone with the link can view
@@ -237,18 +237,12 @@
       </label>
     </div>
 
-    <div class="mb-3">
-      <label class="form-label" for="share-url">Link</label>
-      <div class="input-group">
-        <input type="text" class="form-control" id="share-url" readonly>
-        <button type="button" class="btn btn-outline-secondary" id="btn-share-copy">Copy</button>
-      </div>
+    <div class="share-footer">
+      <button type="button" class="btn btn-outline-secondary" id="btn-share-copy">
+        <i class="bi bi-link-45deg"></i> Copy link</button>
+      <button type="button" class="btn btn-primary" data-close="modal-share">Done</button>
     </div>
-
-    <div class="text-end">
-      <button type="button" class="btn btn-outline-secondary" data-close="modal-share">Cancel</button>
-      <button type="button" class="btn btn-primary" id="btn-share-save">Save sharing</button>
-    </div>
+    <input type="hidden" id="share-url">
   </div>
 </div>
 
@@ -261,16 +255,16 @@
     "orderedmap": "https://esm.sh/orderedmap@2.1.1",
     "rope-sequence": "https://esm.sh/rope-sequence@1.3.4",
     "w3c-keyname": "https://esm.sh/w3c-keyname@2.2.8",
-    "prosemirror-model": "https://esm.sh/*prosemirror-model@1.22.3",
-    "prosemirror-transform": "https://esm.sh/*prosemirror-transform@1.10.0",
-    "prosemirror-state": "https://esm.sh/*prosemirror-state@1.4.3",
-    "prosemirror-view": "https://esm.sh/*prosemirror-view@1.34.3",
-    "prosemirror-keymap": "https://esm.sh/*prosemirror-keymap@1.2.2",
-    "prosemirror-commands": "https://esm.sh/*prosemirror-commands@1.6.0",
-    "prosemirror-history": "https://esm.sh/*prosemirror-history@1.4.1"
+    "prosemirror-model": "https://esm.sh/*prosemirror-model@1.25.11",
+    "prosemirror-transform": "https://esm.sh/*prosemirror-transform@1.12.0",
+    "prosemirror-state": "https://esm.sh/*prosemirror-state@1.4.4",
+    "prosemirror-view": "https://esm.sh/*prosemirror-view@1.42.3",
+    "prosemirror-keymap": "https://esm.sh/*prosemirror-keymap@1.2.3",
+    "prosemirror-commands": "https://esm.sh/*prosemirror-commands@1.7.2",
+    "prosemirror-history": "https://esm.sh/*prosemirror-history@1.5.0"
   }
 }
 </script>
-<link rel="stylesheet" href="https://esm.sh/prosemirror-view@1.34.3/style/prosemirror.css">
+<link rel="stylesheet" href="https://esm.sh/prosemirror-view@1.42.3/style/prosemirror.css">
 <script type="module" src="/static/editor/js/main.js"></script>
 {{end}}

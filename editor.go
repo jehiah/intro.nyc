@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"html"
@@ -17,18 +18,25 @@ const maxDraftBytes = 1 << 20
 
 // renderEditor executes an editor template against the shared editor chrome.
 func (a *App) renderEditor(w http.ResponseWriter, r *http.Request, name string, body map[string]any) {
+	a.renderEditorStatus(w, r, 200, name, body)
+}
+
+func (a *App) renderEditorStatus(w http.ResponseWriter, r *http.Request, status int, name string, body map[string]any) {
 	if _, ok := body["User"]; !ok {
 		body["User"] = a.User(r)
 	}
-	body["FirebaseProject"] = a.firebaseProject
 	body["AuthDomain"] = a.authDomain(r)
 
 	t := newTemplateWithBase(a.templateFS, "editor_base.html", name)
-	w.Header().Set("content-type", "text/html")
-	if err := t.ExecuteTemplate(w, name, body); err != nil {
+	var rendered bytes.Buffer
+	if err := t.ExecuteTemplate(&rendered, name, body); err != nil {
 		log.Print(err)
 		http.Error(w, "Internal Server Error", 500)
+		return
 	}
+	w.Header().Set("content-type", "text/html")
+	w.WriteHeader(status)
+	w.Write(rendered.Bytes())
 }
 
 // EditorIndex is the editor home: sign-in when signed out, the document list
@@ -109,7 +117,11 @@ func (a *App) EditorDocument(w http.ResponseWriter, r *http.Request) {
 	user := a.User(r)
 	document, err := a.getDocument(r.Context(), r.PathValue("id"))
 	if err == errDocumentNotFound {
-		http.Error(w, "Not Found", 404)
+		a.renderEditorStatus(w, r, 404, "editor_error.html", map[string]any{
+			"Title":   "Not found",
+			"Code":    404,
+			"Message": "There is no draft at this address.",
+		})
 		return
 	}
 	if err != nil {
@@ -120,11 +132,7 @@ func (a *App) EditorDocument(w http.ResponseWriter, r *http.Request) {
 
 	access := document.AccessFor(user)
 	if !access.CanView() {
-		if !user.SignedIn() {
-			http.Redirect(w, r, "/sign_in?next="+document.ID, 302)
-			return
-		}
-		http.Error(w, "Forbidden", 403)
+		a.editorForbidden(w, r)
 		return
 	}
 
@@ -160,16 +168,23 @@ func (a *App) EditorGetDraft(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		return
 	}
-	w.Header().Set("content-type", "application/json")
-	w.Header().Set("cache-control", "no-store")
-	json.NewEncoder(w).Encode(map[string]any{
+	body := map[string]any{
 		"id":      document.ID,
 		"title":   document.Title,
 		"code":    document.Code,
 		"doc":     json.RawMessage(document.Doc),
 		"canEdit": access.CanEdit(),
 		"updated": document.LastModified,
-	})
+	}
+	// Who a bill is shared with is the owner's business.
+	if access == AccessOwner {
+		body["editors"] = document.Editors
+		body["viewers"] = document.Viewers
+		body["public"] = document.Public
+	}
+	w.Header().Set("content-type", "application/json")
+	w.Header().Set("cache-control", "no-store")
+	json.NewEncoder(w).Encode(body)
 }
 
 // EditorSaveDraft stores a change from the editor.
@@ -263,6 +278,24 @@ func (a *App) EditorShare(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// EditorDeleteDocument removes a draft. Only the owner may delete.
+func (a *App) EditorDeleteDocument(w http.ResponseWriter, r *http.Request) {
+	document, access, ok := a.documentFor(w, r)
+	if !ok {
+		return
+	}
+	if access != AccessOwner {
+		a.editorForbidden(w, r)
+		return
+	}
+	if err := a.deleteDocument(r.Context(), document.ID); err != nil {
+		log.Printf("editor delete: %s", err)
+		http.Error(w, "Internal Server Error", 500)
+		return
+	}
+	w.WriteHeader(204)
+}
+
 // documentFor loads the document named in the path and checks read access.
 func (a *App) documentFor(w http.ResponseWriter, r *http.Request) (*Document, Access, bool) {
 	document, err := a.getDocument(r.Context(), r.PathValue("id"))
@@ -277,10 +310,26 @@ func (a *App) documentFor(w http.ResponseWriter, r *http.Request) (*Document, Ac
 	}
 	access := document.AccessFor(a.User(r))
 	if !access.CanView() {
-		http.Error(w, "Not Found", 404)
+		a.editorForbidden(w, r)
 		return nil, AccessNone, false
 	}
 	return document, access, true
+}
+
+// editorForbidden reports that the reader may not see this document. Signed-out
+// readers are offered sign-in, since they may well have access once they do.
+func (a *App) editorForbidden(w http.ResponseWriter, r *http.Request) {
+	if strings.HasPrefix(r.URL.Path, "/api/") {
+		http.Error(w, "403 Permission denied", 403)
+		return
+	}
+	a.renderEditorStatus(w, r, 403, "editor_error.html", map[string]any{
+		"Title":   "Permission denied",
+		"Code":    403,
+		"Message": "You do not have access to this draft.",
+		"SignIn":  !a.User(r).SignedIn(),
+		"Next":    r.PathValue("id"),
+	})
 }
 
 /* ------------------------------------------------------- document rendering */

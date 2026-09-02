@@ -1,0 +1,17 @@
+{{template "base" .}}
+{{define "title"}}{{.Title}}{{end}}
+
+{{define "middle"}}
+<div class="editor-error">
+  <h1>{{.Code}} {{.Title}}</h1>
+  <p class="lead">{{.Message}}</p>
+  {{if .SignIn}}
+  <p>
+    <a class="btn btn-primary" href="/sign_in?next={{.Next}}">Sign in</a>
+    <span class="rule-cite">You may have access once you are signed in.</span>
+  </p>
+  {{else}}
+  <p><a class="btn btn-outline-secondary" href="/">Your drafts</a></p>
+  {{end}}
+</div>
+{{end}}

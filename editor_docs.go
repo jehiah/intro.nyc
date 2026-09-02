@@ -138,6 +138,11 @@ func (a *App) putDocument(ctx context.Context, d *Document) error {
 	return err
 }
 
+func (a *App) deleteDocument(ctx context.Context, id string) error {
+	_, err := a.firestore.Collection(documentCollection).Doc(id).Delete(ctx)
+	return err
+}
+
 // listDocuments returns everything the user owns or has been given access to.
 func (a *App) listDocuments(ctx context.Context, u *SessionUser) ([]Document, error) {
 	collection := a.firestore.Collection(documentCollection)
