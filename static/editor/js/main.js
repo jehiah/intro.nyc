@@ -128,7 +128,7 @@ async function persist(doc) {
       code: attrs.code,
       doc: doc.toJSON(),
     });
-    setStatus("Saved");
+    setStatus("");
   } catch (e) {
     console.error(e);
     // The local copy is the only thing standing between a failed save and lost
@@ -758,8 +758,14 @@ function openSectionMenu(pos) {
   document.getElementById("section-lead").textContent =
     section.node.firstChild.textContent;
 
+  // A section that cannot be removed offers nothing to cancel, so the menu
+  // becomes a single Close.
   const blocker = sectionRemovalBlocker(section);
-  document.getElementById("btn-section-remove").disabled = Boolean(blocker);
+  const remove = document.getElementById("btn-section-remove");
+  const dismiss = document.getElementById("btn-section-dismiss");
+  remove.hidden = Boolean(blocker);
+  dismiss.textContent = blocker ? "Close" : "Cancel";
+  dismiss.className = blocker ? "btn btn-primary" : "btn btn-outline-secondary";
   document.getElementById("section-note").textContent =
     blocker || "Removing this section deletes it and any law text it carries.";
 
