@@ -216,13 +216,44 @@
 
 /* Rule 3: bill sections are numbered consecutively and only the first spells
    out the word "Section". Derived from document order so it cannot drift.
-   Rule 11.4: a space follows the section symbol. */
-.bill-section > .section-lead::before {
+   Rule 11.4: a space follows the section symbol.
+
+   The read-only view draws the number in CSS; the editor draws it as a control
+   (.section-pill) so it can be selected. */
+.bill-doc:not(.bill-editable) .bill-section > .section-lead::before {
   content: "\00a7\0020" counter(billsection) ". ";
 }
 
-.bill-section:first-of-type > .section-lead::before {
+.bill-doc:not(.bill-editable) .bill-section:first-of-type > .section-lead::before {
   content: "Section 1. ";
+}
+
+.section-pill {
+  font-family: "Be Vietnam Pro", sans-serif;
+  font-size: 0.7rem;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  color: #2f56a6;
+  background: #eef2f9;
+  border: 1px solid #d7e0ef;
+  border-radius: 999px;
+  padding: 0.2rem 0.55rem;
+  margin-right: 0.4rem;
+  vertical-align: 0.12em;
+  user-select: none;
+}
+
+.section-pill:hover {
+  background: #2f56a6;
+  border-color: #2f56a6;
+  color: #fff;
+}
+
+/* A generated lead-in is composed from the law it cites, so it is shown rather
+   than typed. */
+.section-lead-generated {
+  cursor: default;
 }
 
 .section-lead {

@@ -313,6 +313,7 @@ local law amends consolidated law and not agency rules (Rule 5.2).
 | `editor.go` | page handlers, document API, server-side bill rendering |
 | `editor_auth.go` | Firebase session cookies |
 | `editor_docs.go` | the Firestore document model and access rules |
+| `editor_profile.go` | display names |
 | `editor_law.go` | the law API over nyc_code_archive |
 | `templates/editor_base.html` | the editor site's chrome |
 | `templates/editor_susi.html` | sign in |

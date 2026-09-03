@@ -164,6 +164,7 @@ function createState(doc) {
       editorKeymap(),
       keymap(baseKeymap),
       trackedChangesPlugin(),
+      sectionPlugin(),
       lintPlugin(renderProblems),
       persistencePlugin(),
     ],
@@ -624,6 +625,168 @@ const EXPORTS = {
     ),
 };
 
+/* ------------------------------------------------- bill section decorations */
+
+// A bill section's number and its lead-in are both derived from the document —
+// the number from position (Rule 3) and the lead-in from the law it operates on
+// (Rule 3.1) — so neither is editable text. The number is drawn as a control
+// that opens the section menu; a generated lead-in is marked non-editable.
+
+function sectionNumberLabel(index) {
+  return index === 0 ? "Section 1." : `\u00a7 ${index + 1}.`;
+}
+
+function isGeneratedLead(node) {
+  return ["amend", "add", "repeal"].includes(node.attrs.kind);
+}
+
+// The bill section enclosing a position, with its bounds.
+function sectionAt(pos) {
+  const $pos = view.state.doc.resolve(pos);
+  for (let depth = $pos.depth; depth > 0; depth--) {
+    if ($pos.node(depth).type.name === "bill_section") {
+      return {
+        node: $pos.node(depth),
+        from: $pos.before(depth),
+        to: $pos.after(depth),
+      };
+    }
+  }
+  return null;
+}
+
+function sectionPill(label, getPos) {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "section-pill";
+  button.textContent = label;
+  button.title = "Section options";
+  button.contentEditable = "false";
+  // mousedown rather than click so ProseMirror does not first move the
+  // selection into the non-editable lead-in.
+  button.addEventListener("mousedown", (e) => {
+    e.preventDefault();
+    openSectionMenu(getPos());
+  });
+  return button;
+}
+
+function sectionPlugin() {
+  const compute = (doc) => {
+    const decorations = [];
+    let index = 0;
+    doc.forEach((node, offset) => {
+      if (node.type.name !== "bill_section") return;
+      const label = sectionNumberLabel(index++);
+      const lead = node.firstChild;
+      if (!lead || lead.type.name !== "section_lead") return;
+
+      decorations.push(
+        Decoration.widget(offset + 2, (v, getPos) => sectionPill(label, getPos), {
+          side: -1,
+          ignoreSelection: true,
+        })
+      );
+      if (isGeneratedLead(node)) {
+        decorations.push(
+          Decoration.node(offset + 1, offset + 1 + lead.nodeSize, {
+            contenteditable: "false",
+            class: "section-lead-generated",
+          })
+        );
+      }
+    });
+    return DecorationSet.create(doc, decorations);
+  };
+
+  return new Plugin({
+    state: {
+      init: (_, state) => compute(state.doc),
+      apply: (tr, old) => (tr.docChanged ? compute(tr.doc) : old),
+    },
+    props: {
+      decorations(state) {
+        return this.getState(state);
+      },
+    },
+  });
+}
+
+/* ------------------------------------------------------ UI: the section menu */
+
+let pendingSection = null;
+
+function countSections() {
+  let n = 0;
+  view.state.doc.forEach((node) => {
+    if (node.type.name === "bill_section") n++;
+  });
+  return n;
+}
+
+function sectionIndexAt(from) {
+  let index = 0;
+  let found = 0;
+  view.state.doc.forEach((node, offset) => {
+    if (node.type.name !== "bill_section") return;
+    if (offset === from) found = index;
+    index++;
+  });
+  return found;
+}
+
+// Why a section cannot be removed, or null when it can. Both the menu and the
+// command consult this; a disabled button is a hint, not a guard.
+function sectionRemovalBlocker(section) {
+  if (section.node.attrs.kind === "effective") {
+    return "A bill must state when it takes effect, so this section cannot be removed (Rule 6).";
+  }
+  if (countSections() < 2) {
+    return "A bill needs at least one section.";
+  }
+  return null;
+}
+
+function openSectionMenu(pos) {
+  const section = sectionAt(pos);
+  if (!section) return;
+  pendingSection = section;
+
+  document.getElementById("section-number").textContent = sectionNumberLabel(
+    sectionIndexAt(section.from)
+  );
+  document.getElementById("section-lead").textContent =
+    section.node.firstChild.textContent;
+
+  const blocker = sectionRemovalBlocker(section);
+  document.getElementById("btn-section-remove").disabled = Boolean(blocker);
+  document.getElementById("section-note").textContent =
+    blocker || "Removing this section deletes it and any law text it carries.";
+
+  openModal("modal-section");
+}
+
+function removeSection() {
+  if (!pendingSection) return;
+  const from = pendingSection.from;
+  pendingSection = null;
+  closeModal("modal-section");
+
+  // The document may have moved since the menu opened, and the rule is checked
+  // again here rather than trusting the button state.
+  const node = view.state.doc.nodeAt(from);
+  if (!node || node.type.name !== "bill_section") return;
+  if (sectionRemovalBlocker({ node, from })) return;
+
+  view.dispatch(
+    view.state.tr
+      .setMeta(TRACKED, true)
+      .delete(from, from + node.nodeSize)
+      .scrollIntoView()
+  );
+  view.focus();
+}
+
 /* ---------------------------------------------------------------- UI: share */
 
 // The dialog saves on every change, so it holds the current sharing state.
@@ -821,6 +984,10 @@ function wireUI() {
     });
   }
 
+  document
+    .getElementById("btn-section-remove")
+    .addEventListener("click", removeSection);
+
   // Dialogs save as they go, so dismissing one is never destructive.
   document.querySelectorAll(".editor-modal").forEach((modal) => {
     modal.addEventListener("mousedown", (e) => {
@@ -893,7 +1060,9 @@ async function initialDoc() {
 async function main() {
   view = new EditorView(document.getElementById("editor"), {
     state: createState(emptyBill()),
-    attributes: { class: "bill-doc" },
+    // bill-editable distinguishes the editing surface from the read-only view,
+    // which draws its section numbers in CSS.
+    attributes: { class: "bill-doc bill-editable" },
   });
 
   wireUI();
