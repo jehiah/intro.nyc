@@ -601,6 +601,41 @@
   font-size: 0.9rem;
 }
 
+.integrations {
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #dee2e6;
+}
+
+.integrations h2 {
+  font-size: 1.2rem;
+}
+
+.integrations h3 {
+  font-size: 0.95rem;
+  font-weight: 500;
+  margin-top: 1.5rem;
+}
+
+.integrations .token {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85rem;
+}
+
+.integration-snippet {
+  background: #1f2733;
+  color: #e6edf3;
+  border-radius: 4px;
+  padding: 0.85rem 1rem;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  overflow-x: auto;
+}
+
+.integration-snippet code {
+  color: inherit;
+}
+
 /* ------------------------------------------------------- the drafting manual */
 
 .manual {

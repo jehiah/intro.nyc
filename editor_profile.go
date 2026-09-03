@@ -19,6 +19,9 @@ type Profile struct {
 	Email string `firestore:"Email"`
 	Name  string `firestore:"Name"`
 
+	// Empty until the drafter enables API and MCP integrations.
+	APIToken string `firestore:"APIToken"`
+
 	Created      time.Time `firestore:"Created"`
 	LastModified time.Time `firestore:"LastModified"`
 }

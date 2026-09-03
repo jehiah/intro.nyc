@@ -64,11 +64,33 @@ func TestEditorTemplatesRender(t *testing.T) {
 			name: "editor_profile.html",
 			body: map[string]any{
 				"Title": "Profile", "User": user, "Profile": profile, "Saved": true,
+				"BaseURL": "https://editor.intro.nyc",
 			},
 			want: []string{
 				`value="Ada Drafter"`,
 				"drafter@example.com",
 				"Saved.",
+				// integrations are opt-in, so an unprovisioned profile offers the
+				// button rather than a key
+				"Enable API / MCP integrations",
+			},
+		},
+		{
+			name: "editor_profile.html",
+			body: map[string]any{
+				"Title": "Profile", "User": user,
+				"Profile": &Profile{
+					UID: "uid", Email: "drafter@example.com", Name: "Ada Drafter",
+					APIToken: "intro_deadbeef",
+				},
+				"BaseURL": "https://editor.intro.nyc",
+			},
+			want: []string{
+				"intro_deadbeef",
+				"claude mcp add",
+				"https://editor.intro.nyc/mcp",
+				"Bearer intro_deadbeef",
+				"Turn off integrations",
 			},
 		},
 		{

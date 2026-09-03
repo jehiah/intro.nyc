@@ -85,6 +85,82 @@ func (a *App) EditorDraftingManual(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// documentSummary is the shape of a draft in a list.
+type documentSummary struct {
+	ID      string    `json:"id"`
+	Title   string    `json:"title"`
+	Code    string    `json:"code"`
+	Owner   string    `json:"owner"`
+	Public  bool      `json:"public"`
+	Updated time.Time `json:"updated"`
+	Access  string    `json:"access"`
+}
+
+func summarize(d Document, access Access) documentSummary {
+	name := map[Access]string{AccessOwner: "owner", AccessEdit: "editor", AccessView: "viewer"}[access]
+	return documentSummary{
+		ID: d.ID, Title: d.Title, Code: d.Code, Owner: d.Owner,
+		Public: d.Public, Updated: d.LastModified, Access: name,
+	}
+}
+
+// EditorListDrafts lists the drafts the caller can reach.
+func (a *App) EditorListDrafts(w http.ResponseWriter, r *http.Request) {
+	user := a.User(r)
+	if !user.SignedIn() {
+		http.Error(w, "401 Sign in required", 401)
+		return
+	}
+	documents, err := a.listDocuments(r.Context(), user)
+	if err != nil {
+		log.Printf("editor list: %s", err)
+		http.Error(w, "Internal Server Error", 500)
+		return
+	}
+	drafts := make([]documentSummary, 0, len(documents))
+	for _, d := range documents {
+		drafts = append(drafts, summarize(d, d.AccessFor(user)))
+	}
+	w.Header().Set("content-type", "application/json")
+	w.Header().Set("cache-control", "no-store")
+	json.NewEncoder(w).Encode(map[string]any{"drafts": drafts})
+}
+
+// EditorCreateDraft starts a bill. It is the JSON counterpart of POST /new.
+func (a *App) EditorCreateDraft(w http.ResponseWriter, r *http.Request) {
+	user := a.User(r)
+	if !user.SignedIn() {
+		http.Error(w, "401 Sign in required", 401)
+		return
+	}
+	var req struct {
+		Title string `json:"title"`
+		Code  string `json:"code"`
+	}
+	if err := json.NewDecoder(http.MaxBytesReader(w, r.Body, 1<<16)).Decode(&req); err != nil {
+		http.Error(w, "Bad Request", 400)
+		return
+	}
+	if _, ok := titlePrefixes[req.Code]; !ok {
+		req.Code = "administrative code"
+	}
+
+	document := newDocument(uuid.NewString(), user, strings.TrimSpace(req.Title), req.Code)
+	if err := a.putDocument(r.Context(), document); err != nil {
+		log.Printf("editor create: %s", err)
+		http.Error(w, "Internal Server Error", 500)
+		return
+	}
+	w.Header().Set("content-type", "application/json")
+	json.NewEncoder(w).Encode(map[string]any{
+		"id":    document.ID,
+		"title": document.Title,
+		"code":  document.Code,
+		"url":   "/d/" + document.ID,
+		"doc":   json.RawMessage(document.Doc),
+	})
+}
+
 // EditorProfile shows the drafter's account settings.
 func (a *App) EditorProfile(w http.ResponseWriter, r *http.Request) {
 	user := a.User(r)
@@ -93,10 +169,20 @@ func (a *App) EditorProfile(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.renderEditor(w, r, "editor_profile.html", map[string]any{
-		"Title": "Profile",
-		"User":  user,
-		"Saved": r.URL.Query().Has("saved"),
+		"Title":   "Profile",
+		"User":    user,
+		"Saved":   r.URL.Query().Has("saved"),
+		"BaseURL": editorBaseURL(r),
 	})
+}
+
+// editorBaseURL is the origin to show in copy-and-paste integration snippets.
+func editorBaseURL(r *http.Request) string {
+	scheme := "https"
+	if r.TLS == nil && r.Header.Get("X-Forwarded-Proto") != "https" {
+		scheme = "http"
+	}
+	return scheme + "://" + r.Host
 }
 
 // EditorProfilePost saves the display name.
@@ -116,6 +202,36 @@ func (a *App) EditorProfilePost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.Redirect(w, r, "/profile?saved", 302)
+}
+
+// EditorIntegrations enables or revokes the caller's API token.
+func (a *App) EditorIntegrations(w http.ResponseWriter, r *http.Request) {
+	user := a.User(r)
+	if !user.SignedIn() {
+		http.Redirect(w, r, "/", 302)
+		return
+	}
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, "Bad Request", 400)
+		return
+	}
+
+	var err error
+	switch r.PostForm.Get("action") {
+	case "enable":
+		_, err = a.enableAPIToken(r.Context(), user)
+	case "revoke":
+		_, err = a.revokeAPIToken(r.Context(), user)
+	default:
+		http.Error(w, "Bad Request", 400)
+		return
+	}
+	if err != nil {
+		log.Printf("editor integrations: %s", err)
+		http.Error(w, "Internal Server Error", 500)
+		return
+	}
+	http.Redirect(w, r, "/profile#integrations", 302)
 }
 
 // EditorNewForm asks for the title and type of a new bill (Rule 2.1).

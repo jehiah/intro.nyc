@@ -33,5 +33,85 @@
 
     <p>See your <a href="/">Drafts</a></p>
   </form>
+
+  <section class="integrations" id="integrations">
+    <h2>Integrations</h2>
+    <p class="rule-cite">
+      An API key lets a script or an AI tool read and edit your drafts as you.
+      It works as a bearer token on the JSON API and on the MCP endpoint, and
+      carries exactly the access your account has &mdash; no more.
+    </p>
+
+    {{if .Profile.APIToken}}
+    <label class="form-label" for="api-token">Your API key</label>
+    <div class="input-group mb-2">
+      <input type="text" class="form-control token" id="api-token"
+             value="{{.Profile.APIToken}}" readonly>
+      <button type="button" class="btn btn-outline-secondary" id="btn-copy-token">Copy</button>
+    </div>
+    <p class="rule-cite">
+      Treat it like a password. Anyone holding it can read and change every
+      draft you can.
+    </p>
+
+    <h3>Add to Claude Code</h3>
+    <pre class="integration-snippet"><code>claude mcp add --transport http intro-nyc \
+  {{.BaseURL}}/mcp \
+  --header "Authorization: Bearer {{.Profile.APIToken}}"</code></pre>
+
+    <h3>Add to a client that reads <code>mcp.json</code></h3>
+    <pre class="integration-snippet"><code>{
+  "mcpServers": {
+    "intro-nyc": {
+      "type": "http",
+      "url": "{{.BaseURL}}/mcp",
+      "headers": {
+        "Authorization": "Bearer {{.Profile.APIToken}}"
+      }
+    }
+  }
+}</code></pre>
+
+    <h3>Call the API directly</h3>
+    <pre class="integration-snippet"><code>curl -H "Authorization: Bearer {{.Profile.APIToken}}" \
+  {{.BaseURL}}/api/drafts</code></pre>
+
+    <p class="rule-cite">
+      The MCP tools cover listing, creating, reading, editing, sharing and
+      deleting drafts, and searching the Charter and Administrative Code. They
+      are the same endpoints the editor itself uses.
+    </p>
+
+    <form method="POST" action="/profile/integrations" class="mt-3">
+      <input type="hidden" name="action" value="enable">
+      <button type="submit" class="btn btn-sm btn-outline-secondary">Regenerate key</button>
+      <button type="submit" name="action" value="revoke"
+              class="btn btn-sm btn-outline-danger">Turn off integrations</button>
+    </form>
+    {{else}}
+    <form method="POST" action="/profile/integrations">
+      <input type="hidden" name="action" value="enable">
+      <button type="submit" class="btn btn-primary">Enable API / MCP integrations</button>
+    </form>
+    <p class="rule-cite mt-2">
+      No key exists until you enable this.
+    </p>
+    {{end}}
+  </section>
 </div>
+{{end}}
+
+{{define "javascript"}}
+<script>
+var copy = document.getElementById('btn-copy-token');
+if (copy) {
+  copy.addEventListener('click', function () {
+    var field = document.getElementById('api-token');
+    navigator.clipboard.writeText(field.value).then(function () {
+      copy.textContent = 'Copied';
+      setTimeout(function () { copy.textContent = 'Copy'; }, 1500);
+    });
+  });
+}
+</script>
 {{end}}

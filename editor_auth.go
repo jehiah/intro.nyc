@@ -28,7 +28,21 @@ type SessionUser struct {
 func (u *SessionUser) SignedIn() bool { return u != nil && u.UID != "" }
 
 // User returns the signed-in user, or nil.
+//
+// A bearer token is accepted as an alternative to the session cookie, so the
+// JSON API and the MCP endpoint authenticate the same way as the web app.
 func (a *App) User(r *http.Request) *SessionUser {
+	if token := bearerToken(r); token != "" {
+		user, err := a.userForToken(r.Context(), token)
+		if err != nil {
+			if err != errNoToken {
+				log.Printf("api token: %s", err)
+			}
+			return nil
+		}
+		return user
+	}
+
 	cookie, err := r.Cookie(sessionCookie)
 	if err != nil {
 		return nil

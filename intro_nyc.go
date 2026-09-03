@@ -65,6 +65,12 @@ type App struct {
 	profiles     map[UID]*cachedProfile
 	profileMutex sync.RWMutex
 
+	tokens     map[string]*cachedToken
+	tokenMutex sync.RWMutex
+
+	// The editor's own API, reused in-process by the MCP tools.
+	editorRouter http.Handler
+
 	cachedRedirects   map[IntroID]string
 	fileCache         map[string]CachedFile
 	cachedLegislation map[IntroID]*CachedLegislation
@@ -260,6 +266,7 @@ func main() {
 		cachedLegislation: make(map[IntroID]*CachedLegislation),
 		fileCache:         make(map[string]CachedFile),
 		profiles:          make(map[UID]*cachedProfile),
+		tokens:            make(map[string]*cachedToken),
 	}
 	if *devMode {
 		app.templateFS = os.DirFS(".")
@@ -294,7 +301,10 @@ func main() {
 	editorRouter.HandleFunc("POST /new", app.EditorNewPost)
 	editorRouter.HandleFunc("GET /profile", app.EditorProfile)
 	editorRouter.HandleFunc("POST /profile", app.EditorProfilePost)
+	editorRouter.HandleFunc("POST /profile/integrations", app.EditorIntegrations)
 	editorRouter.HandleFunc("GET /drafting-manual", app.EditorDraftingManual)
+	editorRouter.HandleFunc("GET /api/drafts", app.EditorListDrafts)
+	editorRouter.HandleFunc("POST /api/drafts", app.EditorCreateDraft)
 	editorRouter.HandleFunc("GET /d/{id}", app.EditorDocument)
 	editorRouter.HandleFunc("GET /api/draft/{id}", app.EditorGetDraft)
 	editorRouter.HandleFunc("POST /api/draft/{id}", app.EditorSaveDraft)
@@ -305,6 +315,11 @@ func main() {
 	editorRouter.HandleFunc("GET /api/law/section/{dataset}/{path...}", app.EditorLawSection)
 	editorRouter.Handle("GET /static/", app.staticHandler)
 	editorRouter.Handle("/__/auth/", app.firebaseProxy)
+
+	// The MCP tools dispatch back through this router, so it must be reachable
+	// before /mcp is registered on it.
+	app.editorRouter = editorRouter
+	editorRouter.Handle("/mcp", app.mcpHandler())
 
 	router := http.NewServeMux()
 
