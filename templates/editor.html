@@ -42,28 +42,7 @@
         <i class="bi bi-share"></i> Share</button>
       {{end}}
 
-      <div class="menu-wrap">
-        <button type="button" class="btn btn-sm btn-primary" id="btn-download" aria-haspopup="true" aria-expanded="false">
-          <i class="bi bi-download"></i> Download</button>
-        <div class="menu" id="download-menu">
-          <div class="menu-heading">Bill text</div>
-          <button type="button" data-export="copy-rich">Copy for Word</button>
-          <button type="button" data-export="copy-text">Copy text</button>
-          <button type="button" data-export="download-text">Download .txt</button>
-          <div class="menu-heading">Markdown</div>
-          <button type="button" data-export="copy-markdown">Copy markdown</button>
-          <button type="button" data-export="download-markdown">Download .md</button>
-          <div class="menu-heading">Other</div>
-          <button type="button" data-export="download-html">Download .html</button>
-          <button type="button" data-export="download-adopted">Download as adopted</button>
-          <button type="button" data-export="download-json">Download .json</button>
-          {{if ne .Plan "plus"}}
-          <div class="menu-heading menu-upsell">
-            Export requires <a href="/billing">Plus</a>
-          </div>
-          {{end}}
-        </div>
-      </div>
+      {{template "download-menu" .}}
     </div>
   </div>
 </nav>
@@ -71,7 +50,7 @@
 
 {{define "middle"}}
 
-<div class="editor-layout" data-document-id="{{.Document.ID}}" data-can-share="{{.IsOwner}}" data-plan="{{.Plan}}">
+<div class="editor-layout" data-document-id="{{.Document.ID}}" data-can-share="{{.IsOwner}}">
   <div>
     <div class="editor-paper">
       <div id="editor"></div>

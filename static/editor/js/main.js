@@ -36,17 +36,10 @@ import {
 } from "./corpus.js";
 import { buildReference, SUBUNIT_LEVELS } from "./refs.js";
 import { runChecks } from "./lint.js";
-import {
-  toPlainText,
-  toMarkdown,
-  toAdoptedText,
-  toRichText,
-  toHTMLDocument,
-} from "./serialize.js";
+import { wireDownloadMenu } from "./exports.js";
 import {
   documentID,
   canShare,
-  plan,
   loadLocal,
   saveLocal,
   fetchDocument,
@@ -574,57 +567,12 @@ function renderProblems(list) {
   });
 }
 
-/* --------------------------------------------------------------- UI: export */
-
-function download(filename, text, type = "text/plain") {
-  const url = URL.createObjectURL(new Blob([text], { type }));
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-}
+/* ------------------------------------------------------------ UI: clipboard */
 
 async function copyText(text, label) {
   await navigator.clipboard.writeText(text);
   setStatus(label);
 }
-
-async function copyRichText() {
-  const html = toRichText(view.state.doc);
-  const text = toPlainText(view.state.doc);
-  try {
-    await navigator.clipboard.write([
-      new ClipboardItem({
-        "text/html": new Blob([html], { type: "text/html" }),
-        "text/plain": new Blob([text], { type: "text/plain" }),
-      }),
-    ]);
-    setStatus("Copied \u2014 paste into the Legislative Division template");
-  } catch (e) {
-    await copyText(text, "Copied as plain text");
-  }
-}
-
-const EXPORTS = {
-  "copy-rich": copyRichText,
-  "copy-text": () => copyText(toPlainText(view.state.doc), "Copied bill text"),
-  "download-text": () => download("bill.txt", toPlainText(view.state.doc)),
-  "copy-markdown": () =>
-    copyText(toMarkdown(view.state.doc), "Copied markdown"),
-  "download-markdown": () =>
-    download("bill.md", toMarkdown(view.state.doc), "text/markdown"),
-  "download-html": () =>
-    download("bill.html", toHTMLDocument(view.state.doc), "text/html"),
-  "download-adopted": () =>
-    download("bill-as-adopted.txt", toAdoptedText(view.state.doc)),
-  "download-json": () =>
-    download(
-      "bill.json",
-      JSON.stringify(view.state.doc.toJSON(), null, 2),
-      "application/json"
-    ),
-};
 
 /* ------------------------------------------------- bill section decorations */
 
@@ -976,28 +924,7 @@ function wireUI() {
       setTitleAttrs({ subject: e.target.value })
     );
 
-  // Download menu
-  const menu = document.getElementById("download-menu");
-  const menuButton = document.getElementById("btn-download");
-  menuButton.addEventListener("click", (e) => {
-    e.stopPropagation();
-    const open = menu.classList.toggle("open");
-    menuButton.setAttribute("aria-expanded", String(open));
-  });
-  document.addEventListener("click", () => {
-    menu.classList.remove("open");
-    menuButton.setAttribute("aria-expanded", "false");
-  });
-  menu.addEventListener("click", (e) => {
-    const action = e.target.dataset && e.target.dataset.export;
-    if (!action) return;
-    menu.classList.remove("open");
-    if (plan() !== "plus") {
-      setStatus("Export requires Plus — upgrade at /billing");
-      return;
-    }
-    EXPORTS[action]();
-  });
+  wireDownloadMenu(() => view.state.doc, setStatus);
 
   if (canShare()) {
     document.getElementById("btn-share").addEventListener("click", openShare);

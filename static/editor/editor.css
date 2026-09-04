@@ -129,8 +129,25 @@
   font-size: 0.875rem;
 }
 
-.menu button:hover {
+.menu button:hover:not(:disabled) {
   background: #f1f3f7;
+}
+
+/* An export the reader is not entitled to is shown, locked, rather than
+   hidden: what Plus buys is easier to judge when you can see it. */
+.menu button:disabled {
+  color: #adb5bd;
+  cursor: not-allowed;
+}
+
+.menu button .lock {
+  display: none;
+}
+
+.menu button:disabled .lock {
+  display: inline-block;
+  margin-right: 0.4rem;
+  font-size: 0.75rem;
 }
 
 .menu-heading {

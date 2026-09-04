@@ -331,6 +331,13 @@ func (a *App) EditorDocument(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("cache-control", "no-store")
 
+	canExport, err := a.canExport(r.Context(), document, user)
+	if err != nil {
+		log.Printf("editor billing: %s", err)
+		http.Error(w, "Internal Server Error", 500)
+		return
+	}
+
 	if !access.CanEdit() {
 		var doc pmNode
 		if err := json.Unmarshal([]byte(document.Doc), &doc); err != nil {
@@ -339,10 +346,12 @@ func (a *App) EditorDocument(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		a.renderEditor(w, r, "bill_readonly.html", map[string]any{
-			"Title":    document.DisplayTitle(),
-			"User":     user,
-			"Document": document,
-			"Bill":     renderBill(&doc),
+			"Title":     document.DisplayTitle(),
+			"User":      user,
+			"Document":  document,
+			"OwnerName": a.nameFor(r.Context(), document.Owner),
+			"CanExport": canExport,
+			"Bill":      renderBill(&doc),
 		})
 		return
 	}
@@ -354,11 +363,12 @@ func (a *App) EditorDocument(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.renderEditor(w, r, "editor.html", map[string]any{
-		"Title":    document.DisplayTitle(),
-		"User":     user,
-		"Document": document,
-		"IsOwner":  access == AccessOwner,
-		"Plan":     plan,
+		"Title":     document.DisplayTitle(),
+		"User":      user,
+		"Document":  document,
+		"IsOwner":   access == AccessOwner,
+		"Plan":      plan,
+		"CanExport": canExport,
 	})
 }
 

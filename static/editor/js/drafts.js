@@ -16,11 +16,6 @@ export function canShare() {
   return Boolean(el && el.dataset.canShare === "true");
 }
 
-export function plan() {
-  const el = document.querySelector("[data-plan]");
-  return el ? el.dataset.plan : "free";
-}
-
 export function loadLocal(id) {
   const raw = localStorage.getItem(LOCAL_PREFIX + id);
   if (!raw) return null;

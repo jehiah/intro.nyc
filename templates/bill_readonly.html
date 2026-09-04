@@ -7,7 +7,8 @@
     <span class="readonly-badge"><i class="bi bi-eye"></i> Read only</span>
     <span class="rule-cite">
       Last edited {{Time .Document.LastModified}}
-      {{if .Document.Owner}}by {{.Document.Owner}}{{end}}
+      {{/* The last edit may well be someone else's; only ownership is known here. */}}
+      {{if .OwnerName}}&middot; owned by {{.OwnerName}}{{end}}
     </span>
     <div class="control-right">
       {{if .User.SignedIn}}
@@ -15,15 +16,34 @@
       {{else}}
       <a class="btn btn-sm btn-outline-secondary" href="/sign_in">Sign in</a>
       {{end}}
+      {{template "download-menu" .}}
     </div>
   </div>
 </nav>
 {{end}}
 
 {{define "middle"}}
-<div class="editor-layout readonly">
+<div class="editor-layout readonly" data-document-id="{{.Document.ID}}">
   <div class="editor-paper">
     {{.Bill}}
   </div>
 </div>
+{{end}}
+
+{{/*
+  The bill itself is rendered server-side, so it reads with no JavaScript at
+  all. This only powers the download menu, which rebuilds the document model in
+  the browser and runs the editor's own serializers over it — and does not load
+  either until an export is actually chosen.
+*/}}
+{{define "javascript"}}
+<script type="importmap">
+{
+  "imports": {
+    "orderedmap": "https://esm.sh/orderedmap@2.1.1",
+    "prosemirror-model": "https://esm.sh/*prosemirror-model@1.25.11"
+  }
+}
+</script>
+<script type="module" src="/static/editor/js/readonly.js"></script>
 {{end}}

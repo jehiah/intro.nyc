@@ -112,7 +112,7 @@ func TestEditorTemplatesRender(t *testing.T) {
 			name: "editor.html",
 			body: map[string]any{
 				"Title": "a bill", "User": user, "Profile": profile,
-				"Document": document, "IsOwner": true,
+				"Document": document, "IsOwner": true, "CanExport": true,
 			},
 			want: []string{
 				"A Draft Local Law",
@@ -121,7 +121,9 @@ func TestEditorTemplatesRender(t *testing.T) {
 				`id="share-public"`,
 				"Copy link",
 				">Done<",
+				`data-export="copy-rich"`,
 			},
+			deny: []string{`data-export="copy-rich" disabled`, "Export requires"},
 		},
 		{
 			name: "editor_billing.html",
@@ -230,12 +232,39 @@ func TestEditorTemplatesRender(t *testing.T) {
 			deny: []string{"January 1, 1"},
 		},
 		{
+			// The reader is told who owns the draft, not who last touched it —
+			// the two are not the same and only the first is known here.
 			name: "bill_readonly.html",
 			body: map[string]any{
 				"Title": "a bill", "User": user, "Profile": profile, "Document": document,
+				"OwnerName": "Ada Drafter", "CanExport": true,
 				"Bill": template.HTML(`<div class="bill-doc"></div>`),
 			},
-			want: []string{"Read only"},
+			want: []string{
+				"Read only",
+				"owned by Ada Drafter",
+				`data-export="download-text"`,
+			},
+			deny: []string{
+				"drafter@example.com",
+				`data-export="download-text" disabled`,
+				"Export requires",
+			},
+		},
+		{
+			// Nobody involved pays, so the exports are shown locked rather
+			// than left live to fail, and nothing is said in the header.
+			name: "bill_readonly.html",
+			body: map[string]any{
+				"Title": "a bill", "User": user, "Profile": profile, "Document": document,
+				"OwnerName": "Ada Drafter", "CanExport": false,
+				"Bill": template.HTML(`<div class="bill-doc"></div>`),
+			},
+			want: []string{
+				`data-export="download-text" disabled`,
+				"bi-lock-fill",
+				"Export requires",
+			},
 		},
 	}
 

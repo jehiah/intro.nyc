@@ -1,3 +1,37 @@
+{{/*
+  The download menu, shared by the editor and the read-only bill so both offer
+  the same exports of the same document.
+
+  Export is a Plus feature. When it is not available the items are rendered
+  disabled and locked rather than left live to fail on click, so the reader can
+  see what they would get before reaching for it.
+*/}}
+{{define "download-menu"}}
+{{$locked := not .CanExport}}
+<div class="menu-wrap">
+  <button type="button" class="btn btn-sm btn-primary" id="btn-download" aria-haspopup="true" aria-expanded="false">
+    <i class="bi bi-download"></i> Download</button>
+  <div class="menu" id="download-menu">
+    <div class="menu-heading">Bill text</div>
+    <button type="button" data-export="copy-rich"{{if $locked}} disabled{{end}}><i class="bi bi-lock-fill lock"></i>Copy for Word</button>
+    <button type="button" data-export="copy-text"{{if $locked}} disabled{{end}}><i class="bi bi-lock-fill lock"></i>Copy text</button>
+    <button type="button" data-export="download-text"{{if $locked}} disabled{{end}}><i class="bi bi-lock-fill lock"></i>Download .txt</button>
+    <div class="menu-heading">Markdown</div>
+    <button type="button" data-export="copy-markdown"{{if $locked}} disabled{{end}}><i class="bi bi-lock-fill lock"></i>Copy markdown</button>
+    <button type="button" data-export="download-markdown"{{if $locked}} disabled{{end}}><i class="bi bi-lock-fill lock"></i>Download .md</button>
+    <div class="menu-heading">Other</div>
+    <button type="button" data-export="download-html"{{if $locked}} disabled{{end}}><i class="bi bi-lock-fill lock"></i>Download .html</button>
+    <button type="button" data-export="download-adopted"{{if $locked}} disabled{{end}}><i class="bi bi-lock-fill lock"></i>Download as adopted</button>
+    <button type="button" data-export="download-json"{{if $locked}} disabled{{end}}><i class="bi bi-lock-fill lock"></i>Download .json</button>
+    {{if $locked}}
+    <div class="menu-heading menu-upsell">
+      Export requires <a href="/billing">Plus</a>
+    </div>
+    {{end}}
+  </div>
+</div>
+{{end}}
+
 {{define "base"}}
 <!doctype html>
 <html lang="en">

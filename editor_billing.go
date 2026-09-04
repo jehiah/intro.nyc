@@ -243,6 +243,32 @@ func (a *App) planFor(ctx context.Context, u *SessionUser) (string, error) {
 	return planOf(sub), nil
 }
 
+// canExport reports whether the reader may use the download menu.
+//
+// Export is a Plus feature, but it follows the document as well as the reader:
+// a bill an owner pays to keep can be exported by everyone they shared it
+// with, and a Plus reader can export anything they are allowed to read. Either
+// side of the share paying is enough.
+func (a *App) canExport(ctx context.Context, d *Document, u *SessionUser) (bool, error) {
+	if u.SignedIn() {
+		plan, err := a.planFor(ctx, u)
+		if err != nil {
+			return false, err
+		}
+		if plan == PlanPlus {
+			return true, nil
+		}
+		if d.UID == u.UID {
+			return false, nil // the reader is the owner, already asked about
+		}
+	}
+	sub, err := a.subscriptionForUID(ctx, d.UID)
+	if err != nil {
+		return false, err
+	}
+	return planOf(sub) == PlanPlus, nil
+}
+
 /* --------------------------------------------------------- free-plan limits */
 
 // draftCountAtLeast reports whether the drafter owns at least n drafts,

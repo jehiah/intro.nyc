@@ -120,6 +120,15 @@ func (a *App) saveProfileName(ctx context.Context, u *SessionUser, name string) 
 	return &updated, nil
 }
 
+// nameFor is the display name for one address, for the places a person is
+// named rather than listed. An address nobody has claimed shows as itself.
+func (a *App) nameFor(ctx context.Context, email string) string {
+	if email == "" {
+		return ""
+	}
+	return displayName(a.namesFor(ctx, []string{email})[email], email)
+}
+
 // namesFor resolves display names for addresses that have a profile. Addresses
 // without one are simply absent, and are shown as the bare address.
 func (a *App) namesFor(ctx context.Context, emails []string) map[string]string {
