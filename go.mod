@@ -12,6 +12,7 @@ require (
 	github.com/gorilla/handlers v1.5.2
 	github.com/gosimple/slug v1.15.0
 	github.com/jehiah/legislator v0.0.0-20260807155805-1561e6ef2630
+	github.com/modelcontextprotocol/go-sdk v1.7.0
 	golang.org/x/text v0.40.0
 	google.golang.org/api v0.292.0
 	google.golang.org/grpc v1.83.0
@@ -45,7 +46,6 @@ require (
 	github.com/googleapis/enterprise-certificate-proxy v0.3.20 // indirect
 	github.com/googleapis/gax-go/v2 v2.23.0 // indirect
 	github.com/gosimple/unidecode v1.0.1 // indirect
-	github.com/modelcontextprotocol/go-sdk v1.7.0 // indirect
 	github.com/planetscale/vtprotobuf v0.6.1-0.20240319094008-0393e58bdf10 // indirect
 	github.com/segmentio/asm v1.1.3 // indirect
 	github.com/segmentio/encoding v0.5.4 // indirect
