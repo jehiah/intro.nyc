@@ -15,9 +15,11 @@ import {
   trackedBackspaceWord,
   trackedDeleteWord,
   trackedReplace,
+  writeAddition,
   markDeleted,
   restoreDeleted,
   blockStructuralEdit,
+  splitAddedProvision,
   contextAt,
   TRACKED,
 } from "./track.js";
@@ -27,12 +29,10 @@ import {
   loadDatasets,
   textBlocks,
   buildBillSection,
+  composeLeadIn,
   emptyBill,
-  describeTarget,
-  describeRepealTargets,
+  additionTargets,
   repealTitleClause,
-  historyRecital,
-  CODES,
 } from "./corpus.js";
 import { buildReference, SUBUNIT_LEVELS } from "./refs.js";
 import { runChecks } from "./lint.js";
@@ -144,8 +144,10 @@ function editorKeymap() {
     "Alt-Delete": trackedDeleteWord,
     "Mod-d": markDeleted,
     "Shift-Mod-d": restoreDeleted,
-    // Splitting amended law text would renumber the law itself.
-    Enter: (state) => blockStructuralEdit(state),
+    // Splitting amended law text would renumber the law itself; in a provision
+    // the bill is adding, Enter starts the next one.
+    Enter: (state, dispatch) =>
+      blockStructuralEdit(state) || splitAddedProvision(state, dispatch),
     "Mod-b": toggleMark(schema.marks.ins),
   });
 }
@@ -196,18 +198,28 @@ function effectiveDateOffset(doc) {
   return insertAt;
 }
 
-function insertBillSection(node) {
+// `intoText` puts the cursor in the section's last law block rather than in the
+// lead-in, for a section whose text is the drafter's to write.
+function insertBillSection(node, { intoText = false } = {}) {
   const at = effectiveDateOffset(view.state.doc);
   const tr = view.state.tr.setMeta(TRACKED, true).insert(at, node);
-  tr.setSelection(TextSelection.create(tr.doc, at + 2));
+  // at + 2 is inside the lead-in; the end of the last block is two closing
+  // tokens back from the end of the bill section.
+  const cursor = intoText && node.childCount > 1 ? at + node.nodeSize - 2 : at + 2;
+  tr.setSelection(TextSelection.create(tr.doc, cursor));
   view.dispatch(tr.scrollIntoView());
   view.focus();
 }
 
 function insertText(text) {
   const { from, to } = view.state.selection;
-  if (contextAt(view.state, from) === "amend") {
-    trackedReplace(view.state, view.dispatch.bind(view), from, to, text);
+  const dispatch = view.dispatch.bind(view);
+  const kind = contextAt(view.state, from);
+  if (kind === "amend") {
+    trackedReplace(view.state, dispatch, from, to, text);
+  } else if (kind === "add") {
+    // A reference written into a new provision is part of what the bill adds.
+    writeAddition(view.state, dispatch, from, to, text);
   } else {
     view.dispatch(
       view.state.tr.setMeta(TRACKED, true).insertText(text, from, to)
@@ -301,34 +313,142 @@ async function chooseSection(ref) {
 
   document.getElementById("picker-results").innerHTML = "";
   document.getElementById("picker-query").value = "";
-  document.getElementById("picker-detail").hidden = false;
-  document.getElementById("btn-picker-insert").disabled = false;
   document.getElementById("picker-chosen").textContent = `\u00a7 ${
     section.cite
   } ${section.heading} \u2014 ${ref.path}`;
 
-  renderPickerBlocks();
+  renderPickerDetail();
 }
 
 function currentOperation() {
   return document.querySelector('input[name="picker-operation"]:checked').value;
 }
 
-// The provision list, the options beside it and the preview all depend on the
-// operation, so they are rendered together.
-function renderPickerBlocks() {
-  const section = chosenSection;
-  if (!section) return;
+// Everything below the operation radios depends on the operation \u2014 an addition
+// names a container and a new designator, an amendment and a repeal name
+// existing provisions \u2014 so the detail panel is rendered as a whole.
+function renderPickerDetail() {
   const operation = currentOperation();
+  const adding = operation === "add";
   const repealing = operation === "repeal";
+  const section = chosenSection;
+
+  // Under `add` the search is for an anchor: the provision that will contain
+  // the new one, or the one it sits beside. The new provision itself is not in
+  // the archive, so it cannot be searched for.
+  document.getElementById("picker-query-label").textContent = adding
+    ? "Find the section it goes in or next to"
+    : "Find a section";
+
+  document.getElementById("picker-detail").hidden = !section;
+  if (!section) {
+    updateInsertState();
+    return;
+  }
 
   document.getElementById("picker-blocks-label").textContent = repealing
     ? "Provisions to repeal"
     : "Provisions to bring into the bill";
-  document.getElementById("picker-separate-row").hidden = repealing;
+  document.getElementById("picker-blocks-row").hidden = adding;
+  document.getElementById("picker-add-row").hidden = !adding;
+  document.getElementById("picker-separate-row").hidden = repealing || adding;
   document.getElementById("picker-title-row").hidden = !repealing;
   document.getElementById("picker-title-preview").hidden = !repealing;
 
+  if (adding) {
+    renderPickerContainers(section);
+    updateAdditionFields();
+  } else {
+    renderPickerBlocks(section, repealing);
+  }
+
+  renderPickerPreview();
+}
+
+// Rule 3.1.8: the containers the anchor section offers, one of which the new
+// provision is added to.
+function renderPickerContainers(section) {
+  const targets = additionTargets(section);
+  const chosen = document.querySelector(
+    'input[name="picker-container"]:checked'
+  );
+  const keep = targets.some((t) => t.key === (chosen && chosen.value))
+    ? chosen.value
+    : "section";
+
+  const list = document.getElementById("picker-containers");
+  list.innerHTML = "";
+  targets.forEach((target) => {
+    const id = `picker-container-${target.key}`;
+    const row = document.createElement("div");
+    row.className = "form-check";
+    row.innerHTML = `
+      <input class="form-check-input" type="radio" name="picker-container"
+             value="${target.key}" id="${id}" ${
+      target.key === keep ? "checked" : ""
+    }>
+      <label class="form-check-label" for="${id}">${escapeHTML(
+      target.text.charAt(0).toUpperCase() + target.text.slice(1)
+    )} \u2014 a new ${target.level}</label>`;
+    list.appendChild(row);
+  });
+}
+
+function selectedContainer() {
+  const el = document.querySelector('input[name="picker-container"]:checked');
+  if (!el || !chosenSection) return null;
+  return additionTargets(chosenSection).find((t) => t.key === el.value) || null;
+}
+
+// What the new provision is called, and whether it can carry a heading, both
+// follow from the container it is added to.
+function updateAdditionFields() {
+  const level = (selectedContainer() || {}).level || "provision";
+  document.getElementById("picker-new-level").textContent = level;
+  const designator = document.getElementById("picker-new-designator");
+  designator.placeholder = level === "section" ? "17-514" : "c";
+  // A section number is not a subdivision letter, so a designator typed for one
+  // level does not carry over to another.
+  if (designator.dataset.level && designator.dataset.level !== level) {
+    designator.value = "";
+  }
+  designator.dataset.level = level;
+  // Only sections carry a heading (Rule 4.2).
+  document.getElementById("picker-new-heading-col").hidden =
+    level !== "section";
+}
+
+function currentAddition() {
+  const container = selectedContainer();
+  return {
+    container: container ? container.text : "",
+    level: container ? container.level : "provision",
+    designator: document.getElementById("picker-new-designator").value.trim(),
+    heading: document.getElementById("picker-new-heading").value.trim(),
+  };
+}
+
+// Insert is disabled only while something is genuinely missing, and says what.
+function updateInsertState() {
+  const operation = currentOperation();
+  let missing = "";
+  if (!chosenSection) {
+    missing =
+      operation === "add"
+        ? "Find the section the new provision goes in or next to."
+        : "Find a section to insert.";
+  } else if (operation === "add" && !currentAddition().designator) {
+    missing = `Enter a designator for the new ${
+      (selectedContainer() || {}).level || "provision"
+    }.`;
+  }
+  document.getElementById("btn-picker-insert").disabled = Boolean(missing);
+  const hint = document.getElementById("picker-insert-hint");
+  hint.textContent = missing;
+  hint.hidden = !missing;
+}
+
+function renderPickerBlocks(section, repealing) {
   const list = document.getElementById("picker-blocks");
   list.innerHTML = "";
 
@@ -365,8 +485,6 @@ function renderPickerBlocks() {
     note.textContent = `${skipped} table or non-text block not shown; add it by hand.`;
     list.appendChild(note);
   }
-
-  renderPickerPreview();
 }
 
 function wholeSectionSelected() {
@@ -375,10 +493,14 @@ function wholeSectionSelected() {
 }
 
 function selectedBlocks() {
+  const operation = currentOperation();
+  // An addition sets out only the new provision; the anchor's existing text is
+  // not reproduced.
+  if (operation === "add") return [];
   const checked = [
     ...document.querySelectorAll("#picker-blocks input[value]:checked"),
   ].map((el) => Number(el.value));
-  if (currentOperation() === "repeal") {
+  if (operation === "repeal") {
     return checked.map((i) => chosenBlocks[i]).filter(Boolean);
   }
   const indices = checked.length ? checked : [0];
@@ -390,25 +512,18 @@ function renderPickerPreview() {
   const operation = currentOperation();
   const blocks = selectedBlocks();
   const wholeSection = wholeSectionSelected();
-  const recital = historyRecital(chosenSection.history, operation);
-  const code = CODES[chosenSection.code] || CODES["administrative code"];
 
-  let text;
-  if (operation === "repeal") {
-    const target = describeRepealTargets(chosenSection, blocks, wholeSection);
-    text = `${target.text} of the ${code.full} ${
-      target.plural ? "are" : "is"
-    } REPEALED.`;
-  } else {
-    const target = describeTarget(chosenSection, blocks[0]);
-    const verb =
-      operation === "amend"
-        ? "is amended to read as follows:"
-        : "is amended by adding a new provision to read as follows:";
-    text = `${target} of the ${code.full}${recital} ${verb}`;
-  }
-  document.getElementById("picker-preview").textContent =
-    text.charAt(0).toUpperCase() + text.slice(1);
+  // The preview is the lead-in itself, composed by the same function that
+  // writes it into the document, so the two cannot drift.
+  document.getElementById("picker-preview").textContent = composeLeadIn({
+    section: chosenSection,
+    blocks,
+    operation,
+    wholeSection,
+    addition: operation === "add" ? currentAddition() : null,
+  });
+
+  updateInsertState();
 
   if (operation === "repeal") {
     document.getElementById("picker-title-preview").textContent =
@@ -427,6 +542,8 @@ function renderPickerPreview() {
     : "No amendment history recorded \u2014 no recital required (Rule 3.1.2).";
   if (operation === "repeal") {
     note = "No recital of legislative history for a repeal (Rule 3.1.10). " + note;
+  } else if (operation === "add") {
+    note = "No recital of legislative history for an addition (Rule 3.1.8). " + note;
   } else if (history.repealed) {
     note = "This provision is shown as repealed. " + note;
   }
@@ -469,6 +586,18 @@ function insertFromPicker() {
     insertBillSection(
       buildBillSection({ section, blocks, operation, wholeSection })
     );
+  } else if (operation === "add") {
+    // The new provision is empty apart from a heading, so the cursor belongs in
+    // it rather than in the lead-in.
+    insertBillSection(
+      buildBillSection({
+        section,
+        blocks,
+        operation,
+        addition: currentAddition(),
+      }),
+      { intoText: true }
+    );
   } else if (separate && blocks.length > 1) {
     // Rule 3.4.2: non-consecutive provisions may go in separate bill sections.
     blocks.forEach((block) =>
@@ -488,10 +617,12 @@ function insertFromPicker() {
 function resetPicker() {
   chosenSection = null;
   chosenBlocks = [];
-  document.getElementById("picker-detail").hidden = true;
-  document.getElementById("btn-picker-insert").disabled = true;
   document.getElementById("picker-results").innerHTML = "";
   document.getElementById("picker-query").value = "";
+  document.getElementById("picker-containers").innerHTML = "";
+  document.getElementById("picker-new-designator").value = "";
+  document.getElementById("picker-new-heading").value = "";
+  renderPickerDetail();
 }
 
 /* ---------------------------------------------------- UI: reference builder */
@@ -899,6 +1030,7 @@ function wireUI() {
   document
     .getElementById("btn-insert-law")
     .addEventListener("click", () => {
+      renderPickerDetail();
       openModal("modal-picker");
       document.getElementById("picker-query").focus();
     });
@@ -969,7 +1101,14 @@ function wireUI() {
     .addEventListener("change", renderPickerPreview);
   document
     .querySelectorAll('input[name="picker-operation"]')
-    .forEach((el) => el.addEventListener("change", renderPickerBlocks));
+    .forEach((el) => el.addEventListener("change", renderPickerDetail));
+  document.getElementById("picker-containers").addEventListener("change", () => {
+    updateAdditionFields();
+    renderPickerPreview();
+  });
+  ["picker-new-designator", "picker-new-heading"].forEach((id) => {
+    document.getElementById(id).addEventListener("input", renderPickerPreview);
+  });
   document
     .getElementById("btn-picker-insert")
     .addEventListener("click", insertFromPicker);

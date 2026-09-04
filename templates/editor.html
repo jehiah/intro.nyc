@@ -92,7 +92,7 @@
     </div>
 
     <div class="mb-3">
-      <label class="form-label" for="picker-query">Find a section</label>
+      <label class="form-label" for="picker-query" id="picker-query-label">Find a section</label>
       <input type="search" class="form-control" id="picker-query" autocomplete="off"
              placeholder="16-497, or words from the heading">
       <div id="picker-results" class="picker-results"></div>
@@ -105,7 +105,27 @@
         <div class="rule-cite" id="picker-history"></div>
       </div>
 
-      <div class="mb-3">
+      <div class="mb-3" id="picker-add-row" hidden>
+        <label class="form-label">Add to
+          <span class="rule-cite">(the new provision is named for what contains it, Rule 3.1.8)</span></label>
+        <div id="picker-containers"></div>
+
+        <div class="row g-2 mt-2">
+          <div class="col-sm-5">
+            <label class="form-label" for="picker-new-designator">
+              New <span id="picker-new-level">provision</span></label>
+            <input type="text" class="form-control" id="picker-new-designator"
+                   autocomplete="off" placeholder="c">
+          </div>
+          <div class="col-sm-7" id="picker-new-heading-col" hidden>
+            <label class="form-label" for="picker-new-heading">
+              Heading <span class="rule-cite">(optional)</span></label>
+            <input type="text" class="form-control" id="picker-new-heading" autocomplete="off">
+          </div>
+        </div>
+      </div>
+
+      <div class="mb-3" id="picker-blocks-row">
         <label class="form-label" id="picker-blocks-label">Provisions to bring into the bill</label>
         <div id="picker-blocks"></div>
 
@@ -134,6 +154,7 @@
     </div>
 
     <div class="text-end">
+      <span class="rule-cite me-2" id="picker-insert-hint">Find a section to insert.</span>
       <button type="button" class="btn btn-outline-secondary" data-close="modal-picker">Cancel</button>
       <button type="button" class="btn btn-primary" id="btn-picker-insert" disabled>Insert</button>
     </div>

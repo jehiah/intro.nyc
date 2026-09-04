@@ -164,6 +164,53 @@ export function repealTitleClause({
   return `and to repeal ${target.text} of ${body}${relating}`;
 }
 
+// Rule 4.3: what a new provision is called depends on what it is added to.
+const CHILD_LEVEL = {
+  section: "subdivision",
+  subdivision: "paragraph",
+  paragraph: "subparagraph",
+  subparagraph: "clause",
+  clause: "item",
+};
+
+// "chapter 5 of title 17" — the path the archive files a section under, read
+// from the inside out.
+function describePath(path) {
+  const parts = (path || []).filter((p) => p.designator);
+  if (!parts.length) return "";
+  return parts
+    .slice()
+    .reverse()
+    .map((p) => `${p.level} ${p.designator}`)
+    .join(" of ");
+}
+
+// Rule 3.1.8: an addition names what it is added *to*, not an existing
+// provision it sits beside, so the section the drafter searched for is an
+// anchor rather than the target. Its chapter takes a new section, the section
+// itself takes a new subdivision, and each subunit takes the level below it.
+export function additionTargets(section) {
+  if (!section) return [];
+  const targets = [];
+  const path = describePath(section.path);
+  if (path) targets.push({ key: "path", text: path, level: "section" });
+  targets.push({
+    key: "section",
+    text: `section ${section.cite}`,
+    level: "subdivision",
+  });
+  textBlocks(section).forEach((block, i) => {
+    const child = CHILD_LEVEL[block.level];
+    if (!child || !block.designator) return;
+    targets.push({
+      key: `block-${i}`,
+      text: describeTarget(section, block),
+      level: child,
+    });
+  });
+  return targets;
+}
+
 // "Subdivision a of section 21-1013" / "Section 16-497"
 export function describeTarget(section, block) {
   if (!block || block.level === "section") {
@@ -183,7 +230,7 @@ export function composeLeadIn({
   blocks,
   operation,
   wholeSection,
-  newDesignator,
+  addition,
 }) {
   const code = CODES[section.code] || CODES["administrative code"];
   const block = (blocks || [])[0];
@@ -195,13 +242,18 @@ export function composeLeadIn({
       return capitalizeFirst(
         `${target} of the ${code.full}${recital} is amended to read as follows:`
       );
-    case "add":
-      // Rule 3.1.8: adding to existing law without amending it.
+    case "add": {
+      // Rule 3.1.8: adding to existing law without amending it. The new
+      // provision is named by its designator — "a new subdivision c", "a new
+      // section 17-514" — so both the container and the designator come from
+      // the drafter rather than from the anchor section.
+      const { container, level, designator } = addition || {};
+      const where = container ? container : `section ${section.cite}`;
+      const named = [level || "provision", designator].filter(Boolean).join(" ");
       return capitalizeFirst(
-        `${target} of the ${code.full} is amended by adding a new ${
-          newDesignator || "provision"
-        } to read as follows:`
+        `${where} of the ${code.full} is amended by adding a new ${named} to read as follows:`
       );
+    }
     case "repeal": {
       // Rules 3.1.10 and 11.1.4: no recital, and REPEALED in capitals.
       const repealed = describeRepealTargets(section, blocks, wholeSection);
@@ -221,7 +273,9 @@ function textNode(text, marked) {
   return schema.text(text, marks);
 }
 
-function lawBlockNode(section, block, marked) {
+// Existing law, reproduced verbatim and unmarked; the tracked engine brackets
+// and underlines it as it is amended.
+function lawBlockNode(section, block) {
   const isSectionLevel = block.level === "section";
   const label = isSectionLevel
     ? `\u00a7 ${section.cite}`
@@ -237,7 +291,23 @@ function lawBlockNode(section, block, marked) {
       designator: block.designator || "",
       label: label,
     },
-    text ? textNode(text, marked) : null
+    text ? textNode(text, false) : null
+  );
+}
+
+// The empty law block a wholly new provision is drafted into. Its text is not
+// in the law yet, so everything typed into it carries `ins` (Rule 11.1); a new
+// section opens with its heading, which is all the editor can supply.
+function additionNode(addition) {
+  const { level, designator, heading } = addition;
+  const label =
+    level === "section"
+      ? `§ ${designator}`
+      : designatorLabel(level, designator);
+  const text = level === "section" && heading ? heading : "";
+  return schema.nodes.law_block.create(
+    { level, designator, label },
+    text ? textNode(text, true) : null
   );
 }
 
@@ -247,27 +317,33 @@ export function buildBillSection({
   blocks,
   operation,
   wholeSection,
-  newDesignator,
+  addition,
 }) {
   const lead = composeLeadIn({
     section,
     blocks,
     operation,
     wholeSection,
-    newDesignator,
+    addition,
   });
 
-  // Rule 11.1: text added to consolidated law is underlined in full.
-  const marked = operation === "add";
   // Rule 11.1.4: a repeal states the provision and stops; it does not set out
-  // the text being removed.
-  const content =
-    operation === "repeal"
-      ? []
-      : blocks.map((b) => lawBlockNode(section, b, marked));
+  // the text being removed. An addition sets out only the new provision — the
+  // existing text around it is not reproduced, because it is not being amended.
+  let content = [];
+  if (operation === "add") {
+    content = [additionNode(addition)];
+  } else if (operation !== "repeal") {
+    content = blocks.map((b) => lawBlockNode(section, b));
+  }
+
+  const cite =
+    operation === "add" && addition.level === "section"
+      ? addition.designator
+      : section.cite;
 
   return schema.nodes.bill_section.create(
-    { kind: operation, cite: section.cite, code: section.code },
+    { kind: operation, cite, code: section.code },
     [schema.nodes.section_lead.create(null, schema.text(lead)), ...content]
   );
 }

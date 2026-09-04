@@ -7,6 +7,8 @@
 
 import { Plugin, TextSelection } from "prosemirror-state";
 
+import { designatorLabel } from "./schema.js";
+
 export const TRACKED = "trackedChange";
 
 // Characters that hold a word together for Rule 11.1.1. Hyphens and
@@ -242,28 +244,90 @@ export function blockStructuralEdit(state) {
   return kindAt(state.doc, state.selection.from) === "amend";
 }
 
+// Rule 4.3: the designator after "a" is "b", after "1" is "2". A designator the
+// editor cannot continue is left empty rather than guessed at.
+function nextDesignator(designator) {
+  if (/^\d+$/.test(designator)) return String(Number(designator) + 1);
+  if (/^[a-z]$/.test(designator) && designator !== "z") {
+    return String.fromCharCode(designator.charCodeAt(0) + 1);
+  }
+  if (/^[A-Z]$/.test(designator) && designator !== "Z") {
+    return String.fromCharCode(designator.charCodeAt(0) + 1);
+  }
+  return "";
+}
+
+// Enter inside a provision the bill is adding starts the next one: the first
+// subdivision of a new section, or the subdivision after this one. Splitting the
+// block would copy its designator, so the new block is built explicitly with the
+// designator that follows (Rule 4.3).
+export function splitAddedProvision(state, dispatch) {
+  const { $from, empty } = state.selection;
+  if (!empty || kindAt(state.doc, $from.pos) !== "add") return false;
+
+  const block = $from.parent;
+  if (block.type.name !== "law_block") return false;
+  // Only at the end of a block; splitting mid-sentence would divide the
+  // drafter's text between two designated provisions.
+  if ($from.parentOffset !== block.content.size) return false;
+
+  const opening = block.attrs.level === "section";
+  const level = opening ? "subdivision" : block.attrs.level;
+  const designator = opening ? "a" : nextDesignator(block.attrs.designator);
+
+  if (dispatch) {
+    const at = $from.after();
+    const node = state.schema.nodes.law_block.create({
+      level,
+      designator,
+      label: designatorLabel(level, designator),
+    });
+    const tr = state.tr.setMeta(TRACKED, true).insert(at, node);
+    tr.setSelection(TextSelection.create(tr.doc, at + 1));
+    dispatch(tr.scrollIntoView());
+  }
+  return true;
+}
+
+// Rule 11.1: a wholly new provision is underlined in full, so text written into
+// one carries `ins` however little of it is there already to inherit the mark
+// from. kindAt only reports a kind inside a law_block, so the lead-in — which is
+// never underlined (Rule 3) — is untouched.
+export function writeAddition(state, dispatch, from, to, text) {
+  if (!text || kindAt(state.doc, from) !== "add") return false;
+  if (dispatch) {
+    const tr = state.tr
+      .setMeta(TRACKED, true)
+      .replaceWith(
+        from,
+        to,
+        state.schema.text(text, [state.schema.marks.ins.create()])
+      );
+    tr.setSelection(TextSelection.create(tr.doc, from + text.length));
+    dispatch(tr);
+  }
+  return true;
+}
+
 export function trackedChangesPlugin() {
   return new Plugin({
     props: {
       handleTextInput(view, from, to, text) {
-        return trackedReplace(
-          view.state,
-          view.dispatch.bind(view),
-          from,
-          to,
-          text
+        const dispatch = view.dispatch.bind(view);
+        return (
+          writeAddition(view.state, dispatch, from, to, text) ||
+          trackedReplace(view.state, dispatch, from, to, text)
         );
       },
       handlePaste(view, event, slice) {
         const { from, to } = view.state.selection;
-        if (kindAt(view.state.doc, from) !== "amend") return false;
+        const kind = kindAt(view.state.doc, from);
+        if (kind !== "amend" && kind !== "add") return false;
         const text = slice.content.textBetween(0, slice.content.size, " ", "");
-        return trackedReplace(
-          view.state,
-          view.dispatch.bind(view),
-          from,
-          to,
-          text
+        const dispatch = view.dispatch.bind(view);
+        return (
+          writeAddition(view.state, dispatch, from, to, text) ||
+          trackedReplace(view.state, dispatch, from, to, text)
         );
       },
     },
