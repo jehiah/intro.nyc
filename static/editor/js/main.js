@@ -20,6 +20,9 @@ import {
   restoreDeleted,
   blockStructuralEdit,
   splitAddedProvision,
+  indentProvision,
+  outdentProvision,
+  insertLineBreak,
   contextAt,
   TRACKED,
 } from "./track.js";
@@ -148,7 +151,26 @@ function editorKeymap() {
     // the bill is adding, Enter starts the next one.
     Enter: (state, dispatch) =>
       blockStructuralEdit(state) || splitAddedProvision(state, dispatch),
+    "Shift-Enter": insertLineBreak,
+    Tab: indentProvision,
+    "Shift-Tab": outdentProvision,
     "Mod-b": toggleMark(schema.marks.ins),
+  });
+}
+
+// Indent and outdent apply only inside a provision the bill adds, and only
+// where Rule 4.3 leaves room, so the buttons follow the cursor. Each command
+// reports whether it would apply when called without a dispatch.
+function toolbarPlugin() {
+  const sync = (state) => {
+    document.getElementById("btn-indent").disabled = !indentProvision(state);
+    document.getElementById("btn-outdent").disabled = !outdentProvision(state);
+  };
+  return new Plugin({
+    view(v) {
+      sync(v.state);
+      return { update: (updated) => sync(updated.state) };
+    },
   });
 }
 
@@ -161,6 +183,7 @@ function createState(doc) {
       keymap(baseKeymap),
       trackedChangesPlugin(),
       sectionPlugin(),
+      toolbarPlugin(),
       lintPlugin(renderProblems),
       persistencePlugin(),
     ],
@@ -1044,6 +1067,14 @@ function wireUI() {
   });
   document.getElementById("btn-restore").addEventListener("click", () => {
     restoreDeleted(view.state, view.dispatch.bind(view));
+    view.focus();
+  });
+  document.getElementById("btn-indent").addEventListener("click", () => {
+    indentProvision(view.state, view.dispatch.bind(view));
+    view.focus();
+  });
+  document.getElementById("btn-outdent").addEventListener("click", () => {
+    outdentProvision(view.state, view.dispatch.bind(view));
     view.focus();
   });
 

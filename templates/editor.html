@@ -36,6 +36,15 @@
 
     <span class="sep"></span>
 
+    <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-outdent" disabled
+            title="Move this provision up a level — Shift-Tab (Rule 4.3)">
+      <i class="bi bi-text-indent-right"></i> </button>
+    <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-indent" disabled
+            title="Move this provision down a level, a. &rarr; 1. &rarr; (a) — Tab (Rule 4.3)">
+      <i class="bi bi-text-indent-left"></i></button>
+
+    <span class="sep"></span>
+
     <div class="control-right">
       {{if .IsOwner}}
       <button type="button" class="btn btn-sm btn-outline-secondary" id="btn-share">

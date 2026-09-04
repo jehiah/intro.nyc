@@ -36,6 +36,53 @@ export function designatorLabel(level, designator) {
   }
 }
 
+// Rule 4.3, for a section the bill adds: "a." subdivision, "1." paragraph,
+// "(a)" subparagraph, "(1)" clause, "(A)" item.
+const SEQUENCES = {
+  subdivision: "lower",
+  paragraph: "number",
+  subparagraph: "lower",
+  clause: "number",
+  item: "upper",
+};
+
+// a…z, then aa, bb, cc — the doubling the Administrative Code uses past z.
+function nthLetter(n, first) {
+  return String.fromCharCode(first + (n % 26)).repeat(Math.floor(n / 26) + 1);
+}
+
+// The n-th designator of a level, counting from zero.
+export function nthDesignator(level, n) {
+  switch (SEQUENCES[level]) {
+    case "lower":
+      return nthLetter(n, 97);
+    case "upper":
+      return nthLetter(n, 65);
+    case "number":
+      return String(n + 1);
+    default:
+      return "";
+  }
+}
+
+// Where a designator sits in its level's sequence, or -1 for one this editor
+// would not have produced — a decimal or hyphenated designator carried in from
+// existing law.
+export function designatorIndex(level, designator) {
+  const sequence = SEQUENCES[level];
+  if (!designator || !sequence) return -1;
+  if (sequence === "number") {
+    return /^\d+$/.test(designator) ? Number(designator) - 1 : -1;
+  }
+  const letter = designator[0];
+  const range = sequence === "lower" ? /^[a-z]$/ : /^[A-Z]$/;
+  if (!range.test(letter) || designator !== letter.repeat(designator.length)) {
+    return -1;
+  }
+  const first = sequence === "lower" ? 97 : 65;
+  return (designator.length - 1) * 26 + (letter.charCodeAt(0) - first);
+}
+
 // Rule 2.1: the title states which bodies of law the bill amends and briefly
 // refers to its subject. Only the subject is drafted by hand, so the two are
 // held separately and composed here.
@@ -170,6 +217,17 @@ const nodes = {
   },
 
   text: { group: "inline" },
+
+  // A line break within one provision (Shift-Enter). Text that reads on its own
+  // line but is not a subunit of its own — a list lead-in, a formula — would
+  // otherwise have to become a designated provision to be broken.
+  hard_break: {
+    inline: true,
+    group: "inline",
+    selectable: false,
+    parseDOM: [{ tag: "br" }],
+    toDOM: () => ["br"],
+  },
 };
 
 const marks = {

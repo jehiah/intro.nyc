@@ -639,6 +639,10 @@ func renderNode(b *strings.Builder, n pmNode) {
 
 func renderInline(b *strings.Builder, content []pmNode) {
 	for _, n := range content {
+		if n.Type == "hard_break" {
+			b.WriteString("<br>")
+			continue
+		}
 		text := html.EscapeString(n.Text)
 		switch {
 		case n.hasMark("del"):

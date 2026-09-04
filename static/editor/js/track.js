@@ -7,7 +7,14 @@
 
 import { Plugin, TextSelection } from "prosemirror-state";
 
-import { designatorLabel } from "./schema.js";
+import {
+  LEVELS,
+  designatorLabel,
+  designatorIndex,
+  nthDesignator,
+} from "./schema.js";
+
+const depthOf = (level) => LEVELS.indexOf(level);
 
 export const TRACKED = "trackedChange";
 
@@ -244,47 +251,190 @@ export function blockStructuralEdit(state) {
   return kindAt(state.doc, state.selection.from) === "amend";
 }
 
-// Rule 4.3: the designator after "a" is "b", after "1" is "2". A designator the
-// editor cannot continue is left empty rather than guessed at.
-function nextDesignator(designator) {
-  if (/^\d+$/.test(designator)) return String(Number(designator) + 1);
-  if (/^[a-z]$/.test(designator) && designator !== "z") {
-    return String.fromCharCode(designator.charCodeAt(0) + 1);
-  }
-  if (/^[A-Z]$/.test(designator) && designator !== "Z") {
-    return String.fromCharCode(designator.charCodeAt(0) + 1);
-  }
-  return "";
+// Designators in a provision the bill adds are derived from position, the way
+// bill-section numbers are: putting a subdivision between a and b renumbers what
+// follows rather than repeating a letter (Rule 4.3). Existing law is never
+// touched — its numbering belongs to the law, not to this editor.
+function resequenceAdditions(state) {
+  const changes = [];
+
+  state.doc.forEach((section, offset) => {
+    if (section.type.name !== "bill_section") return;
+    if (section.attrs.kind !== "add") return;
+
+    // The first provision keeps the designator the picker gave it: a bill may
+    // add "a new subdivision c", and c is where the sequence starts. Deeper
+    // levels always start at the beginning of their own sequence.
+    let anchorLevel = null;
+    let anchorStart = 0;
+    const counts = new Map();
+
+    section.forEach((child, childOffset) => {
+      if (child.type.name !== "law_block") return;
+      const { level, designator, label } = child.attrs;
+      // The section itself is designated by its own number, not by a sequence.
+      if (level === "section" || depthOf(level) < 1) return;
+
+      // A run of a deeper level restarts under each new parent.
+      for (const seen of [...counts.keys()]) {
+        if (depthOf(seen) > depthOf(level)) counts.delete(seen);
+      }
+      if (anchorLevel === null) {
+        anchorLevel = level;
+        anchorStart = Math.max(designatorIndex(level, designator), 0);
+      }
+
+      const n = counts.has(level) ? counts.get(level) + 1 : 0;
+      counts.set(level, n);
+
+      const next = nthDesignator(
+        level,
+        (level === anchorLevel ? anchorStart : 0) + n
+      );
+      const nextLabel = designatorLabel(level, next);
+      if (next !== designator || nextLabel !== label) {
+        changes.push({
+          pos: offset + 1 + childOffset,
+          attrs: { ...child.attrs, designator: next, label: nextLabel },
+        });
+      }
+    });
+  });
+
+  if (!changes.length) return null;
+  // Numbering is derived, so it is not its own undo step: undo restores the
+  // structure and the designators are recomputed from it.
+  const tr = state.tr.setMeta(TRACKED, true).setMeta("addToHistory", false);
+  changes.forEach((c) => tr.setNodeMarkup(c.pos, null, c.attrs));
+  return tr;
 }
 
-// Enter inside a provision the bill is adding starts the next one: the first
-// subdivision of a new section, or the subdivision after this one. Splitting the
-// block would copy its designator, so the new block is built explicitly with the
-// designator that follows (Rule 4.3).
+// The law_block the cursor sits in, with what surrounds it, or null when the
+// selection is not inside a provision the bill adds.
+function addedProvisionAt(state) {
+  const { $from } = state.selection;
+  if (kindAt(state.doc, $from.pos) !== "add") return null;
+  if ($from.parent.type.name !== "law_block") return null;
+  return {
+    block: $from.parent,
+    pos: $from.before($from.depth),
+    index: $from.index($from.depth - 1),
+    section: $from.node($from.depth - 1),
+  };
+}
+
+// Enter inside a provision the bill is adding starts the next one, carrying any
+// text after the cursor into it. The designator is left to the resequencer, so
+// inserting between two provisions renumbers rather than duplicates.
 export function splitAddedProvision(state, dispatch) {
-  const { $from, empty } = state.selection;
-  if (!empty || kindAt(state.doc, $from.pos) !== "add") return false;
+  const found = addedProvisionAt(state);
+  if (!found || !state.selection.empty) return false;
 
-  const block = $from.parent;
-  if (block.type.name !== "law_block") return false;
-  // Only at the end of a block; splitting mid-sentence would divide the
-  // drafter's text between two designated provisions.
-  if ($from.parentOffset !== block.content.size) return false;
-
-  const opening = block.attrs.level === "section";
-  const level = opening ? "subdivision" : block.attrs.level;
-  const designator = opening ? "a" : nextDesignator(block.attrs.designator);
+  // A new section opens with its heading, so what follows it is that section's
+  // first subdivision rather than a second section.
+  const level =
+    found.block.attrs.level === "section"
+      ? "subdivision"
+      : found.block.attrs.level;
 
   if (dispatch) {
-    const at = $from.after();
-    const node = state.schema.nodes.law_block.create({
-      level,
-      designator,
-      label: designatorLabel(level, designator),
-    });
-    const tr = state.tr.setMeta(TRACKED, true).insert(at, node);
-    tr.setSelection(TextSelection.create(tr.doc, at + 1));
+    const tr = state.tr.setMeta(TRACKED, true);
+    tr.split(state.selection.from, 1, [
+      {
+        type: state.schema.nodes.law_block,
+        attrs: { level, designator: "", label: "" },
+      },
+    ]);
     dispatch(tr.scrollIntoView());
+  }
+  return true;
+}
+
+// Tab and Shift-Tab in a provision the bill adds. Rule 4.3's levels are a
+// nesting, so a provision moves with everything nested under it — demoting
+// subdivision b turns its paragraphs into subparagraphs.
+export function shiftProvisionLevel(delta) {
+  return (state, dispatch) => {
+    const found = addedProvisionAt(state);
+    if (!found) return false;
+    const { block, pos, index, section } = found;
+
+    const current = depthOf(block.attrs.level);
+    // The section level is the law's own numbering; nothing moves into it.
+    if (current < 1 || current + delta < 1) return false;
+
+    if (delta > 0) {
+      // A paragraph needs a subdivision to sit under: the provision above must
+      // be at this level or deeper, or there is no parent to demote into.
+      const previous = index > 0 ? section.child(index - 1) : null;
+      if (
+        !previous ||
+        previous.type.name !== "law_block" ||
+        depthOf(previous.attrs.level) < current
+      ) {
+        return false;
+      }
+    } else {
+      // Nothing rises above the level the bill section starts at — that level
+      // is what the lead-in announced.
+      let floor = null;
+      section.forEach((child) => {
+        if (floor !== null || child.type.name !== "law_block") return;
+        if (depthOf(child.attrs.level) >= 1) floor = depthOf(child.attrs.level);
+      });
+      if (floor !== null && current + delta < floor) return false;
+    }
+
+    // The provision and everything nested under it move together.
+    const moving = [{ pos, node: block }];
+    let at = pos + block.nodeSize;
+    for (let i = index + 1; i < section.childCount; i++) {
+      const child = section.child(i);
+      if (child.type.name !== "law_block") break;
+      if (depthOf(child.attrs.level) <= current) break;
+      moving.push({ pos: at, node: child });
+      at += child.nodeSize;
+    }
+    if (
+      moving.some((m) => depthOf(m.node.attrs.level) + delta >= LEVELS.length)
+    ) {
+      return false;
+    }
+
+    if (dispatch) {
+      const tr = state.tr.setMeta(TRACKED, true);
+      moving.forEach((m) => {
+        tr.setNodeMarkup(m.pos, null, {
+          ...m.node.attrs,
+          level: LEVELS[depthOf(m.node.attrs.level) + delta],
+          // The resequencer designates the provision at its new level.
+          designator: "",
+          label: "",
+        });
+      });
+      dispatch(tr.scrollIntoView());
+    }
+    return true;
+  };
+}
+
+export const indentProvision = shiftProvisionLevel(1);
+export const outdentProvision = shiftProvisionLevel(-1);
+
+// Shift-Enter: a line break inside one provision the bill adds. Amended law
+// reads as it stands, so a break is not offered there — it would alter the text
+// the bill reproduces — and a lead-in or an effective date is a single sentence.
+// The key is swallowed either way rather than falling through to Enter, which
+// would start a provision the drafter did not ask for.
+export function insertLineBreak(state, dispatch) {
+  if (!addedProvisionAt(state)) return true;
+  if (dispatch) {
+    dispatch(
+      state.tr
+        .setMeta(TRACKED, true)
+        .replaceSelectionWith(state.schema.nodes.hard_break.create())
+        .scrollIntoView()
+    );
   }
   return true;
 }
@@ -330,6 +480,13 @@ export function trackedChangesPlugin() {
           trackedReplace(view.state, dispatch, from, to, text)
         );
       },
+    },
+
+    // Designators follow document order however the order changed — Enter,
+    // Tab, a deleted provision, an undo.
+    appendTransaction(trs, oldState, newState) {
+      if (!trs.some((tr) => tr.docChanged)) return null;
+      return resequenceAdditions(newState);
     },
 
     // Backstop for edits that do not come through the handlers above (cut,

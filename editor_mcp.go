@@ -32,6 +32,11 @@ Drafting Manual (see https://editor.intro.nyc/drafting-manual):
       section_lead    the unconsolidated lead-in sentence (Rule 3)
       law_block*      attrs {level, designator, label}; the consolidated text
 
+Inline content is text, plus a hard_break node for a line break within one
+block. In a bill_section of kind "add" the designator and label attrs are
+derived from document order and rewritten by the editor; set them to "" and
+let the level attr carry the structure.
+
 bill_section.kind is one of:
   amend       existing law reproduced and marked up
   add         wholly new text; all of it carries the "ins" mark

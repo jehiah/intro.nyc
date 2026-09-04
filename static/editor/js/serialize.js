@@ -10,10 +10,17 @@ function sectionNumberLabel(index) {
 function inlineRuns(node) {
   const runs = [];
   node.forEach((child) => {
+    // A line break is neither added nor removed language; it carries no marks
+    // and is rendered as a break in whatever the export's terms are.
+    if (child.type.name === "hard_break") {
+      runs.push({ text: "", br: true, ins: false, del: false });
+      return;
+    }
     if (!child.isText) return;
     const marks = child.marks.map((m) => m.type.name);
     runs.push({
       text: child.text,
+      br: false,
       ins: marks.includes("ins"),
       del: marks.includes("del"),
     });
@@ -25,13 +32,19 @@ function collapseRuns(runs) {
   const out = [];
   for (const run of runs) {
     const last = out[out.length - 1];
-    if (last && last.ins === run.ins && last.del === run.del) {
+    if (last && !last.br && !run.br && last.ins === run.ins && last.del === run.del) {
       last.text += run.text;
     } else {
       out.push({ ...run });
     }
   }
   return out;
+}
+
+// A break inside a block continues that block, so its later lines keep the
+// block's indent rather than dropping back to the margin.
+function indentBreaks(line) {
+  return line.replace(/\n/g, "\n  ");
 }
 
 function titleOf(doc) {
@@ -66,13 +79,15 @@ export function toPlainText(doc) {
   lines.push(
     ...eachBlock(doc, (child, i) => {
       const text = collapseRuns(inlineRuns(child))
-        .map((r) => (r.del ? `[${r.text}]` : r.ins ? `_${r.text}_` : r.text))
+        .map((r) =>
+          r.br ? "\n" : r.del ? `[${r.text}]` : r.ins ? `_${r.text}_` : r.text
+        )
         .join("");
       if (child.type.name === "section_lead") {
-        return `${sectionNumberLabel(i)} ${text}`;
+        return indentBreaks(`${sectionNumberLabel(i)} ${text}`);
       }
       const label = child.attrs.label ? child.attrs.label + " " : "";
-      return `  ${label}${text}`;
+      return indentBreaks(`  ${label}${text}`);
     })
   );
 
@@ -95,7 +110,14 @@ export function toMarkdown(doc) {
     ...eachBlock(doc, (child, i) => {
       const text = collapseRuns(inlineRuns(child))
         .map((r) =>
-          r.del ? `\\[${r.text}\\]` : r.ins ? `<u>${r.text}</u>` : r.text
+          // A raw newline would end the blockquote a law block is written in.
+          r.br
+            ? "<br>"
+            : r.del
+            ? `\\[${r.text}\\]`
+            : r.ins
+            ? `<u>${r.text}</u>`
+            : r.text
         )
         .join("");
       if (child.type.name === "section_lead") {
@@ -117,16 +139,18 @@ export function toAdoptedText(doc) {
     ...eachBlock(doc, (child, i) => {
       const text = collapseRuns(inlineRuns(child))
         .filter((r) => !r.del)
-        .map((r) => r.text)
+        .map((r) => (r.br ? "\n" : r.text))
         .join("")
-        .replace(/\s{2,}/g, " ")
+        // Tidy the spacing a bracketed deletion leaves behind, without closing
+        // up the drafter's own line breaks.
+        .replace(/[^\S\n]{2,}/g, " ")
         .trim();
       if (!text) return "";
       if (child.type.name === "section_lead") {
-        return `${sectionNumberLabel(i)} ${text}`;
+        return indentBreaks(`${sectionNumberLabel(i)} ${text}`);
       }
       const label = child.attrs.label ? child.attrs.label + " " : "";
-      return `  ${label}${text}`;
+      return indentBreaks(`  ${label}${text}`);
     })
   );
   return lines.join("\n");
@@ -135,6 +159,7 @@ export function toAdoptedText(doc) {
 function runHTML(runs) {
   return runs
     .map((r) => {
+      if (r.br) return "<br>";
       const text = escapeHTML(r.text);
       if (r.del) return `[${text}]`;
       if (r.ins) return `<u>${text}</u>`;
