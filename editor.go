@@ -67,14 +67,28 @@ func (a *App) EditorIndex(w http.ResponseWriter, r *http.Request) {
 		Shared bool
 	}
 	rows := make([]row, 0, len(documents))
+	owned := 0
 	for _, d := range documents {
 		rows = append(rows, row{Document: d, Shared: d.UID != user.UID})
+		if d.UID == user.UID {
+			owned++
+		}
+	}
+
+	plan, err := a.planFor(r.Context(), user)
+	if err != nil {
+		log.Printf("editor list: %s", err)
+		http.Error(w, "Internal Server Error", 500)
+		return
 	}
 
 	a.renderEditor(w, r, "editor_documents.html", map[string]any{
-		"Title":     "Drafts",
-		"User":      user,
-		"Documents": rows,
+		"Title":         "Drafts",
+		"User":          user,
+		"Documents":     rows,
+		"Plan":          plan,
+		"OwnedCount":    owned,
+		"MaxFreeDrafts": maxFreeDrafts,
 	})
 }
 
@@ -133,6 +147,9 @@ func (a *App) EditorCreateDraft(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "401 Sign in required", 401)
 		return
 	}
+	if !a.requireDraftCapacity(w, r, user) {
+		return
+	}
 	var req struct {
 		Title string `json:"title"`
 		Code  string `json:"code"`
@@ -168,11 +185,21 @@ func (a *App) EditorProfile(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/", 302)
 		return
 	}
+	sub, err := a.subscriptionFor(r.Context(), user)
+	if err != nil {
+		log.Printf("editor profile: %s", err)
+		http.Error(w, "Internal Server Error", 500)
+		return
+	}
 	a.renderEditor(w, r, "editor_profile.html", map[string]any{
-		"Title":   "Profile",
-		"User":    user,
-		"Saved":   r.URL.Query().Has("saved"),
-		"BaseURL": editorBaseURL(r),
+		"Title":        "Profile",
+		"User":         user,
+		"Saved":        r.URL.Query().Has("saved"),
+		"BaseURL":      editorBaseURL(r),
+		"Subscription": sub,
+		"Plan":         planOf(sub),
+		"PlusPlan":     sub.PlusPlan(),
+		"Canceling":    sub.Canceling(),
 	})
 }
 
@@ -254,6 +281,9 @@ func (a *App) EditorNewPost(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/", 302)
 		return
 	}
+	if !a.requireDraftCapacity(w, r, user) {
+		return
+	}
 	if err := r.ParseForm(); err != nil {
 		http.Error(w, "Bad Request", 400)
 		return
@@ -317,11 +347,18 @@ func (a *App) EditorDocument(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	plan, err := a.planFor(r.Context(), user)
+	if err != nil {
+		log.Printf("editor billing: %s", err)
+		http.Error(w, "Internal Server Error", 500)
+		return
+	}
 	a.renderEditor(w, r, "editor.html", map[string]any{
 		"Title":    document.DisplayTitle(),
 		"User":     user,
 		"Document": document,
 		"IsOwner":  access == AccessOwner,
+		"Plan":     plan,
 	})
 }
 
@@ -417,15 +454,20 @@ func (a *App) EditorShare(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	document.Editors = withoutOwner(normalizeEmails(req.Editors), document.Owner)
+	newEditors := withoutOwner(normalizeEmails(req.Editors), document.Owner)
 	// An address with edit access does not also need view access.
-	var viewers []string
+	var newViewers []string
 	for _, email := range withoutOwner(normalizeEmails(req.Viewers), document.Owner) {
-		if !contains(document.Editors, email) {
-			viewers = append(viewers, email)
+		if !contains(newEditors, email) {
+			newViewers = append(newViewers, email)
 		}
 	}
-	document.Viewers = viewers
+	if !a.requireShareCapacity(w, r, a.User(r), document, newEditors, newViewers, req.Public) {
+		return
+	}
+
+	document.Editors = newEditors
+	document.Viewers = newViewers
 	document.Public = req.Public
 	document.LastModified = time.Now().UTC()
 

@@ -133,7 +133,7 @@ func TestCallEditorAPI(t *testing.T) {
 // interpret is worse than no tool.
 func TestMCPToolsAreDescribed(t *testing.T) {
 	app := &App{editorRouter: http.NewServeMux()}
-	server := app.mcpServer("Bearer intro_abc", nil)
+	server := app.mcpServer("Bearer intro_abc", "editor.intro.nyc", nil)
 
 	ctx := context.Background()
 	clientTransport, serverTransport := mcp.NewInMemoryTransports()

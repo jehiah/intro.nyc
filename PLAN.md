@@ -257,6 +257,91 @@ is rendered server-side in Go from the stored document (`renderBill` in
 `editor.go`) and reuses `static/editor/editor.css`, so a shared bill is
 byte-for-byte the bill being drafted and needs no JavaScript.
 
+## 8.4 Billing
+
+Export, sharing with more than one person (including a public link), and a
+sixth draft are Plus features. A free account is otherwise fully functional —
+it drafts, amends and checks a bill exactly as Plus does.
+
+Plus is a PayPal subscription, monthly ($6.99) or annual ($70, a 20% discount
+over monthly). `/billing` shows the current plan and, for a free account, a
+PayPal button per interval; a signed-in profile links there from a plan
+summary. Sharing sets the subscription's `custom_id` to the drafter's uid, so
+both the approval callback and the webhook can attribute a subscription
+without a lookup table.
+
+The flow has two halves:
+
+1. **Approval.** `actions.subscription.create` on the PayPal button carries
+   the uid as `custom_id`. Its `onApprove` posts the resulting subscription id
+   to `POST /api/billing/subscribe`, which fetches that subscription from
+   PayPal directly — never trusting the browser — checks its plan id is one of
+   ours, its `custom_id` matches the signed-in drafter, and its status is
+   active or pending, then stores the record.
+2. **Ongoing status.** `POST /webhooks/paypal` verifies each delivery with
+   PayPal's own verify-webhook-signature call and updates the stored status on
+   `BILLING.SUBSCRIPTION.ACTIVATED` / `UPDATED` / `CANCELLED` / `SUSPENDED` /
+   `EXPIRED`, so a lapsed or failed payment revokes Plus access without the
+   drafter doing anything.
+
+`/billing` tells a subscriber what they are paying for: the interval and its
+price, what Plus includes, when they were last charged and for how much, and
+when it renews. Those dates come from PayPal's `billing_info`, mirrored onto
+the stored record by `paypalSubscription.applyTo` and refreshed from PayPal
+whenever the page is viewed — PayPal is the source of truth, and the mirror
+only exists so the page still answers the question when PayPal is unreachable.
+`applyTo` copies each field only when PayPal actually sent it, because a
+cancellation event carries no `next_billing_time` and blanking the stored one
+would lose the date the drafter is paid through.
+
+Cancelling does not take back what was already bought. PayPal charges a full
+cycle and does not refund it, so `Subscription.AccessUntil` holds the renewal
+that will now never happen and `Active()` keeps Plus on until then; the page
+says "Plus ends <date>" rather than offering a plan the drafter still has. A
+`SUSPENDED` subscription — a failed payment — is different: access stops now,
+and the explanation sits above the upgrade offer, since the drafter is on the
+free plan and would otherwise just see a sales pitch for something they
+thought they had.
+
+Prices and the feature list live in `plusPlans` and `plusFeatures` in
+`editor_billing.go`, and both the upgrade offer and the subscribed status
+render from them, so the two panels cannot quote different numbers.
+
+A free-plan limit is enforced once, server-side, on the same handler the web
+app, the JSON API and the MCP tools all share: `EditorCreateDraft` /
+`EditorNewPost` reject a sixth draft, and `EditorShare` rejects a second
+collaborator or a new public link. The editor's JS mirrors these limits (a
+disabled-looking export menu, a note in the share dialog) so the drafter is
+told before they are turned away, but the server is the actual gate. Export is
+the exception: it is generated in the browser from a document the drafter is
+already entitled to read, so its gate is a product nudge rather than a
+boundary.
+
+Limits never trap a drafter in their own work. A draft that is already shared
+more widely than the free plan allows — because a subscription lapsed — can
+still be narrowed; only widening it is refused. Drafts over the limit are kept
+and editable; only a new one is refused.
+
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /billing` | plan summary and PayPal subscribe buttons |
+| `POST /api/billing/subscribe` | record a subscription approved via PayPal |
+| `POST /api/billing/cancel` | cancel the current subscription with PayPal |
+| `POST /webhooks/paypal` | PayPal's subscription lifecycle events |
+
+`PAYPAL_CLIENT_ID`, `PAYPAL_SECRET` and `PAYPAL_WEBHOOK_ID` are read from the
+environment. Without the webhook id, deliveries are rejected rather than
+trusted unverified, so it must be set once a webhook pointed at
+`/webhooks/paypal` exists in the PayPal dashboard.
+
+There is no flag to choose a billing environment: `--dev-mode` runs against
+PayPal's sandbox and `newPayPalClient` picks the API host and the pair of plan
+ids together, so a development run can never bill against a live plan. The
+four plan ids are constants in `editor_billing.go`. Sandbox and live are
+separate PayPal accounts, so `--dev-mode` also needs sandbox credentials in
+`PAYPAL_CLIENT_ID` / `PAYPAL_SECRET`; the environment in use is logged at
+startup.
+
 ## 9. The law API
 
 Law comes from [nyc_code_archive](https://github.com/jehiah/nyc_code_archive),
@@ -314,12 +399,14 @@ local law amends consolidated law and not agency rules (Rule 5.2).
 | `editor_auth.go` | Firebase session cookies |
 | `editor_docs.go` | the Firestore document model and access rules |
 | `editor_profile.go` | display names |
+| `editor_billing.go` | PayPal subscriptions, the webhook, free-plan limits |
 | `editor_law.go` | the law API over nyc_code_archive |
 | `templates/editor_base.html` | the editor site's chrome |
 | `templates/editor_susi.html` | sign in |
 | `templates/editor_documents.html` | the document list |
 | `templates/editor_new.html` | new-bill prompt |
-| `templates/editor_profile.html` | display name |
+| `templates/editor_profile.html` | display name, plan summary |
+| `templates/editor_billing.html` | plan and PayPal subscribe/cancel |
 | `templates/drafting_manual.html` | the rules, excerpted from the 2022 manual |
 | `templates/editor.html` | title nav, control bar, dialogs |
 | `templates/bill_readonly.html` | the shared read-only view |

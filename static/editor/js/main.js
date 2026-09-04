@@ -46,6 +46,7 @@ import {
 import {
   documentID,
   canShare,
+  plan,
   loadLocal,
   saveLocal,
   fetchDocument,
@@ -885,7 +886,23 @@ async function commitSharing() {
     setStatus("Sharing updated");
   } catch (e) {
     console.error(e);
-    shareError("Could not update sharing.");
+    shareError(e.message || "Could not update sharing.");
+    // The change was rejected (e.g. a free-plan limit), so the dialog must
+    // fall back to what the server actually has rather than what was
+    // optimistically drawn.
+    try {
+      const current = await fetchDocument(docID);
+      sharing = {
+        owner: current.owner || "",
+        editors: current.editors || [],
+        viewers: current.viewers || [],
+        public: Boolean(current.public),
+        names: current.names || {},
+      };
+      renderShare();
+    } catch (e2) {
+      console.error(e2);
+    }
   }
 }
 
@@ -975,6 +992,10 @@ function wireUI() {
     const action = e.target.dataset && e.target.dataset.export;
     if (!action) return;
     menu.classList.remove("open");
+    if (plan() !== "plus") {
+      setStatus("Export requires Plus — upgrade at /billing");
+      return;
+    }
     EXPORTS[action]();
   });
 

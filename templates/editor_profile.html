@@ -34,6 +34,26 @@
     <p>See your <a href="/">Drafts</a></p>
   </form>
 
+  <section class="billing-current">
+    <h2>Plan</h2>
+    {{if eq .Plan "plus"}}
+    <p>
+      You're on <strong>Plus</strong>{{with .PlusPlan}}, {{.Price}} per {{.Per}}{{end}}.
+      {{if .Canceling}}
+      Canceled &mdash; Plus stays on through {{Date .Subscription.AccessUntil}}.
+      {{else if not .Subscription.NextBilling.IsZero}}
+      Renews {{Date .Subscription.NextBilling}}.
+      {{end}}
+    </p>
+    {{else}}
+    <p>
+      You're on the <strong>Free</strong> plan: up to 5 drafts, sharing with one
+      other person, and no export.
+    </p>
+    {{end}}
+    <p><a href="/billing">Manage billing</a></p>
+  </section>
+
   <section class="integrations" id="integrations">
     <h2>Integrations</h2>
     <p class="rule-cite">

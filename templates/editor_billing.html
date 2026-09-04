@@ -1,0 +1,203 @@
+{{template "base" .}}
+{{define "title"}}{{.Title}}{{end}}
+
+{{define "middle"}}
+<div class="profile">
+  <h1>Billing</h1>
+
+  {{if eq .Limit "drafts"}}
+  <div class="billing-notice">
+    Free accounts are limited to 5 drafts. Upgrade to Plus for unlimited drafts.
+  </div>
+  {{end}}
+
+  {{/* A suspended subscription is not Plus, so this sits above the offer
+       below rather than inside the subscribed status: the drafter needs to
+       know a payment failed, not be sold a plan they thought they had. */}}
+  {{if .Suspended}}
+  <div class="billing-notice">
+    PayPal has suspended your subscription, usually because a payment did not
+    go through, so Plus features are off.
+    <a href="https://www.paypal.com/myaccount/autopay/">Review it at PayPal</a>
+    &mdash; once it is paid, Plus comes back on by itself.
+  </div>
+  {{end}}
+
+  {{if eq .Plan "plus"}}
+  {{$sub := .Subscription}}
+  <section class="billing-current">
+    <h2>You're on Plus</h2>
+
+    {{if .Canceling}}
+    <div class="billing-notice">
+      This subscription is canceled and will not renew. Plus stays on through
+      {{Date $sub.AccessUntil}}, the end of the period you have already paid
+      for.
+    </div>
+    {{end}}
+
+    <dl class="billing-facts">
+      <dt>Plan</dt>
+      <dd>
+        Plus
+        {{with .PlusPlan}}
+        &mdash; {{.Price}} per {{.Per}}{{if .Note}} <span class="rule-cite">({{.Note}})</span>{{end}}
+        {{end}}
+      </dd>
+
+      <dt>Last billed</dt>
+      <dd>
+        {{if $sub.LastPayment.IsZero}}
+        No payment recorded yet.
+        {{else}}
+        {{Date $sub.LastPayment}}{{with $sub.LastPaymentAmount}} &mdash; {{.}}{{end}}
+        {{end}}
+      </dd>
+
+      <dt>{{if .Canceling}}Plus ends{{else}}Renews{{end}}</dt>
+      <dd>
+        {{if .Canceling}}
+        {{Date $sub.AccessUntil}} &mdash; it will not be billed again.
+        {{else if $sub.NextBilling.IsZero}}
+        PayPal has not scheduled the next payment yet.
+        {{else}}
+        {{Date $sub.NextBilling}}{{with .PlusPlan}}, for {{.Price}}{{end}}
+        &mdash; automatically, through PayPal.
+        {{end}}
+      </dd>
+
+      <dt>Payment method</dt>
+      <dd>PayPal, as subscription <code>{{$sub.PayPalSubscriptionID}}</code>.</dd>
+    </dl>
+
+    <h3 class="billing-features-heading">What Plus includes</h3>
+    <ul class="billing-features">
+      {{range .Features}}<li>{{.}}</li>{{end}}
+    </ul>
+
+    {{if not .Canceling}}
+    <button type="button" class="btn btn-outline-danger" id="btn-cancel-plan">Cancel subscription</button>
+    <p class="rule-cite">
+      Canceling stops the next payment. Plus stays on until then, and your
+      drafts are never deleted &mdash; a free account keeps them, it just
+      cannot add a sixth.
+    </p>
+    <p class="cancel-error" id="cancel-error" hidden></p>
+    {{end}}
+  </section>
+  {{else if .Pending}}
+  <section class="billing-current">
+    <h2>Confirming your subscription</h2>
+    <p class="rule-cite">
+      PayPal has your approval and is activating the subscription. This usually
+      takes a few seconds &mdash; reload this page, and Plus will be on.
+    </p>
+    <a class="btn btn-outline-secondary" href="/billing">Reload</a>
+  </section>
+  {{else}}
+  <section class="billing-plans">
+    <h2>Upgrade to Plus</h2>
+    <p class="rule-cite">
+      Free accounts can keep up to 5 drafts, share a draft with one other
+      person, and cannot export a bill. Plus removes all three limits:
+    </p>
+    <ul class="billing-features">
+      {{range .Features}}<li>{{.}}</li>{{end}}
+    </ul>
+
+    <div class="billing-cards">
+      {{range .Plans}}
+      <div class="billing-card">
+        <h3>{{.Label}}</h3>
+        <p class="billing-price">{{.Price}}<span>/{{.Per}}</span></p>
+        {{with .Note}}<p class="rule-cite">{{.}}</p>{{end}}
+        <div id="paypal-button-container-{{.Interval}}"></div>
+      </div>
+      {{end}}
+    </div>
+    {{if not .ShowButtons}}
+    <p class="billing-error">Billing is not configured on this server.</p>
+    {{end}}
+    <p class="billing-error" id="billing-error" hidden></p>
+  </section>
+  {{end}}
+
+  <p><a href="/profile">Back to profile</a></p>
+</div>
+{{end}}
+
+{{define "javascript"}}
+{{if .ShowButtons}}
+<script src="https://www.paypal.com/sdk/js?client-id={{.PayPalClientID}}&vault=true&intent=subscription" data-sdk-integration-source="button-factory"></script>
+<script>
+function billingError(message) {
+  var el = document.getElementById("billing-error");
+  el.textContent = message || "";
+  el.hidden = !message;
+}
+
+function subscribe(subscriptionID) {
+  return fetch("/api/billing/subscribe", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ subscription_id: subscriptionID }),
+  }).then(function (response) {
+    if (!response.ok) {
+      return response.text().then(function (text) {
+        throw new Error(text || "Could not confirm the subscription");
+      });
+    }
+    location.href = "/billing?subscribed";
+  }).catch(function (e) {
+    billingError(e.message);
+  });
+}
+
+if (window.paypal) {
+  paypal.Buttons({
+    style: { shape: "pill", color: "blue", layout: "vertical", label: "subscribe" },
+    createSubscription: function (data, actions) {
+      return actions.subscription.create({
+        plan_id: "{{.PlanIDMonthly}}",
+        custom_id: "{{.User.UID}}",
+      });
+    },
+    onApprove: function (data) {
+      subscribe(data.subscriptionID);
+    },
+  }).render("#paypal-button-container-monthly");
+
+  paypal.Buttons({
+    style: { shape: "pill", color: "blue", layout: "vertical", label: "subscribe" },
+    createSubscription: function (data, actions) {
+      return actions.subscription.create({
+        plan_id: "{{.PlanIDAnnual}}",
+        custom_id: "{{.User.UID}}",
+      });
+    },
+    onApprove: function (data) {
+      subscribe(data.subscriptionID);
+    },
+  }).render("#paypal-button-container-annual");
+}
+</script>
+{{else if and (eq .Plan "plus") (not .Canceling)}}
+<script>
+document.getElementById("btn-cancel-plan").addEventListener("click", function () {
+  if (!confirm("Cancel your Plus subscription?")) return;
+  fetch("/api/billing/cancel", { method: "POST" }).then(function (response) {
+    if (!response.ok) {
+      return response.text().then(function (text) {
+        throw new Error(text || "Could not cancel the subscription");
+      });
+    }
+    location.href = "/billing?canceled";
+  }).catch(function (e) {
+    var el = document.getElementById("cancel-error");
+    el.textContent = e.message;
+    el.hidden = false;
+  });
+});
+</script>
+{{end}}
+{{end}}

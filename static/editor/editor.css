@@ -141,6 +141,14 @@
   padding: 0.5rem 1rem 0.15rem;
 }
 
+.menu-upsell {
+  text-transform: none;
+  letter-spacing: normal;
+  border-top: 1px solid #eee;
+  margin-top: 0.25rem;
+  padding-top: 0.5rem;
+}
+
 /* ------------------------------------------------------------------ layout */
 
 .editor-main {
@@ -634,6 +642,118 @@
 
 .integration-snippet code {
   color: inherit;
+}
+
+/* --------------------------------------------------------------- billing */
+
+.billing-current,
+.billing-plans {
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #dee2e6;
+}
+
+.billing-current h2,
+.billing-plans h2 {
+  font-size: 1.2rem;
+}
+
+.billing-notice {
+  background: #fff3cd;
+  border: 1px solid #ffe69c;
+  border-radius: 4px;
+  padding: 0.5rem 0.85rem;
+  margin-bottom: 1.25rem;
+  font-size: 0.9rem;
+}
+
+/* The subscribed status: what is being paid for, and when. */
+.billing-facts {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.4rem 1.5rem;
+  margin: 1rem 0 1.5rem;
+  font-size: 0.95rem;
+}
+
+.billing-facts dt {
+  font-weight: 500;
+  color: #6c757d;
+}
+
+.billing-facts dd {
+  margin: 0;
+}
+
+.billing-facts code {
+  font-size: 0.85em;
+  color: #6c757d;
+}
+
+@media (max-width: 32rem) {
+  .billing-facts {
+    grid-template-columns: 1fr;
+    gap: 0 0;
+  }
+  .billing-facts dd {
+    margin-bottom: 0.75rem;
+  }
+}
+
+.billing-features-heading {
+  font-size: 0.95rem;
+  font-weight: 500;
+  margin-bottom: 0.4rem;
+}
+
+.billing-features {
+  margin: 0 0 1.5rem;
+  padding-left: 1.1rem;
+  font-size: 0.9rem;
+  color: #495057;
+}
+
+.billing-features li {
+  margin-bottom: 0.2rem;
+}
+
+.billing-cards {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.billing-card {
+  flex: 1 1 14rem;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 1.25rem;
+  background: #fff;
+}
+
+.billing-card h3 {
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.billing-price {
+  font-size: 1.6rem;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.billing-price span {
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: #6c757d;
+}
+
+.billing-error,
+.cancel-error {
+  color: #dc3545;
+  font-size: 0.85rem;
+  margin-top: 0.75rem;
 }
 
 /* ------------------------------------------------------- the drafting manual */

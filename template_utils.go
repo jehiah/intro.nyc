@@ -37,6 +37,7 @@ func newTemplateWithBase(fs fs.FS, base, n string, funcs ...template.FuncMap) *t
 		"ToLower":       strings.ToLower,
 		"Comma":         commaInt,
 		"Time":          humanize.Time,
+		"Date":          func(t time.Time) string { return t.Format("January 2, 2006") },
 		"RFC3339":       func(t time.Time) string { return t.Format(time.RFC3339) },
 		"CSSClass":      cssClass,
 		"Slugify":       slug.Make,

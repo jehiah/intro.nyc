@@ -68,6 +68,11 @@ type App struct {
 	tokens     map[string]*cachedToken
 	tokenMutex sync.RWMutex
 
+	// Plus subscriptions, managed through PayPal.
+	paypal            *paypalClient
+	subscriptions     map[UID]*cachedSubscription
+	subscriptionMutex sync.RWMutex
+
 	// The editor's own API, reused in-process by the MCP tools.
 	editorRouter http.Handler
 
@@ -267,6 +272,15 @@ func main() {
 		fileCache:         make(map[string]CachedFile),
 		profiles:          make(map[UID]*cachedProfile),
 		tokens:            make(map[string]*cachedToken),
+
+		// Development never touches live billing.
+		paypal: newPayPalClient(paypalConfig{
+			ClientID:  os.Getenv("PAYPAL_CLIENT_ID"),
+			Secret:    os.Getenv("PAYPAL_SECRET"),
+			WebhookID: os.Getenv("PAYPAL_WEBHOOK_ID"),
+			Sandbox:   *devMode,
+		}),
+		subscriptions: make(map[UID]*cachedSubscription),
 	}
 	if *devMode {
 		app.templateFS = os.DirFS(".")
@@ -282,6 +296,7 @@ func main() {
 		}
 	}
 	log.Printf("law archive: %s", lawArchiveSource(app.lawPath))
+	log.Printf("paypal: %s", app.paypal)
 	app.legistar.LookupURL, err = url.Parse("https://legistar.council.nyc.gov/gateway.aspx?m=l&id=")
 	if err != nil {
 		panic(err)
@@ -302,6 +317,10 @@ func main() {
 	editorRouter.HandleFunc("GET /profile", app.EditorProfile)
 	editorRouter.HandleFunc("POST /profile", app.EditorProfilePost)
 	editorRouter.HandleFunc("POST /profile/integrations", app.EditorIntegrations)
+	editorRouter.HandleFunc("GET /billing", app.EditorBilling)
+	editorRouter.HandleFunc("POST /api/billing/subscribe", app.EditorBillingSubscribe)
+	editorRouter.HandleFunc("POST /api/billing/cancel", app.EditorBillingCancel)
+	editorRouter.HandleFunc("POST /webhooks/paypal", app.EditorPayPalWebhook)
 	editorRouter.HandleFunc("GET /drafting-manual", app.EditorDraftingManual)
 	editorRouter.HandleFunc("GET /api/drafts", app.EditorListDrafts)
 	editorRouter.HandleFunc("POST /api/drafts", app.EditorCreateDraft)

@@ -8,6 +8,13 @@
     <a class="btn btn-primary" href="/new"><i class="bi bi-plus-lg"></i> New draft</a>
   </div>
 
+  {{if ne .Plan "plus"}}
+  <p class="rule-cite">
+    {{.OwnedCount}} of {{.MaxFreeDrafts}} free drafts used.
+    <a href="/billing">Upgrade to Plus</a> for unlimited drafts.
+  </p>
+  {{end}}
+
   {{if .Documents}}
   <ul class="document-list">
     {{range .Documents}}
