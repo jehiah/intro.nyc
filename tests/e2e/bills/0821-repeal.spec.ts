@@ -12,8 +12,10 @@ import { downloadExport } from "../support/exports";
 // close: the real bill's §2 repeals all three sections in a single sentence
 // ("... are REPEALED"), because the picker resolves one anchor section at a
 // time (EDITOR_PLAN.md §5) — so here that becomes three separate repeal bill
-// sections instead. Everything else — the title, every provision's wording,
-// the effective date — is asserted against the bill's own Text field.
+// sections instead, each by hand given the "The definition of ... in" prefix
+// the real bill's combined sentence carries (see the loop below). Everything
+// else — the title, every provision's wording, the effective date — is
+// asserted against the bill's own Text field.
 
 const SUBDIVISION_G_TEXT =
   '"Older adult center" shall mean a facility, other than a social adult day care, operated by a person pursuant to a contract with the department to provide services to older adults on a regular basis including, but not limited to, meals, recreation, and counseling.';
@@ -71,6 +73,17 @@ async function draftBill(page: Page, id: string) {
   // The title we set at creation already states the repeal generically, the
   // way the real bill's title does — don't also let the picker append its
   // own per-section clause for each of the three repeals below.
+  //
+  // composeLeadIn() (corpus.js) only ever names what is repealed by citation
+  // ("Subdivision a of section 21-210 ... is REPEALED."); the real bill also
+  // says *what* that provision is ("The definitions of 'older adult center'
+  // in ... are REPEALED.") — description Rule 2.1.1 requires in the title but
+  // does not require in the lead-in itself, so a drafter adds it by hand. The
+  // lead-in is ordinary editable prose (EDITOR_PLAN.md §5), so this is typed
+  // in like any other lead-in edit: the cursor goes to the very start (so the
+  // auto-generated citation keeps its `ref` mark rather than being retyped
+  // from scratch) and only the prefix is inserted, then "Subdivision" is
+  // lowercased now that it no longer opens the sentence.
   for (const cite of REPEALED_SECTIONS) {
     await openPicker(page);
     await chooseAnchor(page, cite);
@@ -78,6 +91,16 @@ async function draftBill(page: Page, id: string) {
     await chooseRepealBlock(page, "a");
     await page.locator("#picker-title-clause").uncheck();
     await insertFromPicker(page);
+
+    // Click the very top-left of the paragraph, not click()'s default center —
+    // this sentence is long enough to wrap onto a second visual line, and
+    // "Home" only reaches the start of the *current* line, not the paragraph.
+    const lead = page.locator(`.bill-section[data-kind="repeal"][data-cite="${cite}"] .section-lead`);
+    await lead.click({ position: { x: 0, y: 0 } });
+    await page.keyboard.press("Home");
+    await page.keyboard.type('The definition of "older adult center" in ');
+    await page.keyboard.press("Shift+ArrowRight");
+    await page.keyboard.type("s");
   }
 
   // "Chapter 2 of title 21 ... is amended by adding a new section 21-218 to
@@ -121,7 +144,7 @@ async function draftBill(page: Page, id: string) {
     expect(lawBlocks(billSection)).toHaveLength(0);
     const lead = textOf(billSection.content[0]);
     expect(lead).toBe(
-      `Subdivision a of section ${cite} of the administrative code of the city of New York is REPEALED.`
+      `The definition of "older adult center" in subdivision a of section ${cite} of the administrative code of the city of New York is REPEALED.`
     );
     leads.push(lead);
   }
