@@ -141,23 +141,51 @@ async function persist(doc) {
   }
 }
 
+// The lead-in is the drafter's sentence to rewrite, but it stays one sentence
+// standing outside the law (Rule 3). Enter would break it into paragraphs, and
+// deleting past either end would run it into the law text below it or the
+// section next door, so at those edges the key does nothing.
+function leadInCursor(state) {
+  const $cursor = state.selection.$cursor;
+  if (!$cursor || $cursor.parent.type.name !== "section_lead") return null;
+  const section = $cursor.node($cursor.depth - 1);
+  return section && isGeneratedLead(section) ? $cursor : null;
+}
+
+function atLeadInEdge(dir) {
+  return (state) => {
+    const $cursor = leadInCursor(state);
+    if (!$cursor) return false;
+    return dir < 0
+      ? $cursor.parentOffset === 0
+      : $cursor.parentOffset === $cursor.parent.content.size;
+  };
+}
+
+const atLeadInStart = atLeadInEdge(-1);
+const atLeadInEnd = atLeadInEdge(1);
+
 function editorKeymap() {
+  const guard = (blocked, command) => (state, dispatch) =>
+    blocked(state) || command(state, dispatch);
   return keymap({
     "Mod-z": undo,
     "Shift-Mod-z": redo,
     "Mod-y": redo,
-    Backspace: trackedBackspace,
-    Delete: trackedDelete,
-    "Mod-Backspace": trackedBackspaceWord,
-    "Alt-Backspace": trackedBackspaceWord,
-    "Mod-Delete": trackedDeleteWord,
-    "Alt-Delete": trackedDeleteWord,
+    Backspace: guard(atLeadInStart, trackedBackspace),
+    Delete: guard(atLeadInEnd, trackedDelete),
+    "Mod-Backspace": guard(atLeadInStart, trackedBackspaceWord),
+    "Alt-Backspace": guard(atLeadInStart, trackedBackspaceWord),
+    "Mod-Delete": guard(atLeadInEnd, trackedDeleteWord),
+    "Alt-Delete": guard(atLeadInEnd, trackedDeleteWord),
     "Mod-d": markDeleted,
     "Shift-Mod-d": restoreDeleted,
     // Splitting amended law text would renumber the law itself; in a provision
     // the bill is adding, Enter starts the next one.
     Enter: (state, dispatch) =>
-      blockStructuralEdit(state) || splitAddedProvision(state, dispatch),
+      Boolean(leadInCursor(state)) ||
+      blockStructuralEdit(state) ||
+      splitAddedProvision(state, dispatch),
     "Shift-Enter": insertLineBreak,
     Tab: indentProvision,
     "Shift-Tab": outdentProvision,
@@ -835,10 +863,14 @@ async function copyText(text, label) {
 
 /* ------------------------------------------------- bill section decorations */
 
-// A bill section's number and its lead-in are both derived from the document —
-// the number from position (Rule 3) and the lead-in from the law it operates on
-// (Rule 3.1) — so neither is editable text. The number is drawn as a control
-// that opens the section menu; a generated lead-in is marked non-editable.
+// A bill section's number is derived from its position (Rule 3), so it is drawn
+// as a control that opens the section menu rather than typed.
+//
+// Its lead-in is composed from the law it operates on (Rule 3.1), but only as a
+// starting point: what an amendment does is often more than the formula says —
+// "by adding new definitions of x, y and z in alphabetical order" — so the
+// sentence is the drafter's to rewrite. It stays one unconsolidated sentence,
+// which is the one thing the keymap holds it to.
 
 function sectionNumberLabel(index) {
   return index === 0 ? "Section 1." : `\u00a7 ${index + 1}.`;
@@ -871,7 +903,7 @@ function sectionPill(label, getPos) {
   button.title = "Section options";
   button.contentEditable = "false";
   // mousedown rather than click so ProseMirror does not first move the
-  // selection into the non-editable lead-in.
+  // selection into the lead-in behind the control.
   button.addEventListener("mousedown", (e) => {
     e.preventDefault();
     openSectionMenu(getPos());
@@ -895,14 +927,6 @@ function sectionPlugin() {
           ignoreSelection: true,
         })
       );
-      if (isGeneratedLead(node)) {
-        decorations.push(
-          Decoration.node(offset + 1, offset + 1 + lead.nodeSize, {
-            contenteditable: "false",
-            class: "section-lead-generated",
-          })
-        );
-      }
     });
     return DecorationSet.create(doc, decorations);
   };

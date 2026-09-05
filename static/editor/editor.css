@@ -275,12 +275,6 @@
   color: #fff;
 }
 
-/* A generated lead-in is composed from the law it cites, so it is shown rather
-   than typed. */
-.section-lead-generated {
-  cursor: default;
-}
-
 .section-lead {
   text-indent: 2em;
 }

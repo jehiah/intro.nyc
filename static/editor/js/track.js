@@ -40,6 +40,17 @@ export function contextAt(state, pos) {
   return kindAt(state.doc, pos);
 }
 
+// Which lead-in a position is in, if any. A lead-in is one sentence standing
+// outside the law (Rule 3): its words are the drafter's, but an edit that runs
+// out of it would take the law text below it, or the section boundary, with it.
+function leadInAt(doc, pos) {
+  const $p = doc.resolve(pos);
+  for (let d = $p.depth; d > 0; d--) {
+    if ($p.node(d).type.name === "section_lead") return $p.before(d);
+  }
+  return null;
+}
+
 function textSegments(doc, from, to) {
   const out = [];
   doc.nodesBetween(from, to, (node, pos) => {
@@ -517,10 +528,11 @@ export function trackedChangesPlugin() {
       let doc = state.doc;
       for (const step of tr.steps) {
         const { from, to } = step;
+        const spans =
+          typeof from === "number" && typeof to === "number" && to > from;
+        if (spans && leadInAt(doc, from) !== leadInAt(doc, to)) return false;
         if (
-          typeof from === "number" &&
-          typeof to === "number" &&
-          to > from &&
+          spans &&
           kindAt(doc, from) === "amend" &&
           !everySegment(doc, from, to, (s) =>
             state.schema.marks.ins.isInSet(s.marks)
