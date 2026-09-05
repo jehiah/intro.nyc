@@ -242,6 +242,45 @@ const marks = {
     parseDOM: [{ tag: "span.del" }],
     toDOM: () => ["span", { class: "del" }, 0],
   },
+  // Rule 5: a cross-reference the editor built. The words are what the bill
+  // says; these attributes are how the editor finds that provision again, to
+  // show its text or to link to the publisher's. They carry no legal meaning
+  // and no export prints them.
+  ref: {
+    attrs: {
+      // Where the provision lives in the law archive.
+      dataset: { default: "" },
+      file: { default: "" },
+      cite: { default: "" },
+      // source.record_id: the publisher's own id for the record.
+      record: { default: "" },
+    },
+    // A reference is a fixed phrase; typing against either edge is not part of
+    // it.
+    inclusive: false,
+    parseDOM: [
+      {
+        tag: "span.law-ref",
+        getAttrs: (dom) => ({
+          dataset: dom.getAttribute("data-dataset") || "",
+          file: dom.getAttribute("data-file") || "",
+          cite: dom.getAttribute("data-cite") || "",
+          record: dom.getAttribute("data-record") || "",
+        }),
+      },
+    ],
+    toDOM: (mark) => [
+      "span",
+      {
+        class: "law-ref",
+        "data-dataset": mark.attrs.dataset,
+        "data-file": mark.attrs.file,
+        "data-cite": mark.attrs.cite,
+        "data-record": mark.attrs.record,
+      },
+      0,
+    ],
+  },
 };
 
 export const schema = new Schema({ nodes, marks });

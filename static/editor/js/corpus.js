@@ -10,14 +10,17 @@ export const CODES = {
   "administrative code": {
     full: "administrative code of the city of New York",
     short: "administrative code",
+    dataset: "administrative-code",
   },
   charter: {
     full: "New York city charter",
     short: "charter",
+    dataset: "charter",
   },
   rules: {
     full: "rules of the city of New York",
     short: "rules",
+    dataset: "rules",
   },
 };
 
@@ -35,6 +38,87 @@ export async function fetchSection(ref) {
   );
   if (!response.ok) throw new Error(`could not load section ${ref.cite}`);
   return response.json();
+}
+
+// The same sections are read over and over — the picker fetches one, then
+// every reference to it wants its text again — so a section is fetched once.
+const sections = new Map();
+
+export function loadSection(ref) {
+  const key = `${ref.dataset}/${ref.file}`;
+  if (!sections.has(key)) {
+    sections.set(
+      key,
+      fetchSection(ref).catch((e) => {
+        // A failed fetch is not cached: the next hover tries again.
+        sections.delete(key);
+        throw e;
+      })
+    );
+  }
+  return sections.get(key);
+}
+
+// Where the publisher puts the provision. `source.record_id` in the archive is
+// American Legal Publishing's own id for the record, and is the last path
+// segment of the page it publishes.
+const CODE_LIBRARY = {
+  "administrative-code": "NYCadmin",
+  charter: "NYCcharter",
+  rules: "NYCrules",
+};
+
+export function publisherURL({ dataset, record } = {}) {
+  const code = CODE_LIBRARY[dataset];
+  if (!code || !record) return "";
+  return `https://codelibrary.amlegal.com/codes/newyorkcity/latest/${code}/${record}`;
+}
+
+// What a `ref` mark needs to find a provision again, from a search hit and the
+// section it names.
+export function referenceAttrs(hit, section) {
+  return {
+    dataset: hit.dataset,
+    file: hit.file,
+    cite: hit.cite,
+    record: ((section || {}).source || {}).record_id || "",
+  };
+}
+
+// The same, for a section already in hand.
+export function sectionRefAttrs(section) {
+  if (!section) return null;
+  const code = CODES[section.code];
+  if (!code || !section.file) return null;
+  return {
+    dataset: code.dataset,
+    file: section.file,
+    cite: section.cite,
+    record: ((section.source || {}).record_id) || "",
+  };
+}
+
+// The sections a citation names. More than one means the archive cannot tell
+// them apart either: two sections of the Administrative Code share a number.
+export async function matchCite(cite, datasets) {
+  const hits = await searchLaw(cite, datasets);
+  return hits.filter((hit) => hit.cite.toLowerCase() === cite.toLowerCase());
+}
+
+// Where a sentence names a section — "Section 19-167", "of section 19-167" —
+// so that name can be marked as the reference it is. The number must end there:
+// § 19-167 is not § 19-167.1.
+export function citeRange(text, cite) {
+  const escaped = cite.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const pattern = new RegExp(`sections?\\s+${escaped}(?![\\w-])(?!\\.\\d)`, "gi");
+  let match;
+  while ((match = pattern.exec(text))) {
+    // "by adding a new section 17-514" names what the bill creates, which is
+    // not in the law to point at.
+    if (/\bnew\s+$/i.test(text.slice(0, match.index))) continue;
+    return { from: match.index, to: match.index + match[0].length };
+  }
+  return null;
 }
 
 export async function loadDatasets() {
@@ -311,6 +395,26 @@ function additionNode(addition) {
   );
 }
 
+// A lead-in names a provision of existing law — the one being amended, added
+// to, or repealed — and that name is a reference to it (Rule 5). The words are
+// untouched, and the lead-in is still unmarked text (Rule 3); the `ref` mark
+// only records which provision the sentence is about, so the editor can show it
+// and the read-only view can link it.
+function leadInNodes(lead, section) {
+  const attrs = sectionRefAttrs(section);
+  const range = attrs && citeRange(lead, section.cite);
+  if (!range) return [schema.text(lead)];
+  const nodes = [];
+  if (range.from) nodes.push(schema.text(lead.slice(0, range.from)));
+  nodes.push(
+    schema.text(lead.slice(range.from, range.to), [
+      schema.marks.ref.create(attrs),
+    ])
+  );
+  if (range.to < lead.length) nodes.push(schema.text(lead.slice(range.to)));
+  return nodes;
+}
+
 // Build a complete bill section around a provision of existing law.
 export function buildBillSection({
   section,
@@ -344,7 +448,10 @@ export function buildBillSection({
 
   return schema.nodes.bill_section.create(
     { kind: operation, cite, code: section.code },
-    [schema.nodes.section_lead.create(null, schema.text(lead)), ...content]
+    [
+      schema.nodes.section_lead.create(null, leadInNodes(lead, section)),
+      ...content,
+    ]
   );
 }
 

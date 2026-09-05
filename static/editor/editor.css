@@ -325,6 +325,96 @@
   color: #8b0000;
 }
 
+/* ------------------------------------------------- cross-references (Rule 5) */
+
+/* A reference the editor built, pointing at a provision of existing law. Blue
+   and dotted rather than solidly underlined: Rule 11.1 gives a solid underline
+   a meaning of its own, and a reference is an affordance of the editor, not
+   part of the bill. Nothing here reaches print or any export. */
+.law-ref {
+  color: #2f56a6;
+  border-bottom: 1px dotted currentColor;
+  cursor: help;
+}
+
+/* Language being struck reads as struck, whatever it points at. */
+.bill-doc span.del .law-ref {
+  color: inherit;
+  border-bottom-color: transparent;
+}
+
+/* Read-only: no hover card, so the reference is a link you can follow. */
+.bill-doc:not(.bill-editable) a.law-ref {
+  text-decoration: none;
+}
+.bill-doc:not(.bill-editable) a.law-ref::after {
+  content: "\2197";
+  font-size: 0.75em;
+  vertical-align: super;
+  margin-left: 0.1em;
+}
+
+.law-ref-card {
+  position: absolute;
+  z-index: 1200;
+  max-height: 22rem;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: 0.375rem;
+  box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.15);
+  padding: 0.75rem 0.9rem;
+  font-family: "Times New Roman", Times, serif;
+  font-size: 11pt;
+  line-height: 1.4;
+}
+
+.law-ref-card p {
+  margin: 0 0 0.4rem;
+}
+
+.law-ref-head {
+  font-family: "Be Vietnam Pro", sans-serif;
+  font-size: 0.8rem;
+  border-bottom: 1px solid #e9ecef;
+  padding-bottom: 0.4rem;
+  margin-bottom: 0.5rem;
+}
+
+.law-ref-cite {
+  font-weight: 600;
+}
+
+.law-ref-heading {
+  margin-left: 0.3em;
+}
+
+.law-ref-code {
+  display: block;
+  color: #6c757d;
+}
+
+.law-ref-open {
+  float: right;
+  margin-left: 0.5rem;
+  white-space: nowrap;
+}
+
+.law-ref-designator {
+  font-weight: 600;
+}
+
+.law-ref-loading,
+.law-ref-more {
+  color: #6c757d;
+}
+
+.ref-source {
+  font-size: 0.8rem;
+  color: #6c757d;
+  margin: 0.4rem 0 0;
+}
+
 /* ------------------------------------------------------------ style checks */
 
 .lint {

@@ -27,8 +27,10 @@ import {
   TRACKED,
 } from "./track.js";
 import {
+  CODES,
   searchLaw,
   fetchSection,
+  loadSection,
   loadDatasets,
   textBlocks,
   buildBillSection,
@@ -36,8 +38,13 @@ import {
   emptyBill,
   additionTargets,
   repealTitleClause,
+  referenceAttrs,
+  publisherURL,
+  matchCite,
+  citeRange,
 } from "./corpus.js";
 import { buildReference, SUBUNIT_LEVELS } from "./refs.js";
+import { refPopoverPlugin } from "./reflink.js";
 import { runChecks } from "./lint.js";
 import { wireDownloadMenu } from "./exports.js";
 import {
@@ -184,6 +191,7 @@ function createState(doc) {
       trackedChangesPlugin(),
       sectionPlugin(),
       toolbarPlugin(),
+      refPopoverPlugin(),
       lintPlugin(renderProblems),
       persistencePlugin(),
     ],
@@ -234,15 +242,23 @@ function insertBillSection(node, { intoText = false } = {}) {
   view.focus();
 }
 
-function insertText(text) {
+function insertText(text, marks = []) {
   const { from, to } = view.state.selection;
   const dispatch = view.dispatch.bind(view);
   const kind = contextAt(view.state, from);
   if (kind === "amend") {
-    trackedReplace(view.state, dispatch, from, to, text);
+    trackedReplace(view.state, dispatch, from, to, text, marks);
   } else if (kind === "add") {
     // A reference written into a new provision is part of what the bill adds.
-    writeAddition(view.state, dispatch, from, to, text);
+    writeAddition(view.state, dispatch, from, to, text, marks);
+  } else if (marks.length) {
+    // A lead-in or an effective date is unmarked text, but a reference in one
+    // still points where it points.
+    view.dispatch(
+      view.state.tr
+        .setMeta(TRACKED, true)
+        .replaceWith(from, to, schema.text(text, marks))
+    );
   } else {
     view.dispatch(
       view.state.tr.setMeta(TRACKED, true).insertText(text, from, to)
@@ -664,8 +680,97 @@ function currentReference() {
   return buildReference({ chain, cite, context, anchor });
 }
 
+// The `ref` mark attributes for the cite currently typed, once it has been
+// matched against the archive; null while it names nothing the editor can find.
+let refTarget = null;
+let refTimer = null;
+
+// Which body of law the cite is in follows from where the reference will live.
+const REF_DATASETS = {
+  charter: ["charter"],
+  "unconsolidated-charter": ["charter"],
+  administrative: ["administrative-code"],
+  "unconsolidated-administrative": ["administrative-code"],
+};
+
+function referenceDatasets() {
+  const context = document.getElementById("ref-context").value;
+  if (REF_DATASETS[context]) return REF_DATASETS[context];
+  // "Same body of law" is whichever this bill amends; a bill that amends both
+  // could mean either.
+  switch (view.state.doc.firstChild.attrs.code) {
+    case "charter":
+      return ["charter"];
+    case "administrative code":
+      return ["administrative-code"];
+    default:
+      return ["administrative-code", "charter"];
+  }
+}
+
 function renderReferencePreview() {
   document.getElementById("ref-preview").textContent = currentReference();
+  clearTimeout(refTimer);
+  refTimer = setTimeout(resolveReference, 250);
+}
+
+function refSourceHTML(hit, section) {
+  const url = publisherURL(referenceAttrs(hit, section));
+  return `§ ${escapeHTML(hit.cite)} ${escapeHTML(hit.heading)} — ${escapeHTML(
+    hit.path
+  )}${
+    url
+      ? ` <a href="${escapeHTML(
+          url
+        )}" target="_blank" rel="noopener">source ↗</a>`
+      : ""
+  }`;
+}
+
+// Rule 5 says how a reference reads; the archive says whether it points at
+// anything. A cite that matches a section is inserted knowing where that
+// section is, so the draft can show it later. One that matches nothing is still
+// inserted — the drafter may be referring to a section this bill adds — it just
+// carries no link.
+async function resolveReference() {
+  const cite = document.getElementById("ref-cite").value.trim();
+  const note = document.getElementById("ref-source");
+  refTarget = null;
+
+  if (!cite) {
+    note.innerHTML = "";
+    return;
+  }
+
+  let matches;
+  try {
+    matches = await matchCite(cite, referenceDatasets());
+  } catch (e) {
+    console.error(e);
+    note.innerHTML = "";
+    return;
+  }
+  if (document.getElementById("ref-cite").value.trim() !== cite) return;
+
+  if (matches.length !== 1) {
+    // Two sections share a cite in the Administrative Code, and the editor
+    // cannot tell which is meant.
+    note.innerHTML = matches.length
+      ? '<span class="rule-cite">More than one section has this number — inserted without a link.</span>'
+      : '<span class="rule-cite">Not found in the law archive — inserted as plain text.</span>';
+    return;
+  }
+
+  const hit = matches[0];
+  let section = null;
+  try {
+    section = await loadSection(hit);
+  } catch (e) {
+    console.error(e);
+  }
+  if (document.getElementById("ref-cite").value.trim() !== cite) return;
+  refTarget = referenceAttrs(hit, section);
+  note.innerHTML = refSourceHTML(hit, section);
 }
 
 /* -------------------------------------------------------- UI: style checks */
@@ -1155,9 +1260,66 @@ function wireUI() {
     el.addEventListener("change", renderReferencePreview);
   });
   document.getElementById("btn-ref-insert").addEventListener("click", () => {
-    insertText(currentReference());
+    // A reference that resolved to a provision carries where that provision is,
+    // so the draft can show it without a search (Rule 5).
+    const marks = refTarget ? [schema.marks.ref.create(refTarget)] : [];
+    insertText(currentReference(), marks);
     closeModal("modal-ref");
   });
+}
+
+// A bill section says which provision it is about — bill_section.attrs.cite —
+// long before the lead-in sentence knew how to record it, and a draft written
+// through the MCP tools never marks it at all. So when a document loads, the
+// provision each lead-in names is looked up and marked as the reference it is
+// (Rule 5). The words of the lead-in do not change; only the editor's knowledge
+// of what they point at, which is why this is not part of the undo history.
+async function linkLeadIns() {
+  const wanted = new Map();
+  view.state.doc.forEach((node) => {
+    if (node.type.name !== "bill_section") return;
+    const { kind, cite, code } = node.attrs;
+    if (!cite || !code || kind === "effective") return;
+    if ((CODES[code] || {}).dataset) wanted.set(`${code}|${cite}`, node.attrs);
+  });
+  if (!wanted.size) return;
+
+  const found = new Map();
+  await Promise.all(
+    [...wanted].map(async ([key, { cite, code }]) => {
+      try {
+        const matches = await matchCite(cite, [CODES[code].dataset]);
+        // A cite naming nothing in the archive, or two sections at once, is
+        // left as the plain words it already is.
+        if (matches.length !== 1) return;
+        found.set(key, referenceAttrs(matches[0], await loadSection(matches[0])));
+      } catch (e) {
+        console.warn("could not link lead-in", cite, e);
+      }
+    })
+  );
+  if (!found.size) return;
+
+  // Positions come from the document as it stands now: the drafter may have
+  // been typing while the archive was read.
+  const tr = view.state.tr.setMeta(TRACKED, true).setMeta("addToHistory", false);
+  let marked = false;
+  view.state.doc.forEach((node, offset) => {
+    if (node.type.name !== "bill_section") return;
+    const attrs = found.get(`${node.attrs.code}|${node.attrs.cite}`);
+    const lead = node.firstChild;
+    if (!attrs || !lead || lead.type.name !== "section_lead") return;
+    const range = citeRange(lead.textContent, node.attrs.cite);
+    if (!range) return;
+    // A bill_section's content starts one position in, and its lead-in's text
+    // one further.
+    const from = offset + 2 + range.from;
+    const to = offset + 2 + range.to;
+    if (view.state.doc.rangeHasMark(from, to, schema.marks.ref)) return;
+    tr.addMark(from, to, schema.marks.ref.create(attrs));
+    marked = true;
+  });
+  if (marked) view.dispatch(tr);
 }
 
 // The stored document is authoritative; the local copy is a fallback for when
@@ -1194,6 +1356,7 @@ async function main() {
 
   view.updateState(createState(await initialDoc()));
   syncTitleInputs();
+  linkLeadIns().catch((e) => console.warn("could not link lead-ins", e));
 
   try {
     const datasets = await loadDatasets();

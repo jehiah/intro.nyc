@@ -50,6 +50,16 @@ Marks on text (Rule 11.1) are the heart of the format:
 A deletion always precedes the addition that replaces it, separated by one
 unmarked space: [old] new.
 
+One further mark carries no legal meaning and prints nowhere:
+  ref   a cross-reference (Rule 5) to a provision of existing law, with attrs
+        {dataset, file, cite, record} naming it in the law archive. dataset and
+        file are what get_law_section takes; record is source.record_id from
+        that section. The editor shows the cited text on hover and links to the
+        publisher. Add it to the words of a reference when you know them all;
+        leave it off otherwise. The section a lead-in names is a reference too,
+        but you need not mark it: the editor resolves it from bill_section.cite
+        when the draft is opened.
+
 Workflow:
   1. search_law to find a provision, then get_law_section for its full text and
      amendment history.

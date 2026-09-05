@@ -125,11 +125,23 @@ function wordExpansion(doc, from, to) {
   };
 }
 
+// Inserted text is underlined as an addition (Rule 11.1) and may carry marks of
+// its own — a cross-reference knows what it points at. Those belong to the
+// reference itself, not to the letters of a word the editor had to rebuild
+// around it, so the rebuilt word is written as up to three runs.
+function additionRuns(schema, text, marks, prefix, suffix) {
+  const ins = schema.marks.ins.create();
+  const runs = [];
+  if (prefix) runs.push(schema.text(prefix, [ins]));
+  if (text) runs.push(schema.text(text, [ins, ...marks]));
+  if (suffix) runs.push(schema.text(suffix, [ins]));
+  return runs;
+}
+
 // The single replacement primitive. Everything the user can do to tracked text
 // — typing, deleting, pasting — routes through here.
-export function trackedReplace(state, dispatch, from, to, text) {
+export function trackedReplace(state, dispatch, from, to, text, marks = []) {
   const { schema } = state;
-  const { ins } = schema.marks;
   const kind = kindAt(state.doc, from);
 
   if (kind !== "amend") return false;
@@ -137,11 +149,15 @@ export function trackedReplace(state, dispatch, from, to, text) {
   let delFrom = from;
   let delTo = to;
   let addition = text;
+  let prefix = "";
+  let suffix = "";
 
   const word = wordExpansion(state.doc, from, to);
   if (word && isOriginal(state.doc, word.from, word.to, schema)) {
     delFrom = word.from;
     delTo = word.to;
+    prefix = word.prefix;
+    suffix = word.suffix;
     addition = word.prefix + text + word.suffix;
     // Rebuilding the word into exactly what was already there is a no-op.
     if (addition === state.doc.textBetween(word.from, word.to, "\n", "")) {
@@ -175,7 +191,7 @@ export function trackedReplace(state, dispatch, from, to, text) {
         at += 1;
       }
     }
-    tr.replaceWith(at, at, schema.text(addition, [ins.create()]));
+    tr.replaceWith(at, at, additionRuns(schema, text, marks, prefix, suffix));
     tr.setSelection(TextSelection.create(tr.doc, at + addition.length));
   } else if (delFrom !== delTo) {
     tr.setSelection(TextSelection.create(tr.doc, tr.mapping.map(delTo, 1)));
@@ -443,7 +459,7 @@ export function insertLineBreak(state, dispatch) {
 // one carries `ins` however little of it is there already to inherit the mark
 // from. kindAt only reports a kind inside a law_block, so the lead-in — which is
 // never underlined (Rule 3) — is untouched.
-export function writeAddition(state, dispatch, from, to, text) {
+export function writeAddition(state, dispatch, from, to, text, marks = []) {
   if (!text || kindAt(state.doc, from) !== "add") return false;
   if (dispatch) {
     const tr = state.tr
@@ -451,7 +467,10 @@ export function writeAddition(state, dispatch, from, to, text) {
       .replaceWith(
         from,
         to,
-        state.schema.text(text, [state.schema.marks.ins.create()])
+        state.schema.text(text, [
+          state.schema.marks.ins.create(),
+          ...marks,
+        ])
       );
     tr.setSelection(TextSelection.create(tr.doc, from + text.length));
     dispatch(tr);

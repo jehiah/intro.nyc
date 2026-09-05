@@ -119,3 +119,65 @@ func TestNewDocumentRenders(t *testing.T) {
 		}
 	}
 }
+
+// The read-only view renders what the editor stores: a line break within a
+// provision, and a cross-reference linked to the publisher's text.
+func TestRenderBillInlineNodes(t *testing.T) {
+	const doc = `{"type":"doc","content":[
+	  {"type":"bill_title","attrs":{"code":"administrative code","subject":"waste zones"}},
+	  {"type":"enacting_clause"},
+	  {"type":"bill_section","attrs":{"kind":"add","cite":"16-1000","code":"administrative code"},
+	   "content":[
+	     {"type":"section_lead","content":[{"type":"text","text":"Section 16-1000 is amended by adding a new subdivision c:"}]},
+	     {"type":"law_block","attrs":{"level":"subdivision","designator":"c","label":"c."},
+	      "content":[
+	        {"type":"text","marks":[{"type":"ins"}],"text":"See "},
+	        {"type":"text","marks":[{"type":"ins"},{"type":"ref","attrs":{"dataset":"administrative-code","file":"title-16-b/chapter-1/16-1000.json","cite":"16-1000","record":"0-0-0-113745"}}],"text":"section 16-1000"},
+	        {"type":"text","marks":[{"type":"ins"}],"text":"."},
+	        {"type":"hard_break"},
+	        {"type":"text","marks":[{"type":"ins"}],"text":"Second line."}
+	      ]}
+	   ]}
+	]}`
+
+	var node pmNode
+	if err := json.Unmarshal([]byte(doc), &node); err != nil {
+		t.Fatalf("test document is not valid ProseMirror JSON: %s", err)
+	}
+	html := string(renderBill(&node))
+
+	for _, want := range []string{
+		`<br>`,
+		`<a class="law-ref" href="https://codelibrary.amlegal.com/codes/newyorkcity/latest/NYCadmin/0-0-0-113745"`,
+		`section 16-1000</a>`,
+		`Second line.`,
+	} {
+		if !strings.Contains(html, want) {
+			t.Errorf("rendered bill missing %q\ngot: %s", want, html)
+		}
+	}
+}
+
+// A reference the editor could not match to a provision carries no link.
+func TestRenderBillUnresolvedReference(t *testing.T) {
+	const doc = `{"type":"doc","content":[
+	  {"type":"bill_title","attrs":{"code":"charter","subject":"x"}},
+	  {"type":"enacting_clause"},
+	  {"type":"bill_section","attrs":{"kind":"unconsolidated"},
+	   "content":[{"type":"section_lead","content":[
+	     {"type":"text","marks":[{"type":"ref","attrs":{"dataset":"","file":"","cite":"99-999","record":""}}],"text":"section 99-999"}
+	   ]}]}
+	]}`
+
+	var node pmNode
+	if err := json.Unmarshal([]byte(doc), &node); err != nil {
+		t.Fatalf("test document is not valid ProseMirror JSON: %s", err)
+	}
+	html := string(renderBill(&node))
+	if strings.Contains(html, "<a") {
+		t.Errorf("unresolved reference should not be a link\ngot: %s", html)
+	}
+	if !strings.Contains(html, "section 99-999") {
+		t.Errorf("rendered bill missing the reference text\ngot: %s", html)
+	}
+}

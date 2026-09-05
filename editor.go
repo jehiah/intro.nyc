@@ -562,7 +562,8 @@ type pmNode struct {
 	Content []pmNode       `json:"content"`
 	Text    string         `json:"text"`
 	Marks   []struct {
-		Type string `json:"type"`
+		Type  string         `json:"type"`
+		Attrs map[string]any `json:"attrs"`
 	} `json:"marks"`
 }
 
@@ -580,6 +581,39 @@ func (n pmNode) hasMark(name string) bool {
 		}
 	}
 	return false
+}
+
+// markAttr returns one attribute of a mark on this node.
+func (n pmNode) markAttr(mark, name string) string {
+	for _, m := range n.Marks {
+		if m.Type != mark {
+			continue
+		}
+		if s, ok := m.Attrs[name].(string); ok {
+			return s
+		}
+	}
+	return ""
+}
+
+// codeLibrary mirrors CODE_LIBRARY in static/editor/js/corpus.js: the
+// publisher's own id for a record is the last path segment of the page it is
+// published on.
+var codeLibrary = map[string]string{
+	"administrative-code": "NYCadmin",
+	"charter":             "NYCcharter",
+	"rules":               "NYCrules",
+}
+
+// lawRefURL is where a cross-reference (Rule 5) points, or "" for one the
+// editor could not match to a provision.
+func lawRefURL(n pmNode) string {
+	code, ok := codeLibrary[n.markAttr("ref", "dataset")]
+	record := n.markAttr("ref", "record")
+	if !ok || record == "" {
+		return ""
+	}
+	return "https://codelibrary.amlegal.com/codes/newyorkcity/latest/" + code + "/" + record
 }
 
 // titlePrefixes mirrors TITLE_PREFIXES in static/editor/js/schema.js.
@@ -644,6 +678,13 @@ func renderInline(b *strings.Builder, content []pmNode) {
 			continue
 		}
 		text := html.EscapeString(n.Text)
+		// Rule 5: a reference the editor resolved links to the publisher's text.
+		// There is no hover card in the read-only view, so it is a plain link.
+		if url := lawRefURL(n); url != "" {
+			text = fmt.Sprintf(
+				`<a class="law-ref" href="%s" target="_blank" rel="noopener">%s</a>`,
+				html.EscapeString(url), text)
+		}
 		switch {
 		case n.hasMark("del"):
 			fmt.Fprintf(b, `<span class="del">%s</span>`, text)
