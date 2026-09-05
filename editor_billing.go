@@ -236,6 +236,9 @@ func (a *App) refreshSubscription(ctx context.Context, sub *Subscription) *Subsc
 
 // planFor is the plan ("free" or "plus") that gates a signed-in user's access.
 func (a *App) planFor(ctx context.Context, u *SessionUser) (string, error) {
+	if u != nil && u.Plan != "" {
+		return u.Plan, nil
+	}
 	sub, err := a.subscriptionFor(ctx, u)
 	if err != nil {
 		return PlanFree, err
