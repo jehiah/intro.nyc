@@ -858,7 +858,6 @@ function renderProblems(list) {
 
 async function copyText(text, label) {
   await navigator.clipboard.writeText(text);
-  setStatus(label);
 }
 
 /* ------------------------------------------------- bill section decorations */
@@ -1114,7 +1113,6 @@ async function commitSharing() {
       names: saved.names || {},
     };
     renderShare();
-    setStatus("Sharing updated");
   } catch (e) {
     console.error(e);
     shareError(e.message || "Could not update sharing.");
