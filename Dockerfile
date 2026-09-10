@@ -5,6 +5,8 @@ RUN mkdir -p /bin && go build -o /bin/intro.nyc
 
 FROM alpine:latest
 
+RUN apk add --no-cache tzdata
+
 COPY --from=builder /bin/ /bin
 
 CMD ["/bin/intro.nyc"]
