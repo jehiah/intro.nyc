@@ -1,0 +1,24 @@
+{{template "base" .}}
+{{define "title"}}{{.Title}}{{end}}
+
+{{define "middle"}}
+<div class="profile">
+  <h1>Admin</h1>
+
+  {{if .Purged}}
+  <div class="profile-saved">Purged {{.Accounts}} test account(s) and {{.Drafts}} draft(s).</div>
+  {{end}}
+
+  <section>
+    <h2>Test accounts</h2>
+    <p class="rule-cite">
+      Deletes every account signed in through <code>/_admin/testing/auth</code>
+      (UIDs prefixed <code>test-</code>), along with its drafts, API token and
+      subscription record.
+    </p>
+    <form method="POST" action="/_admin/purge_test_accounts">
+      <button type="submit" class="btn btn-outline-danger">Purge test accounts</button>
+    </form>
+  </section>
+</div>
+{{end}}

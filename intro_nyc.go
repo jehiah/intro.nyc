@@ -332,7 +332,12 @@ func main() {
 	editorRouter.HandleFunc("GET /api/law/datasets", app.EditorLawDatasets)
 	editorRouter.HandleFunc("GET /api/law/search", app.EditorLawSearch)
 	editorRouter.HandleFunc("GET /api/law/section/{dataset}/{path...}", app.EditorLawSection)
-	editorRouter.HandleFunc("GET /_admin/testing/auth", app.EditorTestingAuth)
+	if *devMode {
+		editorRouter.HandleFunc("GET /_admin/testing/auth", app.EditorTestingAuth)
+		editorRouter.HandleFunc("GET /_admin/{$}", app.EditorAdminIndex)
+		editorRouter.HandleFunc("POST /_admin/purge_test_accounts", app.EditorAdminPurgeTestAccounts)
+	}
+
 	editorRouter.Handle("GET /static/", app.staticHandler)
 	editorRouter.Handle("/__/auth/", app.firebaseProxy)
 
