@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"sort"
 	"strconv"
 
 	"google.golang.org/api/iterator"
@@ -23,6 +24,106 @@ func (a *App) EditorAdminIndex(w http.ResponseWriter, r *http.Request) {
 		"Accounts": q.Get("purged"),
 		"Drafts":   q.Get("drafts"),
 	})
+}
+
+// adminUserRow is one row of the /_admin/users listing.
+type adminUserRow struct {
+	*Profile
+	Plan   string
+	Drafts int
+}
+
+// EditorAdminUsers lists every editor profile with its plan and draft count,
+// so a paying account never has to be found by digging through Firestore
+// directly.
+func (a *App) EditorAdminUsers(w http.ResponseWriter, r *http.Request) {
+	if !a.devMode {
+		http.NotFound(w, r)
+		return
+	}
+	profiles, err := a.allProfiles(r.Context())
+	if err != nil {
+		log.Printf("admin users: %s", err)
+		http.Error(w, "Internal Server Error", 500)
+		return
+	}
+	draftCounts, err := a.draftCountsByUID(r.Context())
+	if err != nil {
+		log.Printf("admin users: %s", err)
+		http.Error(w, "Internal Server Error", 500)
+		return
+	}
+
+	rows := make([]adminUserRow, 0, len(profiles))
+	for _, p := range profiles {
+		sub, err := a.subscriptionForUID(r.Context(), p.UID)
+		if err != nil {
+			log.Printf("admin users: %s", err)
+			http.Error(w, "Internal Server Error", 500)
+			return
+		}
+		rows = append(rows, adminUserRow{
+			Profile: p,
+			Plan:    planOf(sub),
+			Drafts:  draftCounts[p.UID],
+		})
+	}
+	sort.Slice(rows, func(i, j int) bool {
+		return rows[i].Created.After(rows[j].Created)
+	})
+
+	a.renderEditor(w, r, "editor_admin_users.html", map[string]any{
+		"Title": "Users",
+		"Rows":  rows,
+	})
+}
+
+// allProfiles returns every editor profile.
+func (a *App) allProfiles(ctx context.Context) ([]*Profile, error) {
+	iter := a.firestore.Collection(profileCollection).Documents(ctx)
+	defer iter.Stop()
+
+	var profiles []*Profile
+	for {
+		snapshot, err := iter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		var p Profile
+		if err := snapshot.DataTo(&p); err != nil {
+			return nil, err
+		}
+		profiles = append(profiles, &p)
+	}
+	return profiles, nil
+}
+
+// draftCountsByUID tallies every document's owner in one pass, rather than
+// running a separate query per profile. Select("UID") keeps the scan from
+// pulling each draft's full ProseMirror body across the wire.
+func (a *App) draftCountsByUID(ctx context.Context) (map[UID]int, error) {
+	iter := a.firestore.Collection(documentCollection).Select("UID").Documents(ctx)
+	defer iter.Stop()
+
+	counts := make(map[UID]int)
+	for {
+		snapshot, err := iter.Next()
+		if err == iterator.Done {
+			break
+		}
+		if err != nil {
+			return nil, err
+		}
+		var d Document
+		if err := snapshot.DataTo(&d); err != nil {
+			return nil, err
+		}
+		counts[d.UID]++
+	}
+	return counts, nil
 }
 
 // EditorAdminPurgeTestAccounts deletes every account minted by

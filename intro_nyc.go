@@ -335,6 +335,7 @@ func main() {
 	if *devMode {
 		editorRouter.HandleFunc("GET /_admin/testing/auth", app.EditorTestingAuth)
 		editorRouter.HandleFunc("GET /_admin/{$}", app.EditorAdminIndex)
+		editorRouter.HandleFunc("GET /_admin/users", app.EditorAdminUsers)
 		editorRouter.HandleFunc("POST /_admin/purge_test_accounts", app.EditorAdminPurgeTestAccounts)
 	}
 

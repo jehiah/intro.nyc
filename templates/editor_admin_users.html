@@ -1,0 +1,36 @@
+{{template "base" .}}
+{{define "title"}}{{.Title}}{{end}}
+
+{{define "middle"}}
+<div class="profile">
+  <h1>Users</h1>
+  <p><a href="/_admin/">&larr; Admin</a></p>
+
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Email</th>
+        <th>Name</th>
+        <th>UID</th>
+        <th>Plan</th>
+        <th>Drafts</th>
+        <th>Created</th>
+      </tr>
+    </thead>
+    <tbody>
+      {{range .Rows}}
+      <tr>
+        <td>{{.Email}}</td>
+        <td>{{.Name}}</td>
+        <td><code>{{.UID}}</code></td>
+        <td>{{if eq .Plan "plus"}}<strong>Plus</strong>{{else}}Free{{end}}</td>
+        <td>{{.Drafts}}</td>
+        <td>{{Date .Created}}</td>
+      </tr>
+      {{else}}
+      <tr><td colspan="6">No profiles.</td></tr>
+      {{end}}
+    </tbody>
+  </table>
+</div>
+{{end}}
