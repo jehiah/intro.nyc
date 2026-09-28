@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"html/template"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/jehiah/legislator/db"
@@ -58,6 +59,39 @@ func (ll Legislation) SponsoredBy(id int) bool {
 	}
 	return false
 }
+
+func (ll Legislation) PublicAdvocateSponsors() bool {
+	for _, s := range ll.Sponsors {
+		if strings.HasPrefix(s.FullName, "Public Advocate") {
+			return true
+		}
+	}
+	return false
+}
+
+// func (ll Legislation) BoroughPresidentSponsors() bool {
+// 	for _, s := range ll.Sponsors {
+// 		if s.FullName == "" {
+// 			return true
+// 		}
+// 	}
+// 	return false
+// }
+
+func (ll Legislation) CouncilMemberSponsorCount() int {
+	count := 0
+	for _, s := range ll.Sponsors {
+		switch {
+		case s.FullName == "":
+			continue
+		case strings.HasPrefix(s.FullName, "Public Advocate"):
+			continue
+		}
+		count++
+	}
+	return count
+}
+
 func (ll Legislation) Hearings() []db.History {
 	var o []db.History
 	for _, h := range ll.History {

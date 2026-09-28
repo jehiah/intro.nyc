@@ -228,6 +228,7 @@ func (a *App) IntroSummary(w http.ResponseWriter, r *http.Request) {
 		SubPage        string
 		Legislation    Legislation
 		Councilmembers []Person
+		PublicAdvocate Person
 		SponsorSlugs   []string
 	}
 	body := Page{

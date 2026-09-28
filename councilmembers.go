@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"net/url"
 	"sort"
 	"strings"
 	"time"
@@ -77,40 +76,6 @@ func (s SocialAccount) CSSClass() string {
 	return s.Platform
 }
 
-func twitterUsername(s string) string {
-	if s == "" {
-		return ""
-	}
-	u, err := url.Parse(s)
-	if err != nil {
-		return ""
-	}
-	return "@" + strings.TrimPrefix(u.Path, "/")
-}
-func facebookUsername(s string) string {
-	if s == "" {
-		return ""
-	}
-	u, err := url.Parse(s)
-	if err != nil {
-		return ""
-	}
-	if strings.Contains(u.Path, "profile.php") {
-		return "Facebook"
-	}
-	return strings.Trim(u.Path, "/")
-}
-func instagramUsername(s string) string {
-	if s == "" {
-		return ""
-	}
-	u, err := url.Parse(s)
-	if err != nil {
-		return ""
-	}
-	return strings.Trim(u.Path, "/")
-}
-
 func (p Person) CouncilTitle() string {
 	now := time.Now()
 	for _, oo := range p.OfficeRecords {
@@ -172,6 +137,14 @@ func (p Person) PartyShort() string {
 		}
 	}
 	return ""
+}
+
+func (p Person) IsPublicAdvocate() bool {
+	return strings.HasPrefix(p.FullName, "Public Advocate")
+}
+
+func (p Person) IsBoroughPresident() bool {
+	return p.FullName == ""
 }
 
 func (a *App) GetCouncilMembers(ctx context.Context, session Session) ([]Person, error) {
