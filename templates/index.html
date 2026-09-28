@@ -295,6 +295,7 @@ function loadSearchIndex(session, introType) {
     .then(d => {
       index[key] = newIndex();
       d.forEach(dd => {
+        dd.ShortFile = dd.File.split('-')[0].replace(/^(Int|Res) 0+/,"") // allows searching w/o leading zero
         dd.LastModifiedDt = new Date(dd.LastModified)
         index[key].add(dd);
         lookupData[dd.File] = dd
